@@ -1,112 +1,149 @@
 # 🌿 Tecendo Saúde
 
-> Sistema de telemedicina offline-first para atendimento remoto no Baixo Amazonas e Tapajós (PA)
+> Sistema de telemedicina offline-first para regiões remotas da Amazônia
 
 ---
 
-## 📋 Sobre o Projeto
+## 📋 Sobre
 
-**Tecendo Saúde** é uma aplicação web progressiva (PWA) que conecta pacientes de regiões remotas da Amazônia com profissionais de saúde, permitindo:
+Conecta pacientes e profissionais de saúde através de:
 
-- ✅ Cadastro e consultas **100% offline** (pacientes)
-- ✅ Envio de múltiplas mídias (foto + vídeo + áudio juntos)
-- ✅ Prontuário eletrônico completo (30+ campos)
-- ✅ Chat assíncrono (até 5 interações por registro)
-- ✅ Sincronização automática quando há internet
+- ✅ **Funciona 100% offline** (pacientes)
+- ✅ **Múltiplas mídias** (foto + vídeo + áudio juntos)
+- ✅ **Prontuário completo** (30+ campos)
+- ✅ **Chat assíncrono** (até 5 interações)
+- ✅ **Sincronização automática** (5 segundos)
 
 ---
 
-## 📱 Arquivos do Sistema
+## 📱 Arquivos
 
-### `app.html` (Aplicação Web)
-- **Tecnologia**: React 18 + TailwindCSS (via CDN)
-- **Tamanho**: ~1.800 linhas de código
-- **Funciona**: Direto no navegador (Chrome, Firefox, Safari)
-- **Deploy**: Copiar arquivo para qualquer servidor web
-- **Offline**: Salva dados localmente (IndexedDB)
+### `app.html` (1.783 linhas)
+- React 18 + TailwindCSS (CDN)
+- IndexedDB (Dexie.js)
+- Funciona offline
+- Deploy: copiar para servidor
 
-### `app.apk` (Aplicativo Android)
-- **Gerado com**: Cordova/Capacitor (wrapper do app.html)
-- **Tamanho**: ~15 MB
-- **Requisitos**: Android 7.0+ (API 24+)
-- **Instalação**: Download direto (APK) ou Google Play Store
-- **Permissões necessárias**:
-  - 📷 Câmera (fotos/vídeos)
-  - 🎙️ Microfone (gravação áudio)
-  - 💾 Armazenamento (salvar mídias)
-  - 🌐 Internet (sincronização)
+### `app.apk` (~15 MB)
+- Android 7.0+
+- Cordova/Capacitor
+- Permissões: câmera, microfone, storage
 
 ---
 
 ## ✨ Funcionalidades
 
-### 👤 Para Pacientes (Modo Offline)
+### 👤 Paciente
+- Login via CPF (sem senha)
+- Cadastro offline (6 campos)
+- Enviar texto + múltiplas mídias
+- Histórico (atualiza 15s)
+- Vídeos inline + fotos clicáveis
+- Responder até 5x
 
-#### Login e Cadastro
-- Login via **CPF único** (sem senha)
-- Cadastro básico com 6 campos (nome, CPF, data nascimento, região, telefone, email)
-- Salva localmente (funciona sem internet)
-- Auto-login (lembra último usuário)
-
-#### Novo Registro
-- Texto descritivo dos sintomas
-- **Múltiplas mídias simultâneas**:
-  - 📷 Foto (câmera ou galeria)
-  - 🎥 Vídeo curto (câmera)
-  - 🎙️ Áudio (gravação via microfone)
-- Todos os arquivos salvos offline
-- Preview antes de enviar
-
-#### Histórico
-- Lista de registros (cards com thumbnails)
-- Atualização automática a cada **15 segundos**
-- Status visual (pendente/respondido)
-- Ver respostas do profissional
-- Responder até **5 vezes** por registro
-- **Vídeos reproduzem inline** (sem precisar clicar)
-- Fotos clicáveis (expandem em tela cheia)
-- Áudios com player inline
-
-### 👨‍⚕️ Para Profissionais (Requer Internet)
-
-#### Acesso
-- Login via **CPF** (busca no Supabase)
-- Cadastro rápido com lista de 100+ ACS
-- Escolha de UBS (9 unidades)
-
-#### Menu Principal
-- **Contadores automáticos** (atualizam a cada 30s):
-  - 📂 Atendimentos (X) = registros pendentes
-  - 🆕 Novos Cadastros (Y) = pacientes sem prontuário
-- 🔍 Buscar por CPF
-
-#### Painel de Atendimentos
-- Cards com **thumbnail da primeira mídia**
-- Nome, CPF, região, idade do paciente
-- Texto resumo do registro
-- **SEM badge de status** (visual limpo)
-- Clique para abrir chat completo
-
-#### Chat com Paciente
-- Ver **texto + TODAS as mídias** do registro
-- **Vídeos inline** (reproduz sem abrir modal)
-- Fotos clicáveis (expandem)
-- Áudios inline (player)
-- Histórico completo de interações
-- Botão **FICHA** (editar prontuário)
-- Responder com texto + múltiplas mídias
-
-#### Prontuário Completo
-- **30+ campos obrigatórios**:
-  - Foto perfil, dados pessoais
-  - Hipertensão, diabetes, vícios
-  - Atividade física, medicações
-  - Metas de saúde (peso, PA, glicemia)
-- Validação rigorosa antes de salvar
-- Busca por CPF (carregar existente ou criar novo)
+### 👨‍⚕️ Profissional
+- Login CPF (Supabase)
+- Menu com contadores (30s):
+  - Atendimentos pendentes
+  - Novos cadastros
+- Chat com thumbnails
+- Vídeos inline
+- Prontuário (30+ campos)
+- Buscar por CPF
 
 ---
 
-## 🏗️ Arquitetura Técnica
+## 🏗️ Arquitetura
 
-### Frontend (PWA)
+**Frontend**: React 18 + Babel standalone  
+**Local**: Dexie.js (IndexedDB)  
+**Backend**: Supabase (PostgreSQL + Storage)  
+**Sync**: Loop 5s (offline-first)
+
+---
+
+## 📊 Dados
+
+**Regiões**: 13 municípios  
+(Santarém, Belterra, Mojuí dos Campos, Alenquer, Curuá, Óbidos, Oriximiná, Terra Santa, Faro, Juruti, Monte Alegre, Almeirim, Prainha)
+
+**UBS**: 9 unidades  
+(Antônio Evangelista, Boa Esperança, Divinópolis, Márcio Marinho, Haroldo Martins, Maria Bibiana da Silva, Nadime Miranda, Neli Loeblein, Vicente Alves da Silva)
+
+**ACS**: 92 agentes cadastrados
+
+---
+
+## 🚀 Usar
+
+### Web (`app.html`)
+
+```bash
+python -m http.server 8000
+# http://localhost:8000/app.html
+```
+
+### Android (`app.apk`)
+
+1. Transferir APK para celular  
+2. Habilitar "Fontes desconhecidas"  
+3. Instalar APK  
+4. Abrir app "Tecendo Saúde" 🌿  
+
+---
+
+## ⚙️ Configurar
+
+Linha 85-86 de `app.html`:
+
+```js
+const SUPABASE_URL = 'https://rucpqwojmgnqibeskaaj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sBflW42mIzVo835NoMrsjw_uYvlCR8z';
+```
+
+Depois, executar `supabase_schema.sql` no **SQL Editor** do Supabase.
+
+---
+
+## 📈 Estatísticas
+
+| Item                 | Valor          |
+|----------------------|----------------|
+| Linhas código        | 1.783          |
+| Componentes          | 10             |
+| Campos prontuário    | 30+            |
+| Limite chat          | 5 interações   |
+| Sync                 | 5s             |
+| Atualização histórico| 15s            |
+
+---
+
+## ⚠️ Limitações
+
+- Supabase grátis:
+  - 1 GB storage
+  - 2 GB/mês bandwidth
+- Upgrade: **$25/mês** (100 GB)
+
+---
+
+## 🔐 Segurança
+
+- Login via CPF (sem senha)
+- HTTPS obrigatório
+- RLS desabilitado (acesso via anon key)
+- CPF não exposto (UUID nas pastas)
+
+---
+
+## 🔮 Roadmap
+
+- Notificações push  
+- PDF prontuário  
+- Integração e-SUS  
+- Gráficos evolução  
+- Videochamada WebRTC  
+
+---
+
+Desenvolvido para comunidades remotas da Amazônia 🌳💚
