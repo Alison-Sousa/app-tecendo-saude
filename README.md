@@ -18,13 +18,13 @@ Conecta pacientes e profissionais de saúde através de:
 
 ## 📱 Arquivos
 
-### `app.html` (1.783 linhas)
+### `index.html` (1.844 linhas)
 - React 18 + TailwindCSS (CDN)
 - IndexedDB (Dexie.js)
 - Funciona offline
 - Deploy: copiar para servidor
 
-### `app.apk` (~15 MB)
+### `app-tecendo.apk` (~5 MB)
 - Android 7.0+
 - Cordova/Capacitor
 - Permissões: câmera, microfone, storage
@@ -76,14 +76,14 @@ Conecta pacientes e profissionais de saúde através de:
 
 ## 🚀 Usar
 
-### Web (`app.html`)
+### Web (`index.html`)
 
 ```bash
 python -m http.server 8000
-# http://localhost:8000/app.html
+# http://localhost:8000/index.html
 ```
 
-### Android (`app.apk`)
+### Android (`app-tecendo.apk`)
 
 1. Transferir APK para celular  
 2. Habilitar "Fontes desconhecidas"  
@@ -94,7 +94,7 @@ python -m http.server 8000
 
 ## ⚙️ Configurar
 
-Linha 85-86 de `app.html`:
+Linha 85-86 de `index.html`:
 
 ```js
 const SUPABASE_URL = 'https://rucpqwojmgnqibeskaaj.supabase.co';
