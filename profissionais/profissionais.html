@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Tecendo Saúde - Área Profissional</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../env/env.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/utils.js"></script>
+<link rel="icon" href="../img/logo.png" />
+<link rel="apple-touch-icon" href="../img/logo.png" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --primary: #2f6b3f; --accent: #d8a43a; --accent2: #c96f3a; --bg: #f3fbf5; --text: #1f2a44; }
+  body { background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); margin: 0; -webkit-tap-highlight-color: transparent; }
+  .fade-in { animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  .btn-primary { width: 100%; padding: 18px; background: linear-gradient(135deg, var(--primary) 0%, #1f4a2c 100%); color: #fff; border-radius: 14px; font-weight: 800; font-size: 16px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-primary:active { transform: scale(0.98); box-shadow: none; }
+  .btn-sec { width: 100%; padding: 14px; background: #fff; color: #475569; border: 1px solid #cbd5e1; border-radius: 14px; font-weight: 700; cursor: pointer; }
+  .input-box, select, textarea { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #cbd5e1; background: #fff; font-size: 16px; outline: none; margin-bottom: 12px; appearance: none; }
+  .input-box:focus { border-color: var(--primary); box-shadow: 0 0 0 2px #bbf7d0; }
+  .card { background: #fff; padding: 16px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 12px; border: 1px solid #f1f5f9; }
+  .section-title { font-size: 13px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin: 24px 0 8px 0; letter-spacing: 1px; }
+  .loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; font-weight: 700; color: var(--primary); }
+  .thumb { width: 60px; height: 60px; border-radius: 8px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; font-size: 24px; cursor: pointer; }
+  .big-btn { width: 100%; padding: 30px; background: #fff; border-radius: 20px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; box-shadow: 0 4px 6px -2px rgba(0,0,0,0.02); margin-bottom: 16px; }
+  .big-btn-icon { font-size: 32px; background: #dcfce7; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .hidden-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; z-index: 10; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="../js/components.js"></script>
+<script type="text/babel">
+// ================================================
+// COMPONENTES DO PROFISSIONAL
+// ================================================
+
+// Autenticação do profissional
+const ProAuth = ({onAuth, onBack}) => {
+  const [step, setStep] = useState('cpf');
+  const [cpf, setCpf] = useState('');
+  const [reg, setReg] = useState({nome:'', cpf:'', municipio:'', ubs:'', telefone:''});
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  
+  const checkCpf = async () => {
+    if(!cpf) return alert('Digite o CPF');
+    const clean = cpf.replace(/\D/g,'');
+    if(clean.length !== 11) return alert('CPF inválido');
+    setLoading(true);
+    try {
+      const localPatient = await db.perfil.where('cpf').equals(clean).first();
+      if(localPatient){ setMsg('CPF é de paciente. Use a área do paciente para acessar.'); setLoading(false); return; }
+      if(navigator.onLine){
+        try {
+          const { data: remotePatient } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle();
+          if(remotePatient){ setMsg('CPF é de paciente. Use a área do paciente para acessar.'); setLoading(false); return; }
+        } catch { }
+      }
+      const { data } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
+      if(data){ onAuth(data); }
+      else { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('CPF não encontrado. Complete seu cadastro.'); }
+    } catch { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('Offline ou erro. Cadastre-se.'); }
+    setLoading(false);
+  };
+  
+  const register = async () => {
+    if(!reg.municipio || !reg.ubs || !reg.nome || !reg.telefone) return alert('Preencha todos os campos');
+    setLoading(true);
+    try {
+      const cpfClean = reg.cpf.replace(/\D/g,'');
+      const { data: existingPatient } = await supabase.from('perfis').select('cpf').eq('cpf', cpfClean).maybeSingle();
+      if(existingPatient){ alert('CPF já cadastrado como paciente. Use outro CPF para profissional.'); setLoading(false); return; }
+      const payload = { nome: reg.nome, cpf: cpfClean, municipio: reg.municipio, ubs: reg.ubs, telefone: reg.telefone };
+      const { data, error } = await supabase.from('profissionais').insert(payload).select().maybeSingle();
+      if(error){ alert('Erro ao cadastrar: ' + error.message); }
+      else { alert('Cadastrado com sucesso!'); onAuth(data); }
+    } catch(e) { alert('Falha de rede: ' + e.message); }
+    setLoading(false);
+  };
+  
+  if(loading) return <Loading text="Verificando..." />;
+  
+  if(step==='register') return (
+    <div className="p-6 fade-in">
+      <h2 className="text-2xl font-bold mb-4">Cadastro Profissional</h2>
+      <p className="text-gray-500 mb-4">CPF <strong>{reg.cpf}</strong> não encontrado</p>
+      {msg && <div className="text-xs font-bold mb-4 text-blue-700 bg-blue-50 p-3 rounded-lg border border-blue-200">{msg}</div>}
+      <div className="section-title">CPF (já preenchido)</div>
+      <input className="input-box bg-gray-100" value={reg.cpf} disabled />
+      <div className="section-title">Município</div>
+      <select className="input-box" value={reg.municipio} onChange={e=>{
+        const municipio = e.target.value;
+        const ubsOptions = municipio ? getUbsByMunicipio(municipio) : [];
+        const nextUbs = ubsOptions.length === 1 ? ubsOptions[0] : '';
+        const names = nextUbs ? getEnfermeirasByMunicipioUbs(municipio, nextUbs) : [];
+        const nextNome = names.length === 1 ? names[0] : '';
+        setReg(prev => ({ ...prev, municipio, ubs: nextUbs, nome: nextNome }));
+      }}>
+        <option value="">Selecione o município...</option>
+        {PROFISSIONAL_MUNICIPIOS.map(m => <option key={m} value={m}>{m}</option>)}
+      </select>
+      <div className="section-title">UBS de Atuação</div>
+      <select className="input-box" value={reg.ubs} onChange={e=>{
+        const ubs = e.target.value;
+        const names = reg.municipio && ubs ? getEnfermeirasByMunicipioUbs(reg.municipio, ubs) : [];
+        const nextNome = names.length === 1 ? names[0] : '';
+        setReg(prev => ({ ...prev, ubs, nome: nextNome }));
+      }} disabled={!reg.municipio}>
+        <option value="">Selecione...</option>
+        {getUbsByMunicipio(reg.municipio).map(u => <option key={u} value={u}>{u}</option>)}
+      </select>
+      <div className="section-title">Seu Nome</div>
+      <select className="input-box" value={reg.nome} onChange={e=>setReg(prev => ({ ...prev, nome: e.target.value }))} disabled={!reg.municipio || !reg.ubs}>
+        <option value="">Selecione seu nome...</option>
+        {getEnfermeirasByMunicipioUbs(reg.municipio, reg.ubs).map(n => <option key={n} value={n}>{n}</option>)}
+      </select>
+      <div className="section-title">Telefone</div>
+      <input className="input-box" value={reg.telefone} onChange={e=>setReg({...reg,telefone:mascaraTelefone(e.target.value)})} placeholder="(91) 98765-4321" inputMode="tel" />
+      <button className="btn-primary mt-4" onClick={register}>CONCLUIR CADASTRO</button>
+      <button className="btn-sec mt-3" onClick={()=>{setStep('cpf'); setCpf(''); setMsg('');}}>Voltar</button>
+    </div>
+  );
+  
+  return (
+    <div className="p-6 fade-in pt-20">
+      <h2 className="text-2xl font-bold mb-4">Acesso Profissional</h2>
+      <p className="text-gray-500 mb-6">Digite seu CPF para entrar</p>
+      {msg && <div className="text-xs font-bold mb-4 text-amber-800 bg-amber-50 p-3 rounded-lg border border-amber-200">{msg}</div>}
+      <input className="input-box text-center text-xl font-bold" value={cpf} onChange={e=>setCpf(mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} />
+      <button className="btn-primary mt-4" onClick={checkCpf}>ACESSAR</button>
+      <button className="btn-sec mt-3" onClick={onBack}>Voltar</button>
+    </div>
+  );
+};
+
+// Ficha Médica do paciente
+const FichaMedica = ({initialData, onSave, onCancel}) => {
+  const defaultFicha = {
+    foto_url:'', nome:'', cpf:'', nascimento:'', genero:'', raca:'', endereco:'', telefone:'', escolaridade:'', profissao:'', mora_sozinho:'', mora_companheiro:'', regiao:'', ubs_referencia:'', equipe_ubs:'', acs_responsavel:'', hipertensao:'', tempo_diag_has:'', diabetes:'', tempo_diag_dm:'', infeccao_urinaria_gestacao:'', vicios:'', tempo_vicio:'', altura:'', peso_inicial:'', peso_atual:'', peso_primeira_consulta:'', imc_pre_gestacional:'', dum:'', gestacao_semanas:'', previsao_parto:'', faz_pre_natal:'', inicio_pre_natal:'', data_ultima_consulta_pre_natal:'', enxerga_bem:'', consulta_oftalmo:'', tempo_consulta_oftalmo:'', dificuldade_mastigar_falar_engolir:'', uso_medicacoes:'', nomes_medicacoes:'', posologia_dosagem:'', posologia_horario:'', data_ultima_prescricao:'', data_ultima_dispensacao:'', atividade_fisica:'', freq_atividade:'', tipo_atividade:'', meta_peso:'', meta_glicemia:'', meta_pa_min:'', meta_pa_max:'', condicoes:''
+  };
+  const [form, setForm] = useState({ ...defaultFicha, ...(initialData || {}) });
+  const [fotoPreview, setFotoPreview] = useState(initialData?.foto_url || '');
+  const [fotoFile, setFotoFile] = useState(null);
+  const [extraFotos, setExtraFotos] = useState([]);
+  const [saving, setSaving] = useState(false);
+  
+  useEffect(() => {
+    const normalized = { ...defaultFicha, ...(initialData || {}) };
+    if(normalized.cpf) normalized.cpf = mascaraCPF(normalized.cpf);
+    if(normalized.telefone) normalized.telefone = mascaraTelefone(normalized.telefone);
+    setForm(normalized);
+    setFotoPreview(normalized.foto_url || '');
+    setFotoFile(null);
+    setExtraFotos(prev => { prev.forEach(item => { if(item?.preview) URL.revokeObjectURL(item.preview); }); return []; });
+  }, [initialData]);
+  
+  const hasBasicDataOnly = initialData && initialData.nome && initialData.cpf && !initialData.foto_url && !initialData.genero;
+  const isNewPatient = !initialData || (!initialData.nome && !initialData.cpf);
+  
+  useEffect(() => {
+    return () => {
+      if(fotoPreview && fotoPreview.startsWith('blob:')) URL.revokeObjectURL(fotoPreview);
+      extraFotos.forEach(item => { if(item?.preview) URL.revokeObjectURL(item.preview); });
+    };
+  }, [fotoPreview, extraFotos]);
+  
+  const requiredLabel = label => (<div className="section-title flex items-center justify-between"><span>{label}</span><span className="text-[10px] font-black text-rose-500 uppercase tracking-wide">Necessário</span></div>);
+  const updateField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
+  
+  const calcularImcPreGestacional = () => {
+    const alturaRaw = String(form.altura || '').replace(',', '.');
+    const pesoRaw = String(form.peso_inicial || '').replace(',', '.');
+    const alturaNum = parseFloat(alturaRaw);
+    const pesoNum = parseFloat(pesoRaw);
+    if(!alturaNum || !pesoNum) return '';
+    const alturaM = alturaNum > 3 ? (alturaNum / 100) : alturaNum;
+    if(!alturaM) return '';
+    const imc = pesoNum / (alturaM * alturaM);
+    return Number.isFinite(imc) ? imc.toFixed(1) : '';
+  };
+  
+  const handleFoto = e => {
+    const file = e.target.files[0];
+    if(fotoPreview && fotoPreview.startsWith('blob:')) URL.revokeObjectURL(fotoPreview);
+    if(file){ const url = URL.createObjectURL(file); setFotoFile(file); setFotoPreview(url); }
+    else { setFotoFile(null); setFotoPreview(form.foto_url || ''); }
+  };
+  
+  const handleExtraFotos = e => {
+    const files = Array.from(e.target.files || []);
+    if(files.length === 0) return;
+    const next = files.map(file => ({ file, preview: URL.createObjectURL(file) }));
+    setExtraFotos(prev => [...prev, ...next]);
+    e.target.value = '';
+  };
+  
+  const removerExtraFoto = index => {
+    const item = extraFotos[index];
+    if(item?.preview) URL.revokeObjectURL(item.preview);
+    setExtraFotos(prev => prev.filter((_, i) => i !== index));
+  };
+  
+  const REQUIRED_KEYS = ['nome','cpf','nascimento','genero','raca','endereco','telefone','escolaridade','profissao','mora_sozinho','regiao','ubs_referencia','acs_responsavel','hipertensao','diabetes','vicios','tempo_vicio','peso_inicial','enxerga_bem','consulta_oftalmo','uso_medicacoes','atividade_fisica','freq_atividade','tipo_atividade','meta_peso','meta_glicemia','meta_pa_min','meta_pa_max'];
+  
+  const handleSubmit = async () => {
+    for(const key of REQUIRED_KEYS){ if(!form[key]){ alert('Preencha todos os campos obrigatórios.'); return; } }
+    if(!fotoPreview && !fotoFile && !form.foto_url){ alert('Envie a foto de perfil.'); return; }
+    setSaving(true);
+    try {
+      let fotoFinal = form.foto_url || '';
+      if(fotoFile) fotoFinal = await fileToDataUrl(fotoFile);
+      const imcCalc = calcularImcPreGestacional();
+      const payload = { ...form, foto_url: fotoFinal, imc_pre_gestacional: imcCalc || form.imc_pre_gestacional || '' };
+      await onSave(payload, extraFotos.map(item => item.file));
+    } catch (err) { alert('Falha ao salvar prontuário. Tente novamente.'); } finally { setSaving(false); }
+  };
+  
+  return (
+    <div className="fade-in pb-20">
+      {hasBasicDataOnly && (<div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl p-4 mb-6"><div className="text-sm font-bold mb-1">✓ Paciente já cadastrado</div><div className="text-xs">Complete o prontuário com as informações de saúde detalhadas.</div></div>)}
+      {isNewPatient && (<div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 mb-6"><div className="text-sm font-bold mb-1">⚠ Novo Prontuário</div><div className="text-xs">Cadastro iniciado pelo profissional. Preencha todas as informações do paciente.</div></div>)}
+      {requiredLabel('Foto de Perfil')}
+      <div className="flex items-center gap-4 mb-6">
+        <label className="thumb" style={{background:'#fff', overflow:'hidden', position:'relative', zIndex:1, flexShrink:0}}>
+          {fotoPreview ? <img src={fotoPreview} alt="foto" style={{width:'100%',height:'100%',objectFit:'cover'}}/> : '📷'}
+          <input type="file" accept="image/*" className="hidden-input" onChange={handleFoto} />
+        </label>
+        <div className="text-xs text-gray-500 font-semibold">Escolha uma imagem nítida do paciente.</div>
+      </div>
+      {requiredLabel('Nome completo')}
+      <input className="input-box" value={form.nome} onChange={e=>updateField('nome', e.target.value)} placeholder="Nome completo" />
+      {requiredLabel('CPF')}
+      <input className="input-box" value={form.cpf} onChange={e=>updateField('cpf', mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" />
+      {requiredLabel('Data de Nascimento')}
+      <input className="input-box" value={form.nascimento} onChange={e=>updateField('nascimento', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" />
+      <div className="section-title">Condições (pode marcar mais de uma)</div>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {['Hipertensão Arterial','Diabetes','Cuidados Infantis','Gestação'].map(label => {
+          const current = String(form.condicoes || '').split(',').map(v=>v.trim()).filter(Boolean);
+          const isActive = current.includes(label);
+          const toggle = () => {
+            const next = isActive ? current.filter(v=>v !== label) : [...current, label];
+            updateField('condicoes', next.join(', '));
+            if(label === 'Hipertensão Arterial') updateField('hipertensao', isActive ? '' : 'Sim');
+            if(label === 'Diabetes') updateField('diabetes', isActive ? '' : 'Sim');
+          };
+          return (<button key={label} type="button" onClick={toggle} className={`px-4 py-2 rounded-full text-sm font-semibold border ${isActive ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200'}`}>{label}</button>);
+        })}
+      </div>
+      {requiredLabel('Gênero')}
+      <select className="input-box" value={form.genero} onChange={e=>updateField('genero', e.target.value)}><option value="">Escolha...</option><option>Masculino</option><option>Feminino</option><option>Não definido</option></select>
+      {requiredLabel('Raça/Cor')}
+      <select className="input-box" value={form.raca} onChange={e=>updateField('raca', e.target.value)}><option value="">Escolha...</option><option>Branco</option><option>Pardo</option><option>Negro</option><option>Asiático</option><option>Indígena</option></select>
+      {requiredLabel('Endereço')}
+      <input className="input-box" value={form.endereco} onChange={e=>updateField('endereco', e.target.value)} placeholder="Rua das Mangueiras, nº 245, Bairro Nazaré, Belém – PA" />
+      {requiredLabel('Telefone')}
+      <input className="input-box" value={form.telefone} onChange={e=>updateField('telefone', mascaraTelefone(e.target.value))} placeholder="(91) 98765-4321" inputMode="tel" />
+      {requiredLabel('Grau de Instrução')}
+      <select className="input-box" value={form.escolaridade} onChange={e=>updateField('escolaridade', e.target.value)}><option value="">Escolha...</option><option>Sem instrução e fundamental incompleto</option><option>Fundamental completo e médio incompleto</option><option>Médio completo e superior incompleto</option><option>Superior completo</option></select>
+      {requiredLabel('Profissão')}
+      <input className="input-box" value={form.profissao} onChange={e=>updateField('profissao', e.target.value)} placeholder="Profissão" />
+      {requiredLabel('Mora sozinho?')}
+      <select className="input-box" value={form.mora_sozinho} onChange={e=>updateField('mora_sozinho', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Mora com marido/companheiro?')}
+      <select className="input-box" value={form.mora_companheiro} onChange={e=>updateField('mora_companheiro', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Região')}
+      <select className="input-box" value={form.regiao} onChange={e=>updateField('regiao', e.target.value)}><option value="">Escolha...</option>{LISTA_REGIOES.map(r => <option key={r}>{r}</option>)}</select>
+      {requiredLabel('Unidade de Referência')}
+      <select className="input-box" value={form.ubs_referencia} onChange={e=>updateField('ubs_referencia', e.target.value)}><option value="">Escolha...</option>{LISTA_UBS.map(u => <option key={u}>{u}</option>)}</select>
+      {requiredLabel('Equipe UBS')}
+      <select className="input-box" value={form.equipe_ubs} onChange={e=>updateField('equipe_ubs', e.target.value)}><option value="">Escolha...</option><option>ESF</option><option>ESFR</option></select>
+      {requiredLabel('Agente Comunitário de Saúde')}
+      <select className="input-box" value={form.acs_responsavel} onChange={e=>updateField('acs_responsavel', e.target.value)}><option value="">Escolha algo</option>{LISTA_ACS.map(a => <option key={a}>{a}</option>)}</select>
+      {requiredLabel('Hipertensão')}
+      <select className="input-box" value={form.hipertensao} onChange={e=>updateField('hipertensao', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Tempo de diagnóstico - HAS')}
+      <select className="input-box" value={form.tempo_diag_has} onChange={e=>updateField('tempo_diag_has', e.target.value)}><option value="">Escolha...</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
+      {requiredLabel('Diabetes')}
+      <select className="input-box" value={form.diabetes} onChange={e=>updateField('diabetes', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Tempo de diagnóstico - DM')}
+      <select className="input-box" value={form.tempo_diag_dm} onChange={e=>updateField('tempo_diag_dm', e.target.value)}><option value="">Escolha...</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
+      {requiredLabel('Infecção urinária durante a gestação?')}
+      <select className="input-box" value={form.infeccao_urinaria_gestacao} onChange={e=>updateField('infeccao_urinaria_gestacao', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Vícios')}
+      <select className="input-box" value={form.vicios} onChange={e=>updateField('vicios', e.target.value)}><option value="">Escolha...</option><option>Tabagismo</option><option>Etilismo</option><option>Ex-etilista</option><option>Ex-tabagista</option><option>Uso de drogas ilícitas</option><option>Nenhum relato</option></select>
+      {requiredLabel('Tempo de Vício')}
+      <select className="input-box" value={form.tempo_vicio} onChange={e=>updateField('tempo_vicio', e.target.value)}><option value="">Escolha...</option><option>Até 5 anos</option><option>De 5 a 10 anos</option><option>Mais de 10 anos</option></select>
+      <div className="section-title">Altura</div>
+      <input className="input-box" value={form.altura} onChange={e=>updateField('altura', e.target.value)} placeholder="Ex.: 1,52 cm" />
+      {requiredLabel('Peso Inicial')}
+      <input className="input-box" value={form.peso_inicial} onChange={e=>updateField('peso_inicial', e.target.value)} placeholder="Ex.: 50,00" />
+      <div className="section-title">Peso</div>
+      <input className="input-box" value={form.peso_atual} onChange={e=>updateField('peso_atual', e.target.value)} placeholder="Ex.: 60,00" />
+      <div className="section-title">Peso na primeira consulta de pré-natal</div>
+      <input className="input-box" value={form.peso_primeira_consulta} onChange={e=>updateField('peso_primeira_consulta', e.target.value)} placeholder="Ex.: 55,00" />
+      <div className="section-title">IMC pré-gestacional (calculado)</div>
+      <input className="input-box bg-gray-100" value={calcularImcPreGestacional()} disabled />
+      <div className="section-title">Data da última menstruação (DUM)</div>
+      <input className="input-box" value={form.dum} onChange={e=>updateField('dum', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      <div className="section-title">Tempo de gestação (semanas)</div>
+      <input className="input-box" value={form.gestacao_semanas} onChange={e=>updateField('gestacao_semanas', e.target.value)} placeholder="Ex.: 20" inputMode="numeric" />
+      <div className="section-title">Previsão do parto</div>
+      <input className="input-box" value={form.previsao_parto} onChange={e=>updateField('previsao_parto', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      <div className="section-title">Faz acompanhamento de pré-natal?</div>
+      <select className="input-box" value={form.faz_pre_natal} onChange={e=>updateField('faz_pre_natal', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      <div className="section-title">Início do acompanhamento do pré-natal</div>
+      <input className="input-box" value={form.inicio_pre_natal} onChange={e=>updateField('inicio_pre_natal', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      <div className="section-title">Data da última consulta de pré-natal</div>
+      <input className="input-box" value={form.data_ultima_consulta_pre_natal} onChange={e=>updateField('data_ultima_consulta_pre_natal', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      {requiredLabel('Enxerga bem?')}
+      <select className="input-box" value={form.enxerga_bem} onChange={e=>updateField('enxerga_bem', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Consulta com oftalmologista')}
+      <select className="input-box" value={form.consulta_oftalmo} onChange={e=>updateField('consulta_oftalmo', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Tempo da consulta com oftalmologista')}
+      <select className="input-box" value={form.tempo_consulta_oftalmo} onChange={e=>updateField('tempo_consulta_oftalmo', e.target.value)}><option value="">Escolha...</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
+      {requiredLabel('Sente dificuldade para mastigar, falar ou engolir?')}
+      <select className="input-box" value={form.dificuldade_mastigar_falar_engolir} onChange={e=>updateField('dificuldade_mastigar_falar_engolir', e.target.value)}><option value="">Escolha...</option><option>Não</option><option>Mastigar</option><option>Falar</option><option>Engolir</option><option>Mastigar e Falar</option><option>Mastigar e Engolir</option><option>Falar e Engolir</option><option>Mastigar, Falar e Engolir</option></select>
+      {requiredLabel('Faz uso de medicações?')}
+      <select className="input-box" value={form.uso_medicacoes} onChange={e=>updateField('uso_medicacoes', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      <div className="section-title">Nomes das medicações</div>
+      <input className="input-box" value={form.nomes_medicacoes} onChange={e=>updateField('nomes_medicacoes', e.target.value)} placeholder="Ex.: Losartana, Metformina" />
+      <div className="section-title">Posologia das medicações - Dosagem</div>
+      <input className="input-box" value={form.posologia_dosagem} onChange={e=>updateField('posologia_dosagem', e.target.value)} placeholder="Ex.: 5mg, 10mg, 15mg" />
+      <div className="section-title">Posologia das medicações - Horário</div>
+      <input className="input-box" value={form.posologia_horario} onChange={e=>updateField('posologia_horario', e.target.value)} placeholder="Ex.: 8h, 12h, 20h" />
+      <div className="section-title">Data da última prescrição</div>
+      <input className="input-box" value={form.data_ultima_prescricao} onChange={e=>updateField('data_ultima_prescricao', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      <div className="section-title">Data da última dispensação</div>
+      <input className="input-box" value={form.data_ultima_dispensacao} onChange={e=>updateField('data_ultima_dispensacao', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      {requiredLabel('Faz Atividade Física?')}
+      <select className="input-box" value={form.atividade_fisica} onChange={e=>updateField('atividade_fisica', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Frequência da Atividade Física')}
+      <select className="input-box" value={form.freq_atividade} onChange={e=>updateField('freq_atividade', e.target.value)}><option value="">Escolha...</option><option>1x semana</option><option>2-3x semana</option><option>4-5x semana</option><option>Diário</option><option>Nunca</option></select>
+      {requiredLabel('Que tipo de Atividade Física?')}
+      <select className="input-box" value={form.tipo_atividade} onChange={e=>updateField('tipo_atividade', e.target.value)}><option value="">Escolha...</option><option>Caminhada</option><option>Corrida</option><option>Musculação</option><option>Dança</option><option>Esportes</option><option>Outra</option></select>
+      {requiredLabel('Meta de Peso')}
+      <input className="input-box" value={form.meta_peso} onChange={e=>updateField('meta_peso', e.target.value)} placeholder="Ex.: 60" />
+      {requiredLabel('Meta Glicemia')}
+      <input className="input-box" value={form.meta_glicemia} onChange={e=>updateField('meta_glicemia', e.target.value)} placeholder="Ex.: 110" />
+      {requiredLabel('Meta PA Mínima')}
+      <input className="input-box" value={form.meta_pa_min} onChange={e=>updateField('meta_pa_min', e.target.value)} placeholder="Ex.: 110" />
+      {requiredLabel('Meta PA Máxima')}
+      <input className="input-box" value={form.meta_pa_max} onChange={e=>updateField('meta_pa_max', e.target.value)} placeholder="Ex.: 140" />
+      <div className="section-title">Fotos clínicas (opcional)</div>
+      <div className="flex items-center gap-4 mb-4 flex-wrap">
+        <label className="thumb" style={{background:'#fff', overflow:'hidden', position:'relative', zIndex:1, flexShrink:0}}>📷<input type="file" accept="image/*" multiple className="hidden-input" onChange={handleExtraFotos} /></label>
+        <div className="text-xs text-gray-500 font-semibold">Envie fotos (pé, pele, boca, etc.) se necessário.</div>
+      </div>
+      {extraFotos.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-4">
+          {extraFotos.map((item, idx) => (<div key={`${item.file.name}-${idx}`} className="border rounded-xl p-2 bg-white"><img src={item.preview} alt="foto" className="w-24 h-24 object-cover rounded-lg" /><button type="button" className="btn-sec w-full mt-2 text-xs" onClick={()=>removerExtraFoto(idx)}>Remover</button></div>))}
+        </div>
+      )}
+      <button className="btn-primary mt-4" onClick={handleSubmit} disabled={saving}>{saving ? 'SALVANDO...' : 'SALVAR PRONTUÁRIO'}</button>
+      <button className="btn-sec mt-3" onClick={onCancel}>Cancelar</button>
+    </div>
+  );
+};
+
+// Dashboard do Profissional
+const ProDash = ({user, onLogout}) => {
+  const [mode, setMode] = React.useState('menu');
+  const [formData, setFormData] = useState({});
+  const [saving, setSaving] = useState(false);
+  
+  useEffect(() => { sessionStorage.setItem('profissional', JSON.stringify(user)); }, [user]);
+  
+  const saveForm = async (f, extraFiles = []) => {
+    setSaving(true);
+    try {
+      const clean = f.cpf.replace(/\D/g,'');
+      const profNome = user?.enfermeira || user?.nome || 'Profissional';
+      const payload = { ...f, patient_id: 'cpf-'+clean, cpf: clean, created_by_nome: profNome, created_by_ubs: user?.ubs || '', created_by_cpf: user?.cpf || '', updated_at: new Date().toISOString() };
+      const { error } = await supabase.from('perfis').upsert(payload, { onConflict: 'patient_id' });
+      if(error && payload.condicoes){ const fallback = { ...payload }; delete fallback.condicoes; const { error: retryError } = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' }); if(retryError) throw retryError; }
+      else if(error) { throw error; }
+      if (extraFiles && extraFiles.length > 0) {
+        const registroId = uuidv4();
+        const now = new Date().toISOString();
+        const media = [];
+        for (let i = 0; i < extraFiles.length; i += 1) {
+          const file = extraFiles[i];
+          const safeName = (file?.name || `foto_${i}.jpg`).replace(/[^a-zA-Z0-9.]/g,'_');
+          const path = `${registroId}/pro/${Date.now()}_${i}_${safeName}`;
+          const { error: upErr } = await supabase.storage.from('midias').upload(path, file, { upsert: true, contentType: file.type });
+          if (!upErr) { const { data } = supabase.storage.from('midias').getPublicUrl(path); if (data?.publicUrl) media.push({ type: file.type, url: data.publicUrl, path }); }
+        }
+        if (media.length > 0) {
+          const replies = [{ from: 'pro', pro_name: profNome, pro_ubs: user?.ubs || '', text: '📎 Fotos clínicas enviadas no cadastro.', media, at: now }];
+          await supabase.from('registros').upsert({ registro_id: registroId, patient_id: payload.patient_id, device_id: 'pro', texto: 'Fotos clínicas enviadas no cadastro.', tipo: 'cadastro', status: 'respondido', replies_json: replies, created_at: now, updated_at: now }, { onConflict: 'registro_id' });
+        }
+      }
+      alert('✅ Paciente cadastrado com sucesso!'); 
+      setMode('menu');
+    } catch(err) { console.error('Erro ao salvar:', err); alert('❌ Erro ao salvar: ' + (err.message || 'Tente novamente')); } finally { setSaving(false); }
+  };
+  
+  const abrirMonitoramento = () => { window.location.href = '../monitoramento/monitoramento.html'; };
+  
+  let content = null;
+  if(mode === 'menu') {
+    content = (
+      <div className="p-6 fade-in">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2" style={{color:'var(--primary)'}}><img src="../img/logo.png" alt="Tecendo Saúde" className="w-6 h-6" style={{objectFit:'contain'}} />{user.enfermeira || user.nome}</h2>
+            <p className="text-gray-500 text-sm">{user.ubs} • {user.municipio}</p>
+          </div>
+          <button onClick={onLogout} className="text-red-500 font-bold text-sm">SAIR</button>
+        </div>
+        <div className="grid gap-4">
+          <button className="big-btn" onClick={() => { setFormData({}); setMode('novo_cadastro'); }} style={{transition:'all 0.3s', border:'2px solid transparent'}} onMouseOver={e=>e.currentTarget.style.borderColor='var(--primary)'} onMouseOut={e=>e.currentTarget.style.borderColor='transparent'}>
+            <div className="big-btn-icon">📝</div>
+            <div className="font-bold text-lg">Novo Cadastro</div>
+            <div className="text-gray-400 text-sm">Cadastrar novo paciente</div>
+          </button>
+          <button className="big-btn" onClick={abrirMonitoramento} style={{transition:'all 0.3s', border:'2px solid transparent'}} onMouseOver={e=>e.currentTarget.style.borderColor='var(--primary)'} onMouseOut={e=>e.currentTarget.style.borderColor='transparent'}>
+            <div className="big-btn-icon" style={{background:'#dbeafe'}}>📊</div>
+            <div className="font-bold text-lg">Monitoramento</div>
+            <div className="text-gray-400 text-sm">Dashboard de acompanhamento</div>
+          </button>
+        </div>
+      </div>
+    );
+  } else if (mode === 'novo_cadastro') {
+    content = (
+      <div className="p-4 fade-in">
+        <div className="flex items-center gap-3 mb-4">
+          <button onClick={()=>setMode('menu')} className="text-2xl font-bold text-gray-400 hover:text-gray-600">←</button>
+          <h2 className="text-xl font-bold">Ficha do Paciente</h2>
+        </div>
+        <div className="card"><FichaMedica initialData={formData} onSave={saveForm} onCancel={()=>setMode('menu')} /></div>
+      </div>
+    );
+  }
+  return <>{content}</>;
+};
+
+// App principal do Profissional
+const ProfissionalApp = () => {
+  const [route, setRoute] = useState('login');
+  const [user, setUser] = useState(null);
+  const [online, setOnline] = useState(navigator.onLine);
+
+  useEffect(() => { const f = () => setOnline(navigator.onLine); window.addEventListener('online', f); window.addEventListener('offline', f); return () => { window.removeEventListener('online', f); window.removeEventListener('offline', f); }; }, []);
+
+  useEffect(() => {
+    const raw = sessionStorage.getItem('profissional');
+    if (raw) { try { const prof = JSON.parse(raw); if (prof) { setUser(prof); setRoute('dash'); return; } } catch (e) { } }
+  }, []);
+
+  const loginPro = (data) => { setUser(data); setRoute('dash'); };
+  const logout = () => { sessionStorage.removeItem('profissional'); setUser(null); setRoute('login'); };
+
+  if(SUPABASE_CONFIG_MISSING) return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center">
+      <img src="../img/logo.png" alt="Tecendo Saúde" className="w-36 h-36 mb-6" />
+      <h1 className="text-2xl font-extrabold text-green-900 mb-2">Configuração necessária</h1>
+      <p className="text-gray-600 mb-4">Configure o arquivo env/env.js com SUPABASE_URL e SUPABASE_KEY.</p>
+    </div>
+  );
+
+  return (
+    <>
+      <OfflineBanner online={online} />
+      {route === 'login' && <ProAuth onAuth={loginPro} onBack={() => window.location.href = '../index.html'} />}
+      {route === 'dash' && <ProDash user={user} onLogout={logout} />}
+    </>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ProfissionalApp />);
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# 🌿 Tecendo Saúde
+# Tecendo Saúde
 
 > Sistema de telemedicina offline-first para regiões remotas da Amazônia.
 
@@ -6,12 +6,102 @@
 
 ## 📋 Sobre
 
-O **Tecendo Saúde** é uma Single Page Application (SPA) projetada para conectar pacientes e profissionais de saúde em localidades com conectividade intermitente. O sistema prioriza o funcionamento offline, sincronizando automaticamente quando há rede disponível.
+O **Tecendo Saúde** é uma aplicação web projetada para conectar pacientes e profissionais de saúde em localidades com conectividade intermitente. O sistema prioriza o funcionamento offline, sincronizando automaticamente quando há rede disponível.
 
-Objetivos:
+**Objetivos:**
 - Permitir atendimentos e registro de dados de saúde em áreas remotas.
 - Garantir que pacientes possam acessar conteúdos educativos e seus registros mesmo sem internet.
 - Sincronizar dados de forma segura e eficiente quando houver conectividade.
+
+---
+
+## 📂 Estrutura do Projeto
+
+```
+app-tecendo-saude/
+├── index.html     # Tela inicial e roteador principal
+├── README.md                     # Documentação do projeto
+│
+├── js/                           # Módulos JavaScript compartilhados
+│   ├── config.js                 # Configurações, constantes e listas (UBS, ACS, etc)
+│   ├── utils.js    # Funções utilitárias (máscaras, formatação, sync)
+│   └── components.js  # Componentes React reutilizáveis
+│
+├── pacientes/         # Área exclusiva do paciente
+│   └── pacientes.html # App completo do paciente (login, dashboard, registros)
+│
+├── profissionais/     # Área exclusiva do profissional
+│   └── profissionais.html # App completo do profissional (login, cadastro, dashboard)
+│
+├── monitoramento/     # Dashboard de monitoramento
+│   ├── monitoramento.html  # Painel de acompanhamento de pacientes
+│   └── monitoramento.js    # Lógica do monitoramento
+│
+├── env/     # Configurações de ambiente
+│   ├── env.js # Credenciais Supabase (NÃO versionar)
+│   ├── env.example.js # Exemplo de configuração
+│   └── build-env.js   # Script de build para ambiente
+│
+├── audios/  # Áudios educativos pré-carregados
+│   ├── Alerta.mp3
+    ├──Hipertensão.mp3   # Conteúdo sobre pressão alta
+│   ├── Infância.mp3     # Cuidados infantis
+│   └── Gestação.mp3     # Cuidados na gestação
+│
+├── img/                 # Imagens e assets visuais
+│   └── logo.png         # Logo do aplicativo
+│
+├── styles/              # Estilos CSS
+│   └── styles.css       # CSS global (usado em páginas específicas)
+│
+├── textos/              # Documentação de fluxos
+│   ├── paciente.md      # Fluxo do paciente
+│   └── profissional.md  # Fluxo do profissional
+│
+└── database/            # Scripts de banco de dados
+    ├── database-config.sql  # Configuração do Supabase
+    └── seed-dados.sql  # Dados iniciais
+```
+
+---
+
+## 📁 Descrição dos Arquivos
+
+### Raiz
+| Arquivo | Descrição |
+|---------|-----------|
+| `index.html` | Tela de boas-vindas e roteador. Direciona para área de pacientes ou profissionais. |
+| `README.md` | Esta documentação. |
+
+### /js (Módulos Compartilhados)
+| Arquivo | Descrição |
+|---------|-----------|
+| `config.js` | Configurações do Supabase, schema do Dexie (IndexedDB), listas de UBS, regiões, ACS, profissionais. |
+| `utils.js` | Funções utilitárias: máscaras (CPF, data, telefone), formatação, `syncManager()`, conversão de arquivos. |
+| `components.js` | Componentes React reutilizáveis: `SyncIndicator`, `Loading`, `MediaModal`, `OfflineBanner`, etc. |
+
+### /pacientes
+| Arquivo | Descrição |
+|---------|-----------|
+| `pacientes.html` | Aplicação completa do paciente: login por CPF, cadastro rápido, dashboard de monitoramento, envio de registros com mídia, histórico de atendimentos. |
+
+### /profissionais
+| Arquivo | Descrição |
+|---------|-----------|
+| `profissionais.html` | Aplicação completa do profissional: autenticação por CPF, cadastro de novos profissionais, ficha médica completa, acesso ao monitoramento. |
+
+### /monitoramento
+| Arquivo | Descrição |
+|---------|-----------|
+| `monitoramento.html` | Dashboard para acompanhamento de pacientes pelos profissionais. |
+| `monitoramento.js` | Lógica do painel de monitoramento. |
+
+### /env
+| Arquivo | Descrição |
+|---------|-----------|
+| `env.js` | Credenciais do Supabase (SUPABASE_URL, SUPABASE_KEY). **Não versionar!** |
+| `env.example.js` | Modelo para criar o `env.js`. |
+| `build-env.js` | Script para gerar `env.js` em builds automatizados. |
 
 ---
 
@@ -19,85 +109,112 @@ Objetivos:
 
 ### Área do Paciente
 - Login simplificado por CPF (validação local e remota).
-- Cadastro e envio de queixas com suporte a:
+- Cadastro rápido com dados básicos.
+- Monitoramento diário: PA, peso, glicemia, gestação, atividade física.
+- Envio de registros com suporte a:
   - Texto
-  - Fotos
-  - Vídeos (até 1 min)
-  - Áudios (gravação via MediaRecorder)
-- Biblioteca "Saiba Mais" com áudios e textos pré-carregados que funcionam offline.
-- Histórico de atendimentos com visualização de respostas de profissionais.
-- Indicador de status de sincronização (offline / sincronizando / sincronizado).
+  - Fotos (máx 1MB)
+  - Vídeos (máx 1 min)
+  - Áudios (gravação via MediaRecorder, máx 1 min)
+- Biblioteca educativa com áudios e textos que funcionam offline.
+- Histórico de atendimentos com respostas dos profissionais.
+- Card de status de saúde com alertas visuais.
 
 ### Área do Profissional
-- Dashboard com atendimentos pendentes e cadastros incompletos.
-- Gestão de medicamentos (tipo, dosagem, horários, vigência).
-- Prontuário completo:
+- Autenticação por CPF com cadastro automático.
+- Cadastro completo de pacientes (prontuário médico).
+- Ficha médica detalhada:
   - Dados demográficos
-  - Comorbidades
-  - Metas de saúde (PA mínimo/máximo, glicemia, peso)
-  - Histórico de uso/vícios
-- Chat de atendimento (limitado a 5 interações por caso).
-- Busca de pacientes por CPF ou nome.
+  - Comorbidades (HAS, DM, gestação)
+  - Metas de saúde (PA, glicemia, peso)
+  - Histórico de vícios
+  - Informações de pré-natal
+- Acesso ao dashboard de monitoramento.
+- Envio de fotos clínicas no cadastro.
 
-### Sincronização & Mídias
+### Sincronização & Offline
 - Sincronização bidirecional com Supabase (Postgres + Storage).
-- Loop `syncManager()` executando periodicamente (5–15s) para enviar/receber atualizações.
-- Armazenamento local de mídias (áudios, fotos, vídeos) e envio diferido quando online.
+- Loop `syncManager()` executando periodicamente (5–15s).
+- Armazenamento local de mídias via IndexedDB (Dexie.js).
+- Indicador visual de status de sincronização.
+- Funciona 100% offline (dados salvos localmente).
 
 ---
 
 ## 🏗️ Arquitetura Técnica
 
-- Frontend: React 18 (via Babel Standalone para evitar passos de build complexos).
-- Estilização: TailwindCSS (via CDN).
-- Persistência local: Dexie.js (IndexedDB).
-  - Tabelas:
-    - `perfil` — dados do paciente/profissional
-    - `registros` — atendimentos e mensagens
-    - `midias` — blobs de fotos/vídeos/áudios
-    - `medicamentos` — prescrições e horários
-- Backend / Sync: Supabase (Postgres + Storage)
-- Aplicativo Android: Wrapper (Cordova ou Capacitor) que serve o `index.html` localmente no APK.
+| Tecnologia | Uso |
+|------------|-----|
+| **React 18** | Interface (via Babel Standalone, sem build) |
+| **TailwindCSS** | Estilização (via CDN) |
+| **Dexie.js** | IndexedDB para persistência local |
+| **Supabase** | Backend (Postgres + Storage) |
+
+### Tabelas IndexedDB (Dexie)
+- `perfil` — Dados do paciente
+- `registros` — Atendimentos e mensagens
+- `midias` — Blobs de fotos/vídeos/áudios
+- `medicamentos` — Prescrições e horários
 
 ---
 
-## 📂 Arquivos Principais do Projeto
+## 🚀 Como Rodar
 
-- `index.html` — aplicação inteira (HTML, CSS, JS) num único arquivo.
-- `app-tecendo.apk` — APK Android que carrega `index.html` localmente (via Cordova/Capacitor).
-- `audios/` — pasta opcional com conteúdos de áudio pré-carregados.
+### Opção 1 — Servidor Local (Python)
+```bash
+cd app-tecendo-saude
+python -m http.server 8000
+```
+Acesse: `http://localhost:8000`
+
+### Opção 2 — Live Server (VS Code)
+1. Instale a extensão "Live Server".
+2. Clique com botão direito em `index.html` → "Open with Live Server".
+
+### Opção 3 — Produção
+Faça upload para qualquer hosting estático:
+- GitHub Pages
+- Netlify
+- Vercel
+- S3 + CloudFront
+
+### Requisitos
+- Navegador moderno (Chrome, Firefox, Edge, Safari).
+- Suporte a IndexedDB e MediaRecorder API.
 
 ---
 
-## 🚀 Como Rodar (Desenvolvimento / Teste)
+## ⚙️ Configuração
 
-Opção 1 — Web (rápido, sem build):
-1. Coloque `index.html` (e `audios/` se houver) numa pasta.
-2. Execute um servidor estático simples (ex.: Python):
-   ```bash
-   python -m http.server 8000
-   ```
-3. Abra no navegador: `http://localhost:8000/index.html`
+1. Copie `env/env.example.js` para `env/env.js`.
+2. Preencha as credenciais do Supabase:
+```javascript
+window.__ENV = {
+  SUPABASE_URL: 'https://seu-projeto.supabase.co',
+  SUPABASE_KEY: 'sua-chave-anon'
+};
+```
 
-Requisitos do navegador:
-- Suporte a IndexedDB e MediaRecorder API (Chrome, Firefox, Edge, Safari atualizados).
+---
 
-Opção 2 — Produção (hospedagem estática):
-- Faça upload de `index.html` e da pasta `audios/` para qualquer serviço de hosting estático (GitHub Pages, Netlify, Vercel, S3 + CloudFront, Apache/Nginx).
+## 📱 Build Android (APK)
 
-Opção 3 — Android (APK):
-- O APK (`app-tecendo.apk`) já carrega o `index.html` localmente. Para criar um novo APK a partir do código:
-  - Usando Capacitor:
-    - npm install @capacitor/core @capacitor/cli
-    - npx cap init
-    - npx cap add android
-    - Copie `index.html` e assets para `android/app/src/main/assets/`
-    - npx cap open android (build no Android Studio)
-  - Ou usando Cordova:
-    - cordova create tecendo
-    - cordova platform add android
-    - Substitua `www/index.html` pelo seu `index.html`
-    - cordova build android
+### Usando Capacitor
+```bash
+npm install @capacitor/core @capacitor/cli
+npx cap init
+npx cap add android
+# Copie os arquivos para android/app/src/main/assets/
+npx cap open android
+```
+
+### Usando Cordova
+```bash
+cordova create tecendo
+cordova platform add android
+# Substitua www/ pelos arquivos do projeto
+cordova build android
+```
 
 Permissões necessárias no Android:
 - CAMERA
@@ -111,21 +228,21 @@ Permissões necessárias no Android:
 
 ### Desenvolvimento local
 
-1. Crie um arquivo `env.js` (não versionado) com o conteúdo:
+1. Crie um arquivo `env/env.js` (não versionado) com o conteúdo:
    ```javascript
    window.__ENV = {
      SUPABASE_URL: 'https://<sua-instancia>.supabase.co',
      SUPABASE_KEY: 'sb_publishable_...'
    };
    ```
-2. Garanta que o arquivo está na mesma pasta do `index.html` quando rodar localmente.
+2. Garanta que o arquivo está em `env/env.js` quando rodar localmente.
 
 ### Deploy estático no Netlify
 
 1. Adicione no painel do Netlify as variáveis `SUPABASE_URL` e `SUPABASE_KEY`.
-2. Defina o comando de build como `node build-env.js` (ou adicione à pipeline existente).
+2. Defina o comando de build como `node env/build-env.js` (ou adicione à pipeline existente).
 3. Mantenha o diretório de publicação como `.` (raiz do repositório).
-4. Durante o build, o script `build-env.js` gera automaticamente um `env.js` contendo `window.__ENV = { SUPABASE_URL, SUPABASE_KEY }`, garantindo que o arquivo esteja presente no deploy sem precisar versionar segredos.
+4. Durante o build, o script `env/build-env.js` gera automaticamente um `env/env.js` contendo `window.__ENV = { SUPABASE_URL, SUPABASE_KEY }`, garantindo que o arquivo esteja presente no deploy sem precisar versionar segredos.
 
 Observações:
 - Use a Public (anon) key apenas para operações seguras e públicas. Para operações sensíveis, implemente regras no Supabase (políticas RLS) e endpoints server-side.
@@ -148,7 +265,7 @@ Modelos de tabelas (exemplo resumido):
   - Políticas RLS no Supabase.
   - Criptografia a nível de campo para dados sensíveis se requerido.
   - Backups regulares do banco (Supabase exportações).
-  - Nunca versionar chaves: use `.env`/variáveis do deploy para gerar `env.js` (já ignorado no git) com `window.__ENV = { SUPABASE_URL, SUPABASE_KEY }`. Gere nova chave se alguma foi exposta.
+  - Nunca versionar chaves: use `.env`/variáveis do deploy para gerar `env/env.js` (já ignorado no git) com `window.__ENV = { SUPABASE_URL, SUPABASE_KEY }`. Gere nova chave se alguma foi exposta.
 
 ## ⚠️ Limitações e Recomendações
   - Vídeos hospedados externamente (ej. YouTube) requerem conexão ativa.
