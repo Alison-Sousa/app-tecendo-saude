@@ -23,13 +23,11 @@ app-tecendo-saude/
 ├── index.html    # Tela inicial e roteador principal
 ├── README.md     # Documentação do projeto
 │
-├── arquivos/     # Diretório para arquivos diversos
-│
-├── audios/       # Áudios educativos pré-carregados
+├── audios/       # Áudios educativos
 │   ├── Alerta.mp3
-│   ├── Hipertensão.mp3  # Conteúdo sobre pressão alta
-│   ├── Infância.mp3     # Cuidados infantis
-│   └── Gestação.mp3     # Cuidados na gestação
+│   ├── Hipertensão.mp3 # Conteúdo sobre pressão alta
+│   ├── Infância.mp3  # Cuidados infantis
+│   └── Gestação.mp3  # Cuidados na gestação
 │
 ├── database/            # Scripts de banco de dados
 │   ├── database-config.sql   # Configuração do Supabase
