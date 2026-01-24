@@ -75,11 +75,6 @@ app-tecendo-saude/
 | `index.html` | Tela de boas-vindas e roteador. Direciona para área de usuários ou profissionais. |
 | `README.md` | Esta documentação. |
 
-### /arquivos
-| Arquivo | Descrição |
-|---------|-----------|
-| (Diretório vazio) | Diretório reservado para arquivos diversos do projeto. |
-
 ### /audios
 | Arquivo | Descrição |
 |---------|-----------|
