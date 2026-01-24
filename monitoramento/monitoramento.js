@@ -164,6 +164,45 @@ let replyAudioMs = 0;
 let registroSelecionadoChat = null;
 const mediaCache = new Map();
 
+function normalizarRepliesJson(reg) {
+  const raw = reg?.replies_json;
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {}
+  }
+  return [];
+}
+
+function montarTextoPadrao(reg) {
+  const partes = [];
+  if (reg?.pa_sistolica) partes.push(`PA: ${reg.pa_sistolica}/${reg.pa_diastolica || '-'}`);
+  if (reg?.peso_kg) partes.push(`Peso: ${reg.peso_kg}kg`);
+  if (reg?.glicemia_mg) partes.push(`Glicemia: ${reg.glicemia_mg}`);
+  if (reg?.atividade_fisica) partes.push(`Atividade: ${reg.atividade_fisica}`);
+  return partes.join(' | ');
+}
+
+// ============================================
+// NOTIFICAÇÕES
+// ============================================
+async function notifyProfissional(title, body, tag, minIntervalMs = 60000) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch { return; }
+  }
+  if (Notification.permission !== 'granted') return;
+  const key = `notify_${tag}`;
+  const last = Number(localStorage.getItem(key) || 0);
+  if (last && (Date.now() - last) < minIntervalMs) return;
+  try {
+    new Notification(title, { body, icon: '../img/logo.png', tag });
+    localStorage.setItem(key, String(Date.now()));
+  } catch {}
+}
+
 // ============================================
 // INICIALIZAÇÃO
 // ============================================
@@ -184,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // CARREGAR DADOS DO SUPABASE
 // ============================================
 async function carregarDados() {
-  mostrarLoading('Carregando pacientes...');
+  mostrarLoading('Carregando usuários do SUS...');
   // Limpar cache de mídia para buscar dados novos
   mediaCache.clear();
   
@@ -234,13 +273,17 @@ async function carregarDados() {
     console.log('Registros recebidos:', registrosData?.length || 0);
     
     pacientes = perfisData || [];
-    registros = registrosData || [];
+    registros = (registrosData || []).map(r => {
+      const replies = normalizarRepliesJson(r);
+      const texto = (r.texto && String(r.texto).trim()) ? r.texto : montarTextoPadrao(r);
+      return { ...r, replies_json: replies, texto };
+    });
     
     console.log('Perfis carregados:', pacientes.length);
     console.log('Registros carregados:', registros.length);
     
     if (pacientes.length === 0) {
-      mostrarErro('Nenhum paciente cadastrado no banco de dados. Execute o SQL de seed no Supabase.');
+      mostrarErro('Nenhum usuário do SUS cadastrado no banco de dados. Execute o SQL de seed no Supabase.');
       return;
     }
     
@@ -252,6 +295,20 @@ async function carregarDados() {
       const ordem = { critico: 0, atencao: 1, estavel: 2, sem_dados: 3 };
       return ordem[a.classificacao] - ordem[b.classificacao];
     });
+
+    // 5. Notificações para o profissional
+    const totalNovas = registros.reduce((acc, reg) => acc + contarNovasMensagens(reg), 0);
+    const criticos = pacientes.filter(p => p.classificacao === 'critico').length;
+    const lastMsgCount = Number(localStorage.getItem('pro_last_msg_count') || 0);
+    const lastCritCount = Number(localStorage.getItem('pro_last_crit_count') || 0);
+    if (totalNovas > lastMsgCount) {
+      notifyProfissional('Novas mensagens', `Você tem ${totalNovas} nova(s) mensagem(ns) de pacientes.`, 'pro_novas_mensagens');
+    }
+    if (criticos > lastCritCount) {
+      notifyProfissional('Alerta de pacientes críticos', `Há ${criticos} paciente(s) em estado crítico.`, 'pro_criticos');
+    }
+    localStorage.setItem('pro_last_msg_count', String(totalNovas));
+    localStorage.setItem('pro_last_crit_count', String(criticos));
     
     atualizarEstatisticas();
     renderizarListaPacientes();
@@ -269,7 +326,11 @@ function classificarPaciente(paciente) {
   // Buscar todos os registros deste paciente
   const regsDoPC = registros.filter(r => r.patient_id === paciente.patient_id);
   const regsOrdenados = regsDoPC.sort((a, b) => new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0));
-  const ultimoRegClinico = regsOrdenados.find(r => r.tipo !== 'cadastro') || regsOrdenados[0];
+  const temVitais = r => r && (r.pa_sistolica != null || r.pa_diastolica != null || r.glicemia_mg != null || r.peso_kg != null);
+  const ultimoRegClinico = regsOrdenados.find(r => r.tipo !== 'cadastro' && temVitais(r))
+    || regsOrdenados.find(r => r.tipo !== 'cadastro')
+    || regsOrdenados.find(temVitais)
+    || regsOrdenados[0];
   const ultimoReg = ultimoRegClinico; // Preferir registro clínico para classificação
   
   let classificacao = 'sem_dados';
@@ -446,17 +507,33 @@ function renderizarListaPacientes() {
     );
   }
   
-  // Filtrar por status
+  // Filtrar por status e condições
   if (filtroAtual !== 'all') {
     const map = { critical: 'critico', warning: 'atencao', stable: 'estavel' };
-    lista = lista.filter(p => p.classificacao === map[filtroAtual]);
+    if (map[filtroAtual]) {
+      lista = lista.filter(p => p.classificacao === map[filtroAtual]);
+    } else if (filtroAtual === 'gestante') {
+      lista = lista.filter(p => normalizarSim(p.dadosVitais?.gestante) || normalizarSim(p.gestante) || (parseInt(p.gestacao_semanas) || 0) > 0);
+    } else if (filtroAtual === 'filhos') {
+      lista = lista.filter(p => {
+        let filhos = [];
+        try { filhos = p.filhos_json ? JSON.parse(p.filhos_json) : []; } catch { filhos = []; }
+        const qtd = (parseInt(p.qtd_filhos) || 0);
+        return normalizarSim(p.tem_filhos) || filhos.length > 0 || qtd > 0;
+      });
+    } else if (filtroAtual === 'idoso') {
+      lista = lista.filter(p => {
+        const idadeNum = parseInt(calcularIdade(p.nascimento)) || 0;
+        return idadeNum >= 60;
+      });
+    }
   }
   
   if (lista.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">🔍</div>
-        <p>Nenhum paciente encontrado</p>
+        <p>Nenhum usuário do SUS encontrado</p>
       </div>
     `;
     return;
@@ -480,10 +557,24 @@ function renderizarListaPacientes() {
     const hasNovas = contarNovasMensagens(p.historico || p.ultimoRegistro) > 0;
     const badgeMsg = hasNovas ? `<span class="msg-badge">✉ Nova mensagem</span>` : '';
     
-    const isGest = normalizarSim(p.dadosVitais?.gestante) || normalizarSim(p.gestante);
-    const semanas = p.dadosVitais?.gestacao_semanas ? `${p.dadosVitais.gestacao_semanas} semanas` : 'Gestante';
-    const gestText = isGest ? `🤰 Gestação ${semanas}` : '';
+    const isGest = normalizarSim(p.dadosVitais?.gestante) || normalizarSim(p.gestante) || (parseInt(p.gestacao_semanas) || 0) > 0;
+    const semanas = p.dadosVitais?.gestacao_semanas || p.gestacao_semanas;
+    const gestText = isGest ? `🤰 Gestação ${semanas ? semanas + ' semanas' : ''}` : '';
     const subtitulo = [gestText, p.ubs_referencia || '', dataUlt].filter(Boolean).join(' • ');
+
+    let filhos = [];
+    try { filhos = p.filhos_json ? JSON.parse(p.filhos_json) : []; } catch { filhos = []; }
+    const qtdFilhos = Math.max(filhos.length, parseInt(p.qtd_filhos) || 0);
+    const temFilhos = normalizarSim(p.tem_filhos) || qtdFilhos > 0;
+
+    const idadeNum = parseInt(calcularIdade(p.nascimento)) || 0;
+    const isIdoso = idadeNum >= 60;
+
+    const tagsExtras = [
+      isGest ? '<span class="badge badge-info">🤰 Gestante</span>' : '',
+      temFilhos ? `<span class="badge badge-info">👶 ${qtdFilhos || ''} filho${qtdFilhos === 1 ? '' : 's'}</span>` : '',
+      isIdoso ? '<span class="badge badge-info">👴 60+</span>' : ''
+    ].filter(Boolean).join('');
 
     return `
       <div class="patient-row ${classe}" ondblclick="selecionarPaciente('${p.patient_id}')" onclick="selecionarPaciente('${p.patient_id}')">
@@ -491,6 +582,7 @@ function renderizarListaPacientes() {
         <div>
           <div class="font-semibold">${p.nome || 'Sem nome'}</div>
           <div class="text-xs text-muted">${subtitulo || 'Sem registro'} ${badgeMsg}</div>
+          ${tagsExtras ? `<div class="mt-1 flex gap-2 flex-wrap">${tagsExtras}</div>` : ''}
         </div>
         <div class="text-sm">${pa}</div>
         <div class="text-sm">${glic}</div>
@@ -509,11 +601,18 @@ function contarNovasMensagens(regOrList) {
   const contarPorRegistro = (reg) => {
     if (!reg) return 0;
     let count = 0;
-    const replies = Array.isArray(reg.replies_json) ? reg.replies_json : [];
-    const hasProReply = !!reg.resposta || replies.some(r => r.from === 'pro');
-    if (reg.texto && !hasProReply) count += 1;
+    const replies = normalizarRepliesJson(reg);
+    const isAutoReply = r => {
+      const name = String(r?.pro_name || '').trim();
+      const text = String(r?.text || '').trim();
+      const autoText = text && text.toLowerCase().includes('em breve') && text.toLowerCase().includes('ubs');
+      return name === 'Equipe de Saúde' && autoText;
+    };
+    const respostaAuto = String(reg.resposta || '').toLowerCase().includes('em breve') && String(reg.resposta || '').toLowerCase().includes('ubs');
+    const hasRealProReply = (!!reg.resposta && !respostaAuto) || replies.some(r => r.from === 'pro' && !isAutoReply(r));
+    if (reg.texto && !hasRealProReply) count += 1;
     let lastProIdx = -1;
-    replies.forEach((r, i) => { if (r.from === 'pro') lastProIdx = i; });
+    replies.forEach((r, i) => { if (r.from === 'pro' && !isAutoReply(r)) lastProIdx = i; });
     for (let i = lastProIdx + 1; i < replies.length; i += 1) {
       if (replies[i].from !== 'pro') count += 1;
     }
@@ -550,11 +649,30 @@ function selecionarPaciente(patientId) {
   
   abrirPainelDetalhe();
   
-  document.getElementById('detailName').textContent = pacienteSelecionado.nome || 'Paciente';
+  document.getElementById('detailName').textContent = pacienteSelecionado.nome || 'Usuário do SUS';
+  
+  // Calcular idade e verificar se é idoso
+  const idadePac = calcularIdade(pacienteSelecionado.nascimento);
+  const idadeNum = parseInt(idadePac) || 0;
+  const ehIdosoPac = idadeNum >= 60;
+  
+  // Verificar se tem filhos
+  const temFilhosPac = pacienteSelecionado.tem_filhos === 'Sim' || pacienteSelecionado.tem_filhos === 'sim';
+  let qtdFilhosPac = 0;
+  try {
+    const filhosArr = pacienteSelecionado.filhos_json ? JSON.parse(pacienteSelecionado.filhos_json) : [];
+    qtdFilhosPac = Array.isArray(filhosArr) ? filhosArr.length : 0;
+  } catch { qtdFilhosPac = 0; }
+  if (!qtdFilhosPac && pacienteSelecionado.qtd_filhos) qtdFilhosPac = parseInt(pacienteSelecionado.qtd_filhos) || 0;
+  
+  // Labels
   const gestSemanas = pacienteSelecionado.dadosVitais?.gestacao_semanas;
   const gestLabel = pacienteSelecionado.dadosGestacionais ? ` • 🤰 Gestação ${gestSemanas ? gestSemanas + ' semanas' : ''}` : '';
+  const idosoLabel = ehIdosoPac ? ' • 👴 Idoso' : '';
+  const filhosLabel = (temFilhosPac || qtdFilhosPac > 0) ? ` • 👶 ${qtdFilhosPac} filho${qtdFilhosPac !== 1 ? 's' : ''}` : '';
+  
   document.getElementById('detailMeta').innerHTML = `
-    ${pacienteSelecionado.cpf || ''} • ${calcularIdade(pacienteSelecionado.nascimento)}${gestLabel}
+    ${pacienteSelecionado.cpf || ''} • ${idadePac}${idosoLabel}${filhosLabel}${gestLabel}
   `;
   
   const header = document.getElementById('detailHeader');
@@ -605,7 +723,16 @@ function showTab(tabName) {
 // ============================================
 function renderizarResumo(container) {
   const p = pacienteSelecionado;
-  const v = p.dadosVitais || {};
+  const historico = Array.isArray(p.historico) ? p.historico : [];
+  const temVitais = r => r && (r.pa_sistolica != null || r.pa_diastolica != null || r.glicemia_mg != null || r.peso_kg != null);
+  const ultimo = p.ultimoRegistro || historico.find(temVitais) || historico[0] || {};
+  const v = { ...(p.dadosVitais || {}) };
+  if (v.pa_sistolica == null && ultimo.pa_sistolica != null) v.pa_sistolica = ultimo.pa_sistolica;
+  if (v.pa_diastolica == null && ultimo.pa_diastolica != null) v.pa_diastolica = ultimo.pa_diastolica;
+  if (v.glicemia == null && ultimo.glicemia_mg != null) v.glicemia = ultimo.glicemia_mg;
+  if (v.peso == null && ultimo.peso_kg != null) v.peso = ultimo.peso_kg;
+  if (v.data == null && (ultimo.created_at || ultimo.updated_at)) v.data = ultimo.created_at || ultimo.updated_at;
+  if (v.atividade_fisica == null && ultimo.atividade_fisica != null) v.atividade_fisica = ultimo.atividade_fisica;
   
   const classPA = v.pa_sistolica >= LIMITES.PA_SISTOLICA.ALTA ? 'danger' : 
                   v.pa_sistolica >= LIMITES.PA_SISTOLICA.ELEVADA ? 'warning' : '';
@@ -668,14 +795,39 @@ function renderizarResumo(container) {
     `;
   }
   
+  // Idade e verificação de idoso
+  const idadePaciente = (() => {
+    if (!p.nascimento) return null;
+    const nasc = new Date(p.nascimento.split('/').reverse().join('-'));
+    if (isNaN(nasc.getTime())) return null;
+    const hoje = new Date();
+    let anos = hoje.getFullYear() - nasc.getFullYear();
+    const mesAtual = hoje.getMonth();
+    const mesNasc = nasc.getMonth();
+    if (mesAtual < mesNasc || (mesAtual === mesNasc && hoje.getDate() < nasc.getDate())) anos--;
+    return anos;
+  })();
+  const ehIdoso = idadePaciente && idadePaciente >= 60;
+
+  // Verificação de filhos
+  const temFilhosCheck = p.tem_filhos === 'Sim' || p.tem_filhos === 'sim';
+  let qtdFilhosNum = 0;
+  try {
+    const filhosArr = p.filhos_json ? JSON.parse(p.filhos_json) : [];
+    qtdFilhosNum = Array.isArray(filhosArr) ? filhosArr.length : 0;
+  } catch { qtdFilhosNum = 0; }
+  if (!qtdFilhosNum && p.qtd_filhos) qtdFilhosNum = parseInt(p.qtd_filhos) || 0;
+
   // Condições
   html += `
     <div class="section-title mt-4">Condições de Saúde</div>
     <div class="flex gap-2 flex-wrap">
-      ${p.hipertensao === 'Sim' ? '<span class="badge badge-danger">Hipertensão</span>' : ''}
-      ${p.diabetes === 'Sim' ? '<span class="badge badge-danger">Diabetes</span>' : ''}
-      ${p.vicios && p.vicios !== 'Nenhum relato' && p.vicios !== 'nenhum' ? `<span class="badge badge-warning">${p.vicios}</span>` : ''}
-      ${(!p.hipertensao || p.hipertensao === 'Não' || p.hipertensao === 'nao') && (!p.diabetes || p.diabetes === 'Não' || p.diabetes === 'nao') ? '<span class="badge badge-success">Sem comorbidades</span>' : ''}
+      ${ehIdoso ? '<span class="badge badge-info" style="background:#9333ea;color:#fff;">👴 Idoso (60+)</span>' : ''}
+      ${temFilhosCheck || qtdFilhosNum > 0 ? `<span class="badge badge-info" style="background:#0891b2;color:#fff;">👶 ${qtdFilhosNum} filho${qtdFilhosNum !== 1 ? 's' : ''}</span>` : ''}
+      ${p.hipertensao === 'Sim' ? '<span class="badge badge-danger">❤️ Hipertensão</span>' : ''}
+      ${p.diabetes === 'Sim' ? '<span class="badge badge-danger">🩸 Diabetes</span>' : ''}
+      ${p.vicios && !['Nenhum relato','nenhum','Não tem vício'].includes(p.vicios) ? `<span class="badge badge-warning">⚠️ ${p.vicios}</span>` : ''}
+      ${(!p.hipertensao || p.hipertensao === 'Não' || p.hipertensao === 'nao') && (!p.diabetes || p.diabetes === 'Não' || p.diabetes === 'nao') && !ehIdoso ? '<span class="badge badge-success">✅ Sem comorbidades</span>' : ''}
     </div>
   `;
   
@@ -696,9 +848,233 @@ function renderizarResumo(container) {
     `;
   }
   
-  html += `<button class="btn btn-primary btn-block mt-4" onclick="abrirModalMensagem()">💬 Enviar Mensagem</button>`;
+  html += `
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
+      <button class="btn btn-primary btn-block" onclick="abrirFichaCadastral()">📋 Ficha Cadastral</button>
+      <button class="btn btn-secondary btn-block" onclick="abrirModalMensagem()">💬 Enviar Mensagem</button>
+    </div>
+  `;
   
   container.innerHTML = html;
+}
+
+function fecharFichaCadastral() {
+  const modal = document.getElementById('fichaModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatarCampo(value) {
+  if (value === null || value === undefined) return 'Não informado';
+  const str = String(value).trim();
+  return str ? escapeHtml(str) : 'Não informado';
+}
+
+function renderCampo(label, value) {
+  return `
+    <div class="card" style="padding:12px;">
+      <div class="text-xs text-muted">${escapeHtml(label)}</div>
+      <div class="font-semibold">${formatarCampo(value)}</div>
+    </div>
+  `;
+}
+
+async function obterFotosClinicasCadastro(p) {
+  const cadastroRegs = (p.historico || []).filter(r => r.tipo === 'cadastro');
+  if (cadastroRegs.length === 0) return [];
+
+  const fotos = [];
+  const seen = new Set();
+
+  const addFoto = (item) => {
+    if (!item) return;
+    let url = item.url || '';
+    let path = item.path || '';
+    let type = item.type || '';
+    if (!type && path) type = tipoMidiaPorNome(path);
+    if (!url && path && supabase) {
+      const { data } = supabase.storage.from('midias').getPublicUrl(path);
+      url = data?.publicUrl || '';
+    }
+    if (!url || !String(type).startsWith('image')) return;
+    const key = `${url}::${path}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    fotos.push({ url, type: type || 'image', path });
+  };
+
+  for (const reg of cadastroRegs) {
+    const replies = Array.isArray(reg.replies_json) ? reg.replies_json : [];
+    replies.forEach(r => {
+      (Array.isArray(r.media) ? r.media : []).forEach(addFoto);
+    });
+    if (supabase) {
+      const mids = await listarMidiasRegistro(reg.registro_id);
+      (mids || []).forEach(addFoto);
+    }
+  }
+
+  return fotos;
+}
+
+async function abrirFichaCadastral() {
+  if (!pacienteSelecionado) return;
+  const modal = document.getElementById('fichaModal');
+  const body = document.getElementById('fichaModalBody');
+  if (!modal || !body) return;
+
+  const p = pacienteSelecionado;
+  const fotoPerfil = p.foto_url || '';
+  const iniciais = (p.nome || 'U').trim().charAt(0).toUpperCase();
+  const idade = calcularIdade(p.nascimento);
+
+  const fotosClinicas = await obterFotosClinicasCadastro(p);
+  const fotosHtml = fotosClinicas.length
+    ? `<div class="media-grid">${fotosClinicas.map(m => renderizarMidiaHtml(m)).join('')}</div>`
+    : `<div class="text-xs text-muted">Nenhuma foto clínica cadastrada.</div>`;
+
+  body.innerHTML = `
+    <div class="flex items-center gap-4 mb-4">
+      ${fotoPerfil ? `<img src="${escapeHtml(fotoPerfil)}" alt="foto" style="width:72px;height:72px;border-radius:16px;object-fit:cover;border:2px solid #e2e8f0;" />`
+        : `<div style="width:72px;height:72px;border-radius:16px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;color:#475569;">${iniciais}</div>`}
+      <div>
+        <div class="text-lg font-bold">${formatarCampo(p.nome)}</div>
+        <div class="text-xs text-muted">${formatarCampo(p.cpf)} • ${idade || 'Idade não informada'}</div>
+      </div>
+    </div>
+
+    <div class="section-title">Identificação</div>
+    <div class="grid grid-2">
+      ${renderCampo('Nome completo', p.nome)}
+      ${renderCampo('CPF', p.cpf)}
+      ${renderCampo('Nascimento', p.nascimento)}
+      ${renderCampo('Idade', idade)}
+      ${renderCampo('Gênero', p.genero)}
+      ${renderCampo('Raça/Cor', p.raca)}
+      ${renderCampo('Escolaridade', p.escolaridade)}
+      ${renderCampo('Profissão', p.profissao)}
+    </div>
+
+    <div class="section-title">Contato e Território</div>
+    <div class="grid grid-2">
+      ${renderCampo('Telefone', p.telefone)}
+      ${renderCampo('Endereço', p.endereco)}
+      ${renderCampo('Região', p.regiao)}
+      ${renderCampo('UBS de referência', p.ubs_referencia)}
+      ${renderCampo('Equipe UBS', p.equipe_ubs)}
+      ${renderCampo('ACS responsável', p.acs_responsavel)}
+      ${renderCampo('Mora sozinho?', p.mora_sozinho)}
+      ${renderCampo('Mora com companheiro(a)?', p.mora_companheiro)}
+    </div>
+
+    <div class="section-title">Filhos</div>
+    <div class="grid grid-2">
+      ${renderCampo('Tem filhos', p.tem_filhos)}
+      ${renderCampo('Quantidade', p.qtd_filhos)}
+    </div>
+    ${(() => {
+      let filhos = [];
+      try { filhos = p.filhos_json ? JSON.parse(p.filhos_json) : []; } catch { filhos = []; }
+      if (!Array.isArray(filhos) || filhos.length === 0) return '';
+      return `
+        <div class="card" style="padding:12px;">
+          <div class="text-xs text-muted mb-2">Detalhes dos filhos</div>
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+            ${filhos.map((f, i) => `
+              <div class="card" style="padding:10px;">
+                <div class="text-xs font-bold">Filho ${i + 1}</div>
+                <div class="text-xs text-muted">Nome</div>
+                <div class="font-semibold">${formatarCampo(f.nome)}</div>
+                <div class="text-xs text-muted">Idade</div>
+                <div class="font-semibold">${formatarCampo(f.idade)}</div>
+                <div class="text-xs text-muted">Vacinação</div>
+                <div class="font-semibold">${formatarCampo(f.vacinaStatus)}</div>
+                <div class="text-xs text-muted">Data</div>
+                <div class="font-semibold">${formatarCampo(f.vacinaData)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    })()}
+
+    <div class="section-title">Condições e Diagnósticos</div>
+    <div class="grid grid-2">
+      ${renderCampo('Hipertensão', p.hipertensao)}
+      ${renderCampo('Tempo diagnóstico - HAS', p.tempo_diag_has)}
+      ${renderCampo('Diabetes', p.diabetes)}
+      ${renderCampo('Tempo diagnóstico - DM', p.tempo_diag_dm)}
+      ${renderCampo('Infecção urinária na gestação', p.infeccao_urinaria_gestacao)}
+      ${renderCampo('Vícios', p.vicios)}
+      ${renderCampo('Tempo de vício', p.tempo_vicio)}
+      ${renderCampo('Condições (marcadas)', p.condicoes)}
+    </div>
+
+    <div class="section-title">Antropometria</div>
+    <div class="grid grid-2">
+      ${renderCampo('Altura', p.altura)}
+      ${renderCampo('Peso inicial', p.peso_inicial)}
+      ${renderCampo('Peso atual', p.peso_atual)}
+      ${renderCampo('Peso 1ª consulta pré-natal', p.peso_primeira_consulta)}
+      ${renderCampo('IMC pré-gestacional', p.imc_pre_gestacional)}
+    </div>
+
+    <div class="section-title">Gestação</div>
+    <div class="grid grid-2">
+      ${renderCampo('DUM', p.dum)}
+      ${renderCampo('Semanas de gestação', p.gestacao_semanas)}
+      ${renderCampo('Previsão do parto', p.previsao_parto)}
+      ${renderCampo('Faz pré-natal?', p.faz_pre_natal)}
+      ${renderCampo('Início do pré-natal', p.inicio_pre_natal)}
+      ${renderCampo('Última consulta pré-natal', p.data_ultima_consulta_pre_natal)}
+    </div>
+
+    <div class="section-title">Visão e Saúde Bucal</div>
+    <div class="grid grid-2">
+      ${renderCampo('Enxerga bem?', p.enxerga_bem)}
+      ${renderCampo('Consulta com oftalmologista', p.consulta_oftalmo)}
+      ${renderCampo('Tempo da consulta oftalmo', p.tempo_consulta_oftalmo)}
+      ${renderCampo('Dificuldade mastigar/falar/engolir', p.dificuldade_mastigar_falar_engolir)}
+    </div>
+
+    <div class="section-title">Medicações</div>
+    <div class="grid grid-2">
+      ${renderCampo('Faz uso de medicações?', p.uso_medicacoes)}
+      ${renderCampo('Nomes', p.nomes_medicacoes)}
+      ${renderCampo('Posologia - Dosagem', p.posologia_dosagem)}
+      ${renderCampo('Posologia - Horário', p.posologia_horario)}
+      ${renderCampo('Última prescrição', p.data_ultima_prescricao)}
+      ${renderCampo('Última dispensação', p.data_ultima_dispensacao)}
+    </div>
+
+    <div class="section-title">Atividade Física</div>
+    <div class="grid grid-2">
+      ${renderCampo('Faz atividade física?', p.atividade_fisica)}
+      ${renderCampo('Frequência', p.freq_atividade)}
+      ${renderCampo('Tipo de atividade', p.tipo_atividade)}
+    </div>
+
+    <div class="section-title">Metas de Saúde</div>
+    <div class="grid grid-2">
+      ${renderCampo('Meta de peso', p.meta_peso)}
+      ${renderCampo('Meta de glicemia', p.meta_glicemia)}
+      ${renderCampo('Meta PA mínima', p.meta_pa_min)}
+      ${renderCampo('Meta PA máxima', p.meta_pa_max)}
+    </div>
+
+    <div class="section-title">Fotos clínicas (opcional)</div>
+    ${fotosHtml}
+  `;
+
+  modal.style.display = 'flex';
 }
 
 // ============================================
@@ -996,13 +1372,14 @@ async function obterMensagensRegistro(reg) {
     });
   };
 
-  if (reg.texto || midiasPaciente.length) {
-    msgs.push({ tipo: 'received', texto: reg.texto || '', data: reg.created_at, media: midiasPaciente });
+  const textoPaciente = (reg.texto && String(reg.texto).trim()) ? reg.texto : montarTextoPadrao(reg);
+  if (textoPaciente || midiasPaciente.length) {
+    msgs.push({ tipo: 'received', texto: textoPaciente || '', data: reg.created_at, media: midiasPaciente });
   }
   if (reg.resposta || midiasPro.length) {
     msgs.push({ tipo: 'sent', texto: reg.resposta || '', data: reg.resposta_data || reg.updated_at, media: midiasPro });
   }
-  (reg.replies_json || []).forEach(r => {
+  normalizarRepliesJson(reg).forEach(r => {
     const media = normalizarMediaList(Array.isArray(r.media) ? r.media : []);
     msgs.push({
       tipo: r.from === 'pro' ? 'sent' : 'received',
@@ -1077,7 +1454,7 @@ function abrirModalMensagem(registroId) {
     ? historico.find(r => r.registro_id === registroId)
     : pacienteSelecionado.ultimoRegistro || historico[0] || null;
   if (!registroSelecionadoChat) {
-    alert('Paciente sem registro para responder');
+    alert('Usuário do SUS sem registro para responder');
     return;
   }
   document.getElementById('messageModal').style.display = 'flex';
@@ -1150,7 +1527,7 @@ async function enviarMensagem() {
   if ((!texto && !replyAudioBlob) || !pacienteSelecionado || !supabase) return;
   const reg = registroSelecionadoChat || pacienteSelecionado.ultimoRegistro;
   if (!reg) {
-    alert('Paciente sem registro para responder');
+    alert('Usuário do SUS sem registro para responder');
     return;
   }
   

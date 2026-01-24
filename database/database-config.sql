@@ -39,6 +39,9 @@ create table perfis (
   profissao text,
   mora_sozinho text,
   mora_companheiro text,
+  tem_filhos text,
+  qtd_filhos text,
+  filhos_json text,
   acs_responsavel text,
   equipe_ubs text,
   hipertensao text,
@@ -172,3 +175,7 @@ create policy midias_select on storage.objects for select using (bucket_id = 'mi
 create policy midias_insert on storage.objects for insert with check (bucket_id = 'midias');
 create policy midias_update on storage.objects for update using (bucket_id = 'midias') with check (bucket_id = 'midias');
 create policy midias_delete on storage.objects for delete using (bucket_id = 'midias');
+
+-- 9. VIEW - FICHAS CADASTRAIS COMPLETAS
+create or replace view fichas_cadastrais as
+select * from perfis;

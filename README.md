@@ -19,48 +19,51 @@ O **Tecendo Saúde** é uma aplicação web projetada para conectar pacientes e 
 
 ```
 app-tecendo-saude/
-├── index.html     # Tela inicial e roteador principal
-├── README.md                     # Documentação do projeto
+├── build-env.js  # Script de build para ambiente
+├── index.html    # Tela inicial e roteador principal
+├── README.md     # Documentação do projeto
 │
-├── js/                           # Módulos JavaScript compartilhados
-│   ├── config.js                 # Configurações, constantes e listas (UBS, ACS, etc)
-│   ├── utils.js    # Funções utilitárias (máscaras, formatação, sync)
-│   └── components.js  # Componentes React reutilizáveis
+├── arquivos/     # Diretório para arquivos diversos
 │
-├── pacientes/         # Área exclusiva do paciente
-│   └── pacientes.html # App completo do paciente (login, dashboard, registros)
-│
-├── profissionais/     # Área exclusiva do profissional
-│   └── profissionais.html # App completo do profissional (login, cadastro, dashboard)
-│
-├── monitoramento/     # Dashboard de monitoramento
-│   ├── monitoramento.html  # Painel de acompanhamento de pacientes
-│   └── monitoramento.js    # Lógica do monitoramento
-│
-├── env/     # Configurações de ambiente
-│   ├── env.js # Credenciais Supabase (NÃO versionar)
-│   ├── env.example.js # Exemplo de configuração
-│   └── build-env.js   # Script de build para ambiente
-│
-├── audios/  # Áudios educativos pré-carregados
+├── audios/       # Áudios educativos pré-carregados
 │   ├── Alerta.mp3
-    ├──Hipertensão.mp3   # Conteúdo sobre pressão alta
+│   ├── Hipertensão.mp3  # Conteúdo sobre pressão alta
 │   ├── Infância.mp3     # Cuidados infantis
 │   └── Gestação.mp3     # Cuidados na gestação
 │
-├── img/                 # Imagens e assets visuais
-│   └── logo.png         # Logo do aplicativo
+├── database/            # Scripts de banco de dados
+│   ├── database-config.sql   # Configuração do Supabase
+│   └── seed-dados.sql   # Dados iniciais
 │
-├── styles/              # Estilos CSS
-│   └── styles.css       # CSS global (usado em páginas específicas)
+├── env/    # Configurações de ambiente
+│   ├── build-env.js   # Script de build para ambiente
+│   ├── env.example.js # Exemplo de configuração
+│   └── env.js  # Credenciais Supabase (NÃO versionar)
 │
-├── textos/              # Documentação de fluxos
-│   ├── paciente.md      # Fluxo do paciente
-│   └── profissional.md  # Fluxo do profissional
+├── img/   # Imagens e assets visuais
+│   └── logo.png  # Logo do aplicativo
 │
-└── database/            # Scripts de banco de dados
-    ├── database-config.sql  # Configuração do Supabase
-    └── seed-dados.sql  # Dados iniciais
+├── js/    # Módulos JavaScript compartilhados
+│   ├── components.js  # Componentes React reutilizáveis
+│   ├── config.js  # Configurações, constantes e listas (UBS, ACS, etc)
+│   └── utils.js   # Funções utilitárias (máscaras, formatação, sync)
+│
+├── monitoramento/ # Dashboard de monitoramento
+│   ├── monitoramento.html # Painel de acompanhamento de pacientes
+│   └── monitoramento.js   # Lógica do monitoramento
+│
+├── profissionais/  # Área exclusiva do profissional
+│   └── profissionais.html  # App completo do profissional (login, cadastro, dashboard)
+│
+├── styles/          # Estilos CSS
+│   └── styles.css   # CSS global (usado em páginas específicas)
+│
+├── textos/          # Documentação de fluxos
+│   ├── paciente.md       # Fluxo do paciente
+│   └── profissional.md   # Fluxo do profissional
+│
+└── usuarios/  # Área dos usuários (pacientes)
+    └── usuarios.html  # App completo do usuário/paciente (login, dashboard, registros)
 ```
 
 ---
@@ -70,25 +73,47 @@ app-tecendo-saude/
 ### Raiz
 | Arquivo | Descrição |
 |---------|-----------|
-| `index.html` | Tela de boas-vindas e roteador. Direciona para área de pacientes ou profissionais. |
+| `build-env.js` | Script de build para gerar configurações de ambiente. |
+| `index.html` | Tela de boas-vindas e roteador. Direciona para área de usuários ou profissionais. |
 | `README.md` | Esta documentação. |
+
+### /arquivos
+| Arquivo | Descrição |
+|---------|-----------|
+| (Diretório vazio) | Diretório reservado para arquivos diversos do projeto. |
+
+### /audios
+| Arquivo | Descrição |
+|---------|-----------|
+| `Alerta.mp3` | Áudio de alerta geral. |
+| `Hipertensão.mp3` | Conteúdo educativo sobre hipertensão. |
+| `Infância.mp3` | Conteúdo educativo sobre cuidados infantis. |
+| `Gestação.mp3` | Conteúdo educativo sobre cuidados na gestação. |
+
+### /database
+| Arquivo | Descrição |
+|---------|-----------|
+| `database-config.sql` | Scripts SQL para configuração do banco de dados Supabase. |
+| `seed-dados.sql` | Scripts SQL para popular o banco com dados iniciais. |
+
+### /env
+| Arquivo | Descrição |
+|---------|-----------|
+| `build-env.js` | Script para gerar `env.js` em builds automatizados. |
+| `env.example.js` | Modelo para criar o `env.js`. |
+| `env.js` | Credenciais do Supabase (SUPABASE_URL, SUPABASE_KEY). **Não versionar!** |
+
+### /img
+| Arquivo | Descrição |
+|---------|-----------|
+| `logo.png` | Logo do aplicativo Tecendo Saúde. |
 
 ### /js (Módulos Compartilhados)
 | Arquivo | Descrição |
 |---------|-----------|
+| `components.js` | Componentes React reutilizáveis: `SyncIndicator`, `Loading`, `MediaModal`, `OfflineBanner`, etc. |
 | `config.js` | Configurações do Supabase, schema do Dexie (IndexedDB), listas de UBS, regiões, ACS, profissionais. |
 | `utils.js` | Funções utilitárias: máscaras (CPF, data, telefone), formatação, `syncManager()`, conversão de arquivos. |
-| `components.js` | Componentes React reutilizáveis: `SyncIndicator`, `Loading`, `MediaModal`, `OfflineBanner`, etc. |
-
-### /pacientes
-| Arquivo | Descrição |
-|---------|-----------|
-| `pacientes.html` | Aplicação completa do paciente: login por CPF, cadastro rápido, dashboard de monitoramento, envio de registros com mídia, histórico de atendimentos. |
-
-### /profissionais
-| Arquivo | Descrição |
-|---------|-----------|
-| `profissionais.html` | Aplicação completa do profissional: autenticação por CPF, cadastro de novos profissionais, ficha médica completa, acesso ao monitoramento. |
 
 ### /monitoramento
 | Arquivo | Descrição |
@@ -96,7 +121,26 @@ app-tecendo-saude/
 | `monitoramento.html` | Dashboard para acompanhamento de pacientes pelos profissionais. |
 | `monitoramento.js` | Lógica do painel de monitoramento. |
 
-### /env
+### /profissionais
+| Arquivo | Descrição |
+|---------|-----------|
+| `profissionais.html` | Aplicação completa do profissional: autenticação por CPF, cadastro de novos profissionais, ficha médica completa, acesso ao monitoramento. |
+
+### /styles
+| Arquivo | Descrição |
+|---------|-----------|
+| `styles.css` | CSS global (usado em páginas específicas). |
+
+### /textos
+| Arquivo | Descrição |
+|---------|-----------|
+| `paciente.md` | Documentação do fluxo do paciente. |
+| `profissional.md` | Documentação do fluxo do profissional. |
+
+### /usuarios
+| Arquivo | Descrição |
+|---------|-----------|
+| `usuarios.html` | Aplicação completa do usuário/paciente: login por CPF, cadastro rápido, dashboard de monitoramento, envio de registros com mídia, histórico de atendimentos. |
 | Arquivo | Descrição |
 |---------|-----------|
 | `env.js` | Credenciais do Supabase (SUPABASE_URL, SUPABASE_KEY). **Não versionar!** |
@@ -107,7 +151,7 @@ app-tecendo-saude/
 
 ## ✨ Principais Funcionalidades
 
-### Área do Paciente
+### Área do Usuário
 - Login simplificado por CPF (validação local e remota).
 - Cadastro rápido com dados básicos.
 - Monitoramento diário: PA, peso, glicemia, gestação, atividade física.
@@ -149,6 +193,7 @@ app-tecendo-saude/
 | **TailwindCSS** | Estilização (via CDN) |
 | **Dexie.js** | IndexedDB para persistência local |
 | **Supabase** | Backend (Postgres + Storage) |
+| **Inteligência Artificial** | Tecnologias sustentáveis para análise de dados de saúde, recomendações personalizadas e otimização de processos offline-first |
 
 ### Tabelas IndexedDB (Dexie)
 - `perfil` — Dados do paciente
@@ -275,15 +320,6 @@ Modelos de tabelas (exemplo resumido):
 
 ---
 
-## ⚠️ Limitações e Recomendações
-
-- Vídeos hospedados externamente (ej. YouTube) requerem conexão ativa.
-- O plano gratuito do Supabase tem limitações de storage; controlar uploads de vídeo é importante.
-- Navegadores antigos ou dispositivos muito antigos podem não suportar MediaRecorder ou IndexedDB de forma estável.
-- Testar cenários de sincronização com filas de conflitos e retries é essencial.
-
----
-
 ## 🧭 Regiões e UBS (pré-configuradas)
 
 Regiões (municípios) incluídas no projeto:
@@ -299,17 +335,6 @@ Unidades Básicas de Saúde (exemplos):
 - UBS Nadime Miranda
 - UBS Neli Loeblein
 - UBS Vicente Alves da Silva
-
----
-
-## 🛠️ Roadmap / Próximos Recursos Sugeridos
-
-- Notificações push para avisar pacientes sobre novas respostas.
-- Geração de PDF do prontuário para impressão nas UBS.
-- Gráficos de evolução das metas (glicemia / pressão / peso).
-- Integração com sistemas de saúde governamentais (e-SUS) via API.
-- Camada de verificação adicional no login (OTP/SMS).
-- Mecanismos avançados de resolução de conflitos na sincronização.
 
 ---
 

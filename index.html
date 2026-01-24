@@ -49,12 +49,12 @@ const WelcomeScreen = ({onPatient, onProfessional}) => (
     </div>
     <h1 className="text-3xl font-extrabold text-green-900 mb-2">TECENDO</h1>
     <p className="text-gray-500 mb-10 text-lg">Linhas do Cuidado Integral à Saúde na Amazônia</p>
-    <button className="btn-primary mb-4 py-4 text-lg" onClick={onPatient}>SOU PACIENTE</button>
+    <button className="btn-primary mb-4 py-4 text-lg" onClick={onPatient}>SOU USUÁRIO DO SUS</button>
     <button className="text-green-700 font-bold text-sm mt-4 p-4" onClick={onProfessional}>ÁREA PROFISSIONAL</button>
   </div>
 );
 
-// Tela de tópicos educativos do paciente
+// Tela de tópicos educativos do usuário do SUS
 const PatientTopicsScreen = ({onContinue, onBack, online}) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   
@@ -161,7 +161,7 @@ const App = () => {
   // Verifica se há hash na URL para área profissional
   useEffect(() => {
     if (window.location.hash === '#profissional') {
-      window.location.href = 'profissionais/profissionais.html';
+      window.location.href = 'usuarios/usuarios.html#profissional';
     }
   }, []);
   
@@ -169,8 +169,8 @@ const App = () => {
   useEffect(() => {
     const pid = localStorage.getItem('currentProfileId');
     if (pid) {
-      // Redireciona para área do paciente se já estiver logado
-      window.location.href = 'pacientes/pacientes.html';
+      // Redireciona para área do usuário do SUS se já estiver logado
+      window.location.href = 'usuarios/usuarios.html';
     }
   }, []);
   
@@ -179,17 +179,17 @@ const App = () => {
     return <ConfigErrorScreen />;
   }
   
-  // Navegar para área do paciente
+  // Navegar para área do usuário do SUS
   const goToPatient = () => setRoute('patient_topics');
   
   // Navegar para área do profissional
   const goToProfessional = () => {
-    window.location.href = 'profissionais/profissionais.html';
+    window.location.href = 'usuarios/usuarios.html#profissional';
   };
   
-  // Navegar para login do paciente
+  // Navegar para login do usuário do SUS
   const goToPatientLogin = () => {
-    window.location.href = 'pacientes/pacientes.html';
+    window.location.href = 'usuarios/usuarios.html';
   };
   
   // Voltar para tela inicial

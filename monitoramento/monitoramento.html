@@ -33,6 +33,7 @@
       display: flex;
       gap: 12px;
       margin-bottom: 20px;
+      flex-wrap: wrap;
     }
     
     .search-input {
@@ -516,7 +517,7 @@
         <img src="../img/logo.png" alt="Tecendo Saúde" style="width:48px; height:48px; border-radius:12px; object-fit:cover;" />
         <div>
           <h1 class="text-xl font-bold" style="color: var(--primary);">Tecendo Saúde</h1>
-          <p class="text-sm text-muted">Monitoramento de Pacientes</p>
+          <p class="text-sm text-muted">Monitoramento de Usuários do SUS</p>
         </div>
       </div>
       <div class="flex gap-3 items-center">
@@ -541,7 +542,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-value" id="statTotal">0</div>
-        <div class="stat-label">📊 Total de Pacientes</div>
+            <div class="stat-label">📊 Total de Usuários do SUS</div>
       </div>
     </div>
     
@@ -550,17 +551,20 @@
       <!-- Left: Patient List -->
       <div>
         <div class="search-bar">
-          <input type="text" class="input-box search-input" placeholder="Buscar paciente por nome ou CPF..." id="searchInput" onkeyup="filtrarPacientes()">
+          <input type="text" class="input-box search-input" placeholder="Buscar usuário do SUS por nome ou CPF..." id="searchInput" onkeyup="filtrarPacientes()">
           <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Todos</button>
           <button class="filter-btn danger" data-filter="critical" onclick="setFilter('critical')">🚨 Críticos</button>
           <button class="filter-btn" data-filter="warning" onclick="setFilter('warning')">⚠️ Atenção</button>
           <button class="filter-btn" data-filter="stable" onclick="setFilter('stable')">✅ Estáveis</button>
+          <button class="filter-btn" data-filter="gestante" onclick="setFilter('gestante')">🤰 Gestantes</button>
+          <button class="filter-btn" data-filter="filhos" onclick="setFilter('filhos')">👶 Com Filhos</button>
+          <button class="filter-btn" data-filter="idoso" onclick="setFilter('idoso')">👴 Idosos 60+</button>
         </div>
         
         <div class="patient-list" id="patientList">
           <div class="empty-state">
             <div class="empty-icon">⏳</div>
-            <p>Carregando pacientes...</p>
+            <p>Carregando usuários do SUS...</p>
           </div>
         </div>
       </div>
@@ -568,7 +572,7 @@
       <!-- Right: Detail Panel -->
       <div class="detail-panel" id="detailPanel" style="display: none;">
         <div class="detail-header" id="detailHeader">
-          <div class="detail-name" id="detailName">Selecione um paciente</div>
+          <div class="detail-name" id="detailName">Selecione um usuário do SUS</div>
           <div class="detail-meta" id="detailMeta"></div>
           <button class="detail-close" type="button" onclick="fecharPainelDetalhe()">×</button>
         </div>
@@ -586,6 +590,19 @@
     </div>
   </div>
   
+  <!-- Modal de Ficha Cadastral -->
+  <div class="modal-overlay" id="fichaModal" style="display: none;">
+    <div class="modal modal-lg" style="display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3 class="modal-title">📋 Ficha Cadastral</h3>
+        <button class="modal-close" onclick="fecharFichaCadastral()">&times;</button>
+      </div>
+      <div class="modal-body" id="fichaModalBody">
+        <!-- Conteúdo dinâmico -->
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de Mensagem -->
   <div class="modal-overlay" id="messageModal" style="display: none;">
     <div class="modal" id="messageModalBox" style="max-height:90vh;display:flex;flex-direction:column;">
@@ -610,7 +627,7 @@
             <button class="btn btn-ghost mt-2" onclick="limparAudio()">Remover áudio</button>
           </div>
           <div class="input-group">
-            <textarea id="messageInput" class="input-box" rows="3" placeholder="Digite sua mensagem para o paciente..."></textarea>
+            <textarea id="messageInput" class="input-box" rows="3" placeholder="Digite sua mensagem para o usuário do SUS..."></textarea>
           </div>
         </div>
       </div>

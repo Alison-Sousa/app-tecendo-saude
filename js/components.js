@@ -2,7 +2,7 @@
 // TECENDO SAÚDE - COMPONENTES COMPARTILHADOS
 // ================================================
 const {useState, useEffect, useRef, useMemo, useCallback} = React;
-const LOGO_SRC = window.location.pathname.includes('/pacientes/') || window.location.pathname.includes('/profissionais/') || window.location.pathname.includes('/monitoramento/')
+const LOGO_SRC = window.location.pathname.includes('/pacientes/') || window.location.pathname.includes('/profissionais/') || window.location.pathname.includes('/monitoramento/') || window.location.pathname.includes('/usuarios/')
   ? '../img/logo.png'
   : 'img/logo.png';
 

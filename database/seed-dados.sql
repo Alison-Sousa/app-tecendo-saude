@@ -62,6 +62,186 @@ INSERT INTO perfis (
 ('P040','Mateus Dias','59123456799','30/06/1993','Oeste','UBS Oeste','M','Parda','Rua AN, 54','(11) 98888-0040','Ensino Médio','Estoquista','sim','ACS Rosa','nao','nao','nenhum','177','84')
 ON CONFLICT (patient_id) DO NOTHING;
 
+-- 3.1 FOTO FICTÍCIA PARA PERFIS
+UPDATE perfis
+SET foto_url = 'https://ui-avatars.com/api/?name=' || replace(nome, ' ', '+') || '&background=2f6b3f&color=ffffff&size=256'
+WHERE (foto_url IS NULL OR foto_url = '');
+
+-- 3.2 DADOS DE FILHOS E VACINAS (FICTÍCIOS)
+UPDATE perfis
+SET
+  tem_filhos = CASE
+    WHEN patient_id IN ('P001','P004','P007','P010','P012','P015','P018','P020','P021','P039') THEN 'Sim'
+    ELSE 'Não'
+  END,
+  qtd_filhos = CASE
+    WHEN patient_id = 'P001' THEN '2'
+    WHEN patient_id = 'P004' THEN '3'
+    WHEN patient_id = 'P007' THEN '1'
+    WHEN patient_id = 'P010' THEN '2'
+    WHEN patient_id = 'P012' THEN '4'
+    WHEN patient_id = 'P015' THEN '1'
+    WHEN patient_id = 'P018' THEN '8'
+    WHEN patient_id = 'P020' THEN '2'
+    WHEN patient_id = 'P021' THEN '1'
+    WHEN patient_id = 'P039' THEN '1'
+    ELSE 'Não se aplica'
+  END,
+  filhos_json = CASE
+    WHEN patient_id = 'P001' THEN '[{"nome":"Luana Silva","idade":8,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"},{"nome":"Pedro Silva","idade":5,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P004' THEN '[{"nome":"Gabriel Alves","idade":12,"vacinaStatus":"Atrasada","vacinaData":"Não se aplica"},{"nome":"Rafaela Alves","idade":9,"vacinaStatus":"Atrasada","vacinaData":"Não se aplica"},{"nome":"Lucas Alves","idade":6,"vacinaStatus":"Atrasada","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P007' THEN '[{"nome":"Helena Rocha","idade":3,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P010' THEN '[{"nome":"Carolina Prado","idade":10,"vacinaStatus":"Agendada","vacinaData":"15/02/2026"},{"nome":"Miguel Prado","idade":7,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P012' THEN '[{"nome":"Ana Dias","idade":14,"vacinaStatus":"Atrasada","vacinaData":"Não se aplica"},{"nome":"Bruno Dias","idade":11,"vacinaStatus":"Atrasada","vacinaData":"Não se aplica"},{"nome":"Isabela Dias","idade":6,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"},{"nome":"Tiago Dias","idade":4,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P015' THEN '[{"nome":"João Fontes","idade":2,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P018' THEN '[{"nome":"Lara Lima","idade":9,"vacinaStatus":"Agendada","vacinaData":"03/03/2026"},{"nome":"Arthur Lima","idade":7,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"},{"nome":"Enzo Lima","idade":5,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"},{"nome":"Paula Lima","idade":3,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"},{"nome":"Rafael Lima","idade":1,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"},{"nome":"Bianca Lima","idade":4,"vacinaStatus":"Atrasada","vacinaData":"Não se aplica"},{"nome":"Miguel Lima","idade":6,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"},{"nome":"Sofia Lima","idade":2,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P020' THEN '[{"nome":"Marina Santos","idade":8,"vacinaStatus":"Agendada","vacinaData":"21/02/2026"},{"nome":"Nicolas Santos","idade":6,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P021' THEN '[{"nome":"Lívia Alves","idade":6,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    WHEN patient_id = 'P039' THEN '[{"nome":"Sofia Carvalho","idade":4,"vacinaStatus":"Em dia","vacinaData":"Não se aplica"}]'
+    ELSE '[]'
+  END;
+
+-- 3.3 DADOS DE GESTAÇÃO (para menus e telas)
+UPDATE perfis
+SET
+  gestacao_semanas = CASE
+    WHEN patient_id = 'P003' THEN '18'
+    WHEN patient_id = 'P007' THEN '15'
+    WHEN patient_id = 'P021' THEN '19'
+    WHEN patient_id = 'P022' THEN '17'
+    WHEN patient_id = 'P023' THEN '20'
+    WHEN patient_id = 'P024' THEN '18'
+    WHEN patient_id = 'P025' THEN '21'
+    WHEN patient_id = 'P026' THEN '16'
+    WHEN patient_id = 'P027' THEN '22'
+    WHEN patient_id = 'P028' THEN '19'
+    WHEN patient_id = 'P029' THEN '20'
+    WHEN patient_id = 'P030' THEN '24'
+    ELSE gestacao_semanas
+  END,
+  dum = CASE
+    WHEN patient_id = 'P003' THEN '05/09/2025'
+    WHEN patient_id = 'P007' THEN '28/09/2025'
+    WHEN patient_id = 'P021' THEN '01/09/2025'
+    WHEN patient_id = 'P022' THEN '15/09/2025'
+    WHEN patient_id = 'P023' THEN '25/08/2025'
+    WHEN patient_id = 'P024' THEN '10/09/2025'
+    WHEN patient_id = 'P025' THEN '30/08/2025'
+    WHEN patient_id = 'P026' THEN '22/09/2025'
+    WHEN patient_id = 'P027' THEN '18/08/2025'
+    WHEN patient_id = 'P028' THEN '02/09/2025'
+    WHEN patient_id = 'P029' THEN '25/08/2025'
+    WHEN patient_id = 'P030' THEN '15/08/2025'
+    ELSE dum
+  END,
+  previsao_parto = CASE
+    WHEN patient_id = 'P003' THEN '12/05/2026'
+    WHEN patient_id = 'P007' THEN '01/06/2026'
+    WHEN patient_id = 'P021' THEN '08/05/2026'
+    WHEN patient_id = 'P022' THEN '20/05/2026'
+    WHEN patient_id = 'P023' THEN '05/05/2026'
+    WHEN patient_id = 'P024' THEN '18/05/2026'
+    WHEN patient_id = 'P025' THEN '10/05/2026'
+    WHEN patient_id = 'P026' THEN '24/05/2026'
+    WHEN patient_id = 'P027' THEN '28/04/2026'
+    WHEN patient_id = 'P028' THEN '12/05/2026'
+    WHEN patient_id = 'P029' THEN '05/05/2026'
+    WHEN patient_id = 'P030' THEN '22/04/2026'
+    ELSE previsao_parto
+  END,
+  faz_pre_natal = CASE
+    WHEN patient_id IN ('P003','P007','P021','P022','P023','P024','P025','P026','P027','P028','P029','P030') THEN 'Sim'
+    ELSE faz_pre_natal
+  END,
+  data_ultima_consulta_pre_natal = CASE
+    WHEN patient_id = 'P003' THEN '05/01/2026'
+    WHEN patient_id = 'P007' THEN '12/01/2026'
+    WHEN patient_id = 'P021' THEN '08/01/2026'
+    WHEN patient_id = 'P022' THEN '14/01/2026'
+    WHEN patient_id = 'P023' THEN '10/01/2026'
+    WHEN patient_id = 'P024' THEN '11/01/2026'
+    WHEN patient_id = 'P025' THEN '09/01/2026'
+    WHEN patient_id = 'P026' THEN '13/01/2026'
+    WHEN patient_id = 'P027' THEN '06/01/2026'
+    WHEN patient_id = 'P028' THEN '15/01/2026'
+    WHEN patient_id = 'P029' THEN '10/01/2026'
+    WHEN patient_id = 'P030' THEN '07/01/2026'
+    ELSE data_ultima_consulta_pre_natal
+  END;
+
+-- 3.4 DADOS DE IDOSOS (60+)
+UPDATE perfis
+SET nascimento = CASE
+  WHEN patient_id = 'P002' THEN '15/04/1960'
+  WHEN patient_id = 'P004' THEN '03/02/1958'
+  WHEN patient_id = 'P008' THEN '11/11/1955'
+  WHEN patient_id = 'P010' THEN '22/07/1957'
+  WHEN patient_id = 'P012' THEN '09/09/1962'
+  WHEN patient_id = 'P031' THEN '05/01/1959'
+  ELSE nascimento
+END;
+
+-- 3.5 COMPLETAR FICHA CADASTRAL (valores padrão quando ausentes)
+UPDATE perfis
+SET
+  regiao = COALESCE(NULLIF(regiao,''), 'Santarém'),
+  ubs_referencia = COALESCE(NULLIF(ubs_referencia,''), 'UBS Centro'),
+  equipe_ubs = COALESCE(NULLIF(equipe_ubs,''), 'Equipe Verde'),
+  acs_responsavel = COALESCE(NULLIF(acs_responsavel,''), 'ACS Maria'),
+  endereco = COALESCE(NULLIF(endereco,''), 'Rua Principal, 100'),
+  telefone = COALESCE(NULLIF(telefone,''), '(11) 90000-0000'),
+  escolaridade = COALESCE(NULLIF(escolaridade,''), 'Ensino Médio'),
+  profissao = COALESCE(NULLIF(profissao,''), 'Autônomo(a)'),
+  mora_sozinho = COALESCE(NULLIF(mora_sozinho,''), 'nao'),
+  mora_companheiro = COALESCE(NULLIF(mora_companheiro,''), 'sim'),
+  tempo_diag_has = COALESCE(NULLIF(tempo_diag_has,''), CASE WHEN hipertensao = 'sim' OR hipertensao = 'Sim' THEN '3 anos' ELSE 'Não se aplica' END),
+  tempo_diag_dm = COALESCE(NULLIF(tempo_diag_dm,''), CASE WHEN diabetes = 'sim' OR diabetes = 'Sim' THEN '2 anos' ELSE 'Não se aplica' END),
+  infeccao_urinaria_gestacao = COALESCE(NULLIF(infeccao_urinaria_gestacao,''), 'Não'),
+  vicios = COALESCE(NULLIF(vicios,''), 'nenhum'),
+  tempo_vicio = COALESCE(NULLIF(tempo_vicio,''), CASE WHEN vicios IS NULL OR vicios = '' OR vicios = 'nenhum' THEN 'Não se aplica' ELSE '5 anos' END),
+  altura = COALESCE(NULLIF(altura,''), '165'),
+  peso_inicial = COALESCE(NULLIF(peso_inicial,''), '70'),
+  peso_atual = COALESCE(NULLIF(peso_atual,''), peso_inicial),
+  peso_primeira_consulta = COALESCE(NULLIF(peso_primeira_consulta,''), peso_inicial),
+  enxerga_bem = COALESCE(NULLIF(enxerga_bem,''), 'Sim'),
+  consulta_oftalmo = COALESCE(NULLIF(consulta_oftalmo,''), 'Não'),
+  tempo_consulta_oftalmo = COALESCE(NULLIF(tempo_consulta_oftalmo,''), 'Não se aplica'),
+  dificuldade_mastigar_falar_engolir = COALESCE(NULLIF(dificuldade_mastigar_falar_engolir,''), 'Não'),
+  uso_medicacoes = COALESCE(NULLIF(uso_medicacoes,''), CASE WHEN hipertensao = 'sim' OR hipertensao = 'Sim' OR diabetes = 'sim' OR diabetes = 'Sim' THEN 'Sim' ELSE 'Não' END),
+  nomes_medicacoes = COALESCE(NULLIF(nomes_medicacoes,''), CASE WHEN hipertensao = 'sim' OR hipertensao = 'Sim' THEN 'Losartana' WHEN diabetes = 'sim' OR diabetes = 'Sim' THEN 'Metformina' ELSE 'Não usa' END),
+  posologia_dosagem = COALESCE(NULLIF(posologia_dosagem,''), CASE WHEN hipertensao = 'sim' OR hipertensao = 'Sim' THEN '50mg' WHEN diabetes = 'sim' OR diabetes = 'Sim' THEN '500mg' ELSE 'Não se aplica' END),
+  posologia_horario = COALESCE(NULLIF(posologia_horario,''), CASE WHEN hipertensao = 'sim' OR hipertensao = 'Sim' OR diabetes = 'sim' OR diabetes = 'Sim' THEN '08:00 / 20:00' ELSE 'Não se aplica' END),
+  data_ultima_prescricao = COALESCE(NULLIF(data_ultima_prescricao,''), '10/01/2026'),
+  data_ultima_dispensacao = COALESCE(NULLIF(data_ultima_dispensacao,''), '15/01/2026'),
+  atividade_fisica = COALESCE(NULLIF(atividade_fisica,''), 'caminhada'),
+  freq_atividade = COALESCE(NULLIF(freq_atividade,''), '3x por semana'),
+  tipo_atividade = COALESCE(NULLIF(tipo_atividade,''), 'aeróbico'),
+  meta_peso = COALESCE(NULLIF(meta_peso,''), '70'),
+  meta_glicemia = COALESCE(NULLIF(meta_glicemia,''), '110'),
+  meta_pa_min = COALESCE(NULLIF(meta_pa_min,''), '80'),
+  meta_pa_max = COALESCE(NULLIF(meta_pa_max,''), '130'),
+  tem_filhos = COALESCE(NULLIF(tem_filhos,''), 'Não'),
+  qtd_filhos = COALESCE(NULLIF(qtd_filhos,''), '0'),
+  filhos_json = COALESCE(NULLIF(filhos_json,''), '[]'),
+  dum = COALESCE(NULLIF(dum,''), 'Não se aplica'),
+  gestacao_semanas = COALESCE(NULLIF(gestacao_semanas,''), '0'),
+  previsao_parto = COALESCE(NULLIF(previsao_parto,''), 'Não se aplica'),
+  faz_pre_natal = COALESCE(NULLIF(faz_pre_natal,''), 'Não'),
+  inicio_pre_natal = COALESCE(NULLIF(inicio_pre_natal,''), 'Não se aplica'),
+  data_ultima_consulta_pre_natal = COALESCE(NULLIF(data_ultima_consulta_pre_natal,''), 'Não se aplica'),
+  created_by_nome = COALESCE(NULLIF(created_by_nome,''), 'Enfermeira Ana Souza'),
+  created_by_ubs = COALESCE(NULLIF(created_by_ubs,''), ubs_referencia),
+  created_by_cpf = COALESCE(NULLIF(created_by_cpf,''), '12345678901');
+
+-- 3.6 CALCULAR IMC PRÉ-GESTACIONAL QUANDO AUSENTE
+UPDATE perfis
+SET imc_pre_gestacional = CASE
+  WHEN (imc_pre_gestacional IS NULL OR imc_pre_gestacional = '')
+   AND NULLIF(altura,'') IS NOT NULL AND NULLIF(peso_inicial,'') IS NOT NULL
+  THEN to_char((NULLIF(peso_inicial,'')::numeric) / ((NULLIF(altura,'')::numeric/100)^2), 'FM999990.0')
+  ELSE imc_pre_gestacional
+END;
+
 -- 4. REGISTROS DE MONITORAMENTO (PA sistólica/diastólica, peso, glicemia, atividade física)
 -- Cada paciente tem vários registros para formar gráficos
 INSERT INTO registros (
@@ -270,4 +450,95 @@ INSERT INTO registros (
 -- P010 (Luciano Prado) - hipertenso histórico
 ('R010b','P010','Histórico','monitoramento','pendente',165,102,93.0,138,'nao',null,'nenhuma',now()-interval '8 days',now()-interval '8 days'),
 ('R010c','P010','Histórico','monitoramento','pendente',170,106,94.0,142,'nao',null,'nenhuma',now()-interval '16 days',now()-interval '16 days')
+ON CONFLICT (registro_id) DO NOTHING;
+
+-- 6. REGISTROS CRÍTICOS ADICIONAIS (garantir pelo menos ~9 críticos)
+INSERT INTO registros (
+  registro_id, patient_id, texto, tipo, status,
+  pa_sistolica, pa_diastolica, peso_kg, glicemia_mg,
+  gestante, gestacao_semanas, atividade_fisica, created_at, updated_at
+) VALUES
+('RCRIT001','P004','Crítico','monitoramento','pendente',185,120,99.0,260,'nao',null,'nenhuma',now()-interval '3 hours',now()-interval '3 hours'),
+('RCRIT002','P006','Crítico','monitoramento','pendente',182,118,92.0,255,'nao',null,'nenhuma',now()-interval '2 hours',now()-interval '2 hours'),
+('RCRIT003','P008','Crítico','monitoramento','pendente',190,122,88.0,260,'nao',null,'nenhuma',now()-interval '5 hours',now()-interval '5 hours'),
+('RCRIT004','P009','Crítico','monitoramento','pendente',178,112,70.0,255,'nao',null,'nenhuma',now()-interval '4 hours',now()-interval '4 hours'),
+('RCRIT005','P010','Crítico','monitoramento','pendente',182,116,94.0,252,'nao',null,'nenhuma',now()-interval '1 hours',now()-interval '1 hours'),
+('RCRIT006','P014','Crítico','monitoramento','pendente',188,120,98.0,265,'nao',null,'nenhuma',now()-interval '6 hours',now()-interval '6 hours'),
+('RCRIT007','P016','Crítico','monitoramento','pendente',181,118,90.0,250,'nao',null,'nenhuma',now()-interval '7 hours',now()-interval '7 hours'),
+('RCRIT008','P020','Crítico','monitoramento','pendente',185,121,95.0,258,'nao',null,'nenhuma',now()-interval '8 hours',now()-interval '8 hours'),
+('RCRIT009','P031','Crítico','monitoramento','pendente',190,120,94.0,255,'nao',null,'nenhuma',now()-interval '9 hours',now()-interval '9 hours')
+ON CONFLICT (registro_id) DO NOTHING;
+
+-- 7. RESPOSTAS DE CHAT (para testar conversa)
+UPDATE registros
+SET resposta = 'Olá! Recebemos sua mensagem e vamos acompanhar seus dados.',
+    resposta_data = now() - interval '1 day'
+WHERE registro_id IN ('R001c','R002c','R003c','R007c','R009b');
+
+UPDATE registros
+SET replies_json = '[{"from":"pro","text":"Tudo certo por aqui. Continue acompanhando e atualize amanhã.","at":"2026-01-20T12:30:00Z"}]'::jsonb
+WHERE registro_id = 'R005';
+
+-- 8. HISTÓRICO EXTRA PARA IDOSOS (gráficos mais ricos)
+INSERT INTO registros (
+  registro_id, patient_id, texto, tipo, status,
+  pa_sistolica, pa_diastolica, peso_kg, glicemia_mg,
+  gestante, gestacao_semanas, atividade_fisica, created_at, updated_at
+) VALUES
+-- P002 (idoso)
+('RID002a','P002','Histórico','monitoramento','pendente',172,108,88.6,120,'nao',null,'nenhuma',now()-interval '11 days',now()-interval '11 days'),
+('RID002b','P002','Histórico','monitoramento','pendente',178,112,89.1,130,'nao',null,'nenhuma',now()-interval '9 days',now()-interval '9 days'),
+('RID002c','P002','Histórico','monitoramento','pendente',165,102,88.0,110,'nao',null,'caminhada',now()-interval '7 days',now()-interval '7 days'),
+
+-- P004 (idoso)
+('RID004a','P004','Histórico','monitoramento','pendente',160,98,97.5,205,'nao',null,'nenhuma',now()-interval '12 days',now()-interval '12 days'),
+('RID004b','P004','Histórico','monitoramento','pendente',168,104,98.2,215,'nao',null,'nenhuma',now()-interval '9 days',now()-interval '9 days'),
+('RID004c','P004','Histórico','monitoramento','pendente',172,106,99.0,225,'nao',null,'nenhuma',now()-interval '6 days',now()-interval '6 days'),
+
+-- P008 (idoso)
+('RID008a','P008','Histórico','monitoramento','pendente',150,96,86.0,140,'nao',null,'caminhada',now()-interval '10 days',now()-interval '10 days'),
+('RID008b','P008','Histórico','monitoramento','pendente',155,98,86.8,150,'nao',null,'nenhuma',now()-interval '8 days',now()-interval '8 days'),
+('RID008c','P008','Histórico','monitoramento','pendente',148,94,85.9,135,'nao',null,'caminhada',now()-interval '5 days',now()-interval '5 days'),
+
+-- P010 (idoso)
+('RID010a','P010','Histórico','monitoramento','pendente',170,106,93.5,145,'nao',null,'nenhuma',now()-interval '12 days',now()-interval '12 days'),
+('RID010b','P010','Histórico','monitoramento','pendente',175,110,94.1,155,'nao',null,'nenhuma',now()-interval '8 days',now()-interval '8 days'),
+('RID010c','P010','Histórico','monitoramento','pendente',168,104,92.8,138,'nao',null,'caminhada',now()-interval '5 days',now()-interval '5 days'),
+
+-- P012 (idoso)
+('RID012a','P012','Histórico','monitoramento','pendente',158,102,99.0,230,'nao',null,'nenhuma',now()-interval '11 days',now()-interval '11 days'),
+('RID012b','P012','Histórico','monitoramento','pendente',162,106,100.1,245,'nao',null,'nenhuma',now()-interval '7 days',now()-interval '7 days'),
+('RID012c','P012','Histórico','monitoramento','pendente',155,100,98.7,220,'nao',null,'nenhuma',now()-interval '4 days',now()-interval '4 days'),
+
+-- P031 (idoso)
+('RID031a','P031','Histórico','monitoramento','pendente',180,118,93.2,125,'nao',null,'nenhuma',now()-interval '10 days',now()-interval '10 days'),
+('RID031b','P031','Histórico','monitoramento','pendente',176,114,92.6,120,'nao',null,'nenhuma',now()-interval '6 days',now()-interval '6 days'),
+('RID031c','P031','Histórico','monitoramento','pendente',182,120,93.8,130,'nao',null,'nenhuma',now()-interval '3 days',now()-interval '3 days')
+ON CONFLICT (registro_id) DO NOTHING;
+
+-- 9. GARANTIR UM REGISTRO PARA TODOS OS PERFIS (fallback)
+INSERT INTO registros (
+  registro_id, patient_id, texto, tipo, status,
+  pa_sistolica, pa_diastolica, peso_kg, glicemia_mg,
+  gestante, gestacao_semanas, atividade_fisica, created_at, updated_at
+)
+SELECT
+  'RDEF-' || p.patient_id,
+  p.patient_id,
+  'Registro básico',
+  'monitoramento',
+  'pendente',
+  128,
+  82,
+  70.0,
+  105,
+  'nao',
+  NULL,
+  'caminhada',
+  now() - interval '1 day',
+  now() - interval '1 day'
+FROM perfis p
+WHERE NOT EXISTS (
+  SELECT 1 FROM registros r WHERE r.patient_id = p.patient_id
+)
 ON CONFLICT (registro_id) DO NOTHING;

@@ -25,6 +25,64 @@ db.version(3).stores({
     return tx.table('perfil').toCollection().modify(p => { if(!p.foto_url) p.foto_url = ''; });
 });
 
+db.version(4).stores({
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
+  midias:'++id,registroId,name,type,synced',
+  medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
+}).upgrade(tx => {
+  return tx.table('perfil').toCollection().modify(p => {
+    if(!p.mora_companheiro) p.mora_companheiro = p.mora_companheiro || '';
+    if(!p.tem_filhos) p.tem_filhos = p.tem_filhos || '';
+    if(!p.qtd_filhos) p.qtd_filhos = p.qtd_filhos || '';
+    if(!p.vacinas_criancas_status) p.vacinas_criancas_status = p.vacinas_criancas_status || '';
+    if(!p.vacinas_criancas_data) p.vacinas_criancas_data = p.vacinas_criancas_data || '';
+  });
+});
+
+db.version(5).stores({
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,qtd_filhos_outro,filho1_nome,filho1_idade,filho2_nome,filho2_idade,filho3_nome,filho3_idade,filho4_nome,filho4_idade,filho5_nome,filho5_idade,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
+  midias:'++id,registroId,name,type,synced',
+  medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
+}).upgrade(tx => {
+  return tx.table('perfil').toCollection().modify(p => {
+    if(!p.qtd_filhos_outro) p.qtd_filhos_outro = p.qtd_filhos_outro || '';
+    if(!p.filho1_nome) p.filho1_nome = p.filho1_nome || '';
+    if(!p.filho1_idade) p.filho1_idade = p.filho1_idade || '';
+    if(!p.filho2_nome) p.filho2_nome = p.filho2_nome || '';
+    if(!p.filho2_idade) p.filho2_idade = p.filho2_idade || '';
+    if(!p.filho3_nome) p.filho3_nome = p.filho3_nome || '';
+    if(!p.filho3_idade) p.filho3_idade = p.filho3_idade || '';
+    if(!p.filho4_nome) p.filho4_nome = p.filho4_nome || '';
+    if(!p.filho4_idade) p.filho4_idade = p.filho4_idade || '';
+    if(!p.filho5_nome) p.filho5_nome = p.filho5_nome || '';
+    if(!p.filho5_idade) p.filho5_idade = p.filho5_idade || '';
+  });
+});
+
+db.version(6).stores({
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
+  midias:'++id,registroId,name,type,synced',
+  medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
+}).upgrade(tx => {
+  return tx.table('perfil').toCollection().modify(p => {
+    if(!p.filhos_detalhes) p.filhos_detalhes = p.filhos_detalhes || '';
+  });
+});
+
+db.version(7).stores({
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
+  midias:'++id,registroId,name,type,synced',
+  medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
+}).upgrade(tx => {
+  return tx.table('perfil').toCollection().modify(p => {
+    if(!p.filhos_json) p.filhos_json = p.filhos_json || '';
+  });
+});
+
 // Listas de referência
 var LISTA_UBS = ["UBS Antônio Evangelista", "UBS Boa Esperança", "UBS Divinópolis", "UBS Márcio Marinho", "UBS Haroldo Martins", "UBS Maria Bibiana da Silva", "UBS Nadime Miranda", "UBS Neli Loeblein", "UBS Vicente Alves da Silva"];
 var LISTA_REGIOES = ["Santarém", "Belterra", "Mojuí dos Campos", "Alenquer", "Curuá", "Óbidos", "Oriximiná", "Terra Santa", "Faro", "Juruti", "Monte Alegre", "Almeirim", "Prainha"];

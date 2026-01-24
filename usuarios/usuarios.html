@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Tecendo Saúde - Portal</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../env/env.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/utils.js"></script>
+<link rel="icon" href="../img/logo.png" />
+<link rel="apple-touch-icon" href="../img/logo.png" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --primary: #2f6b3f; --accent: #d8a43a; --accent2: #c96f3a; --bg: #f3fbf5; --text: #1f2a44; }
+  body { background: var(--bg); font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); margin: 0; -webkit-tap-highlight-color: transparent; }
+  .fade-in { animation: fadeIn 0.3s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  .btn-primary { width: 100%; padding: 18px; background: linear-gradient(135deg, var(--primary) 0%, #1f4a2c 100%); color: #fff; border-radius: 14px; font-weight: 800; font-size: 16px; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.4); display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-primary:active { transform: scale(0.98); box-shadow: none; }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-sec { width: 100%; padding: 14px; background: #fff; color: #475569; border: 1px solid #cbd5e1; border-radius: 14px; font-weight: 700; cursor: pointer; }
+  .input-box, select, textarea { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #cbd5e1; background: #fff; font-size: 16px; outline: none; margin-bottom: 12px; appearance: none; box-sizing: border-box; }
+  .input-box:focus { border-color: var(--primary); box-shadow: 0 0 0 2px #bbf7d0; }
+  .card { background: #fff; padding: 16px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 12px; border: 1px solid #f1f5f9; }
+  .badge { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+  .badge-pendente { background: #fee2e2; color: #991b1b; }
+  .badge-ok { background: #dcfce7; color: #166534; }
+  .badge-atencao { background: #fef3c7; color: #92400e; }
+  .section-title { font-size: 13px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin: 24px 0 8px 0; letter-spacing: 1px; }
+  .loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; font-weight: 700; color: var(--primary); }
+  .big-btn { width: 100%; padding: 24px; background: #fff; border-radius: 20px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; box-shadow: 0 4px 6px -2px rgba(0,0,0,0.02); margin-bottom: 12px; transition: all 0.2s; }
+  .big-btn:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.08); }
+  .big-btn-icon { font-size: 36px; width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .status-card { background: linear-gradient(135deg, #fff 0%, #f0fdf4 100%); border: 2px solid #dcfce7; border-radius: 20px; padding: 20px; margin-bottom: 16px; }
+  .status-card.alert { background: linear-gradient(135deg, #fff 0%, #fef2f2 100%); border-color: #fecaca; }
+  .status-card.warning { background: linear-gradient(135deg, #fff 0%, #fffbeb 100%); border-color: #fde68a; }
+  .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .metric-item { background: #fff; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; }
+  .metric-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+  .metric-value { font-size: 20px; font-weight: 800; color: #0f172a; }
+  .metric-status { font-size: 10px; font-weight: 700; margin-top: 2px; }
+  input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  .conv-card { background: #fff; border-radius: 16px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #16a34a; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.2s; }
+  .conv-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+  .conv-card.has-new { border-left-color: #f59e0b; }
+  .new-badge { background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="../js/components.js"></script>
+<script type="text/babel">
+const IS_PROFISSIONAL = window.location.hash === '#profissional';
+const AUTO_REPLY_TEXT = 'Olá! 😊 Recebemos sua solicitação e estamos acompanhando suas informações. Em breve, um profissional da UBS entrará em contato para prestar o atendimento necessário 🩺';
+
+const getReadKey = (registroId, ultimaData) => `read_${registroId || 'sem'}_${ultimaData || 'sem'}`;
+const isRead = (registroId, ultimaData) => {
+  try { return localStorage.getItem(getReadKey(registroId, ultimaData)) === '1'; } catch { return false; }
+};
+
+const notifyUser = async (title, body, tag) => {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch { return; }
+  }
+  if (Notification.permission !== 'granted') return;
+  const key = `notify_${tag}`;
+  const last = Number(localStorage.getItem(key) || 0);
+  if (last && (Date.now() - last) < 60000) return;
+  try {
+    new Notification(title, { body, icon: '../img/logo.png', tag });
+    localStorage.setItem(key, String(Date.now()));
+  } catch {}
+};
+
+const isCriticalHealth = (pa, glicemia) => (pa && pa >= 160) || (glicemia && glicemia >= 200) || (glicemia && glicemia < 70);
+
+// Sync registros do Supabase
+const syncRegistrosSupabase = async (patientId) => {
+  if (!navigator.onLine || !supabase || !patientId || String(patientId).startsWith('cpf-')) return;
+  try {
+    const { data, error } = await supabase.from('registros').select('*').eq('patient_id', patientId);
+    if (error || !data) return;
+    const existing = await db.registros.where('patientId').equals(patientId).toArray();
+    const idByRegistro = new Map();
+    const seen = new Set();
+    existing.forEach(reg => {
+      if (!reg?.registroId) return;
+      if (!idByRegistro.has(reg.registroId)) idByRegistro.set(reg.registroId, reg.id);
+    });
+    const dupIds = existing
+      .filter(reg => reg?.registroId && seen.has(reg.registroId) ? true : (seen.add(reg.registroId), false))
+      .map(reg => reg.id)
+      .filter(Boolean);
+    if (dupIds.length) await db.registros.bulkDelete(dupIds);
+
+    const mapped = data.map(r => {
+      let replies = [];
+      if (Array.isArray(r.replies_json)) replies = r.replies_json;
+      else if (typeof r.replies_json === 'string') {
+        try {
+          const parsed = JSON.parse(r.replies_json);
+          if (Array.isArray(parsed)) replies = parsed;
+        } catch {}
+      }
+      return ({
+        registroId: r.registro_id,
+        patientId: r.patient_id,
+        deviceId: r.device_id || 'server',
+        texto: r.texto || '',
+        tipo: r.tipo || 'monitoramento',
+        status: r.status || 'pendente',
+        createdAt: r.created_at || r.updated_at || new Date().toISOString(),
+        updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
+        replies,
+        resposta: r.resposta || '',
+        resposta_data: r.resposta_data || null,
+        pa_sistolica: r.pa_sistolica,
+        pa_diastolica: r.pa_diastolica,
+        peso_kg: r.peso_kg,
+        glicemia_mg: r.glicemia_mg,
+        atividade_fisica: r.atividade_fisica || '',
+        synced: 1,
+        id: idByRegistro.get(r.registro_id)
+      });
+    });
+    await db.registros.bulkPut(mapped);
+  } catch {}
+};
+
+const fetchUltimoMonitoramentoSupabase = async (patientId) => {
+  if (!navigator.onLine || !supabase || !patientId || String(patientId).startsWith('cpf-')) return null;
+  try {
+    const { data } = await supabase.from('registros').select('*').eq('patient_id', patientId).eq('tipo', 'monitoramento').order('created_at', { ascending: false }).limit(1);
+    return Array.isArray(data) && data.length ? data[0] : null;
+  } catch { return null; }
+};
+
+const enviarRegistroSupabase = async (registro) => {
+  if (!navigator.onLine || !supabase || !registro?.patientId || String(registro.patientId).startsWith('cpf-')) return;
+  try {
+    await supabase.from('registros').insert({
+      registro_id: registro.registroId,
+      patient_id: registro.patientId,
+      device_id: registro.deviceId || 'web',
+      texto: registro.texto || '',
+      tipo: registro.tipo || 'monitoramento',
+      status: registro.status || 'pendente',
+      pa_sistolica: registro.pa_sistolica,
+      pa_diastolica: registro.pa_diastolica,
+      peso_kg: registro.peso_kg,
+      glicemia_mg: registro.glicemia_mg,
+      atividade_fisica: registro.atividade_fisica || null,
+      created_at: registro.createdAt,
+      updated_at: registro.updatedAt
+    });
+    await db.registros.update(registro.id, { synced: 1 });
+  } catch {}
+};
+
+// Card de Status de Saúde
+const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpdate }) => {
+  const getStatusPA = (val) => {
+    if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'Não informado' };
+    if (val >= 180) return { color: 'text-red-600', bg: 'bg-red-100', label: 'Crítica' };
+    if (val >= 140) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Elevada' };
+    if (val < 90) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Baixa' };
+    return { color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Normal' };
+  };
+  const getStatusGlicemia = (val) => {
+    if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'Não informado' };
+    if (val >= 200) return { color: 'text-red-600', bg: 'bg-red-100', label: 'Alta' };
+    if (val >= 126) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Elevada' };
+    if (val < 70) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Baixa' };
+    return { color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Normal' };
+  };
+  const statusPA = getStatusPA(pa);
+  const statusGlic = getStatusGlicemia(glicemia);
+  const isCritical = (pa && pa >= 160) || (glicemia && glicemia >= 200) || (glicemia && glicemia < 70);
+  
+  return (
+    <div className={`status-card ${isCritical ? 'alert' : ''}`}>
+      <h3 className="text-lg font-extrabold text-slate-800 mb-3">Seu Status de Saúde</h3>
+      <div className="metric-grid">
+        <div className={`metric-item ${statusPA.bg}`}>
+          <div className="metric-label">Pressão Arterial</div>
+          <div className={`metric-value ${statusPA.color}`}>{pa ? `${pa}/${paDiastolica || '-'}` : '--'} <span className="text-xs font-normal">mmHg</span></div>
+          <div className={`metric-status ${statusPA.color}`}>{statusPA.label}</div>
+        </div>
+        <div className={`metric-item ${statusGlic.bg}`}>
+          <div className="metric-label">Glicemia</div>
+          <div className={`metric-value ${statusGlic.color}`}>{glicemia || '--'} <span className="text-xs font-normal">mg/dL</span></div>
+          <div className={`metric-status ${statusGlic.color}`}>{statusGlic.label}</div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Peso</div>
+          <div className="metric-value">{peso || '--'} <span className="text-xs font-normal">kg</span></div>
+        </div>
+        <div className="metric-item">
+          <div className="metric-label">Atividade</div>
+          <div className="metric-value text-base">{atividade || 'nenhuma'}</div>
+        </div>
+      </div>
+      {lastUpdate && <div className="mt-3 text-xs text-slate-500 text-center">Última atualização: {formatDateISO(lastUpdate)}</div>}
+    </div>
+  );
+};
+
+// Login do Usuário do SUS
+const PatientLogin = ({onLogin, onBack}) => {
+  const [cpf, setCpf] = useState('');
+  const [msg, setMsg] = useState('');
+  const [checking, setChecking] = useState(false);
+  
+  const tryLogin = async () => {
+    if(!cpf){ setMsg('Digite o CPF.'); return; }
+    setChecking(true); setMsg('Verificando...');
+    const clean = cpf.replace(/\D/g,'');
+    const local = await db.perfil.where('cpf').equals(clean).first();
+    if(local && navigator.onLine){
+      try {
+        const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
+        if(data){
+          await db.perfil.put({ ...local, ...data, patientId: data.patient_id || local.patientId, synced: 1 });
+          setTimeout(()=>onLogin(clean, { ...local, ...data }),300);
+        } else { setTimeout(()=>onLogin(clean, local),300); }
+      } catch { setTimeout(()=>onLogin(clean, local),300); }
+    } else if(local){
+      setTimeout(()=>onLogin(clean, local),300);
+    } else if(navigator.onLine){
+      try {
+        const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
+        if(data){ await db.perfil.add({ ...data, patientId: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
+        else { setMsg('CPF não encontrado.'); }
+      } catch { setMsg('Erro de conexão.'); }
+    } else { setMsg('Offline: CPF não encontrado.'); }
+    setChecking(false);
+  };
+  
+  return (
+    <div className="p-6 fade-in pt-20">
+      <h2 className="text-2xl font-bold mb-2">Acesso Usuário do SUS</h2>
+      <p className="text-gray-500 mb-6">Digite seu CPF para entrar</p>
+      <input className="input-box text-center text-xl font-bold" value={cpf} onChange={e=>setCpf(mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} />
+      <button className="btn-primary mb-3" disabled={checking} onClick={tryLogin}>{checking?'VERIFICANDO...':'ENTRAR'}</button>
+      {msg && <div className="text-xs font-bold text-center mb-3 p-2 rounded-lg border text-amber-700 bg-amber-50 border-amber-200">{msg}</div>}
+      <button className="btn-sec" onClick={onBack}>Voltar</button>
+    </div>
+  );
+};
+
+// Menu Principal do Usuário
+const PatientMainMenu = ({ user, onSelect, onLogout }) => {
+  const normalizar = (v) => String(v || '').trim().toLowerCase();
+  const isSim = (v) => ['sim','s','true','1'].includes(normalizar(v));
+  let filhos = []; try { filhos = user.filhos_json ? JSON.parse(user.filhos_json) : []; } catch { filhos = []; }
+  const qtdFilhos = Math.max(filhos.length, parseInt(user.qtd_filhos) || 0);
+  const temFilhos = isSim(user.tem_filhos) || qtdFilhos > 0;
+  const genero = normalizar(user.genero);
+  const isHomem = genero.startsWith('m') || genero.includes('masc');
+  const temDadosGestacao = (parseInt(user.gestacao_semanas) || 0) > 0 || !!user.previsao_parto;
+  const isGestante = isSim(user.gestante) || temDadosGestacao;
+  const mostrarGestacao = isGestante && !isHomem;
+  const mostrarCrianca = temFilhos;
+  
+  return (
+    <div className="p-6 fade-in">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-800">Olá, {user.nome?.split(' ')[0] || 'Usuário'}</h1>
+          <div className="text-sm font-bold text-green-600">{user.regiao || ''}</div>
+        </div>
+        <button onClick={onLogout} className="bg-red-50 text-red-500 px-4 py-2 rounded-lg font-bold text-xs">SAIR</button>
+      </div>
+      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
+        <div className="text-sm font-bold text-emerald-800 mb-1">🔔 Lembrete diário</div>
+        <div className="text-xs text-emerald-700">Verifique sua saúde e atualize seu monitoramento.</div>
+      </div>
+      <div className="section-title">O que você deseja fazer?</div>
+      <div className="space-y-3">
+        <button className="big-btn" onClick={() => onSelect('saude')}>
+          <div className="big-btn-icon bg-emerald-100">❤️</div>
+          <div className="font-bold text-lg text-slate-800">Pressão e Glicemia</div>
+          <div className="text-gray-400 text-sm">Registre PA, peso, glicemia</div>
+        </button>
+        {mostrarGestacao && (
+          <button className="big-btn" onClick={() => onSelect('gestacao')}>
+            <div className="big-btn-icon bg-pink-100">🤰</div>
+            <div className="font-bold text-lg text-slate-800">Acompanhamento da Gestação</div>
+            <div className="text-gray-400 text-sm">Peso gestacional, semanas e pré-natal</div>
+          </button>
+        )}
+        {mostrarCrianca && (
+          <button className="big-btn" onClick={() => onSelect('crianca')}>
+            <div className="big-btn-icon bg-blue-100">👶</div>
+            <div className="font-bold text-lg text-slate-800">Acompanhamento da Criança</div>
+            <div className="text-gray-400 text-sm">Vacinas e saúde dos filhos</div>
+          </button>
+        )}
+        <button className="big-btn" onClick={() => onSelect('chat')}>
+          <div className="big-btn-icon bg-amber-100">💬</div>
+          <div className="font-bold text-lg text-slate-800">Converse Conosco</div>
+          <div className="text-gray-400 text-sm">Mensagens para a equipe de saúde</div>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Acompanhamento Pressão e Glicemia
+const AcompanhamentoSaude = ({ user, onBack }) => {
+  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const [lastData, setLastData] = useState(null);
+  const [bpMax, setBpMax] = useState('');
+  const [bpMin, setBpMin] = useState('');
+  const [peso, setPeso] = useState('');
+  const [glicemia, setGlicemia] = useState('');
+  const [atividade, setAtividade] = useState('');
+  const [lastAt, setLastAt] = useState(null);
+  const [saving, setSaving] = useState(false);
+  
+  useEffect(() => {
+    const load = async () => {
+      const remoteLast = await fetchUltimoMonitoramentoSupabase(patientKey);
+      if (remoteLast) {
+        await syncRegistrosSupabase(patientKey);
+        setLastData({ pa: remoteLast.pa_sistolica, paDiastolica: remoteLast.pa_diastolica, peso: remoteLast.peso_kg, glicemia: remoteLast.glicemia_mg, atividade: remoteLast.atividade_fisica || '', updatedAt: remoteLast.created_at || remoteLast.updated_at });
+        setLastAt(remoteLast.created_at || remoteLast.updated_at);
+        if (isCriticalHealth(remoteLast.pa_sistolica, remoteLast.glicemia_mg)) {
+          notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${remoteLast.created_at || remoteLast.updated_at || ''}`);
+        }
+        return;
+      }
+      await syncRegistrosSupabase(patientKey);
+      const r = await db.registros.where('patientId').equals(patientKey).toArray();
+      const monitors = r.filter(i => i.tipo === 'monitoramento' || i.pa_sistolica);
+      if(!monitors.length) return;
+      const last = monitors.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
+      setLastData({ pa: last.pa_sistolica, paDiastolica: last.pa_diastolica, peso: last.peso_kg, glicemia: last.glicemia_mg, atividade: last.atividade_fisica || '', updatedAt: last.createdAt });
+      setLastAt(last.createdAt);
+      if (isCriticalHealth(last.pa_sistolica, last.glicemia_mg)) {
+        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${last.createdAt || ''}`);
+      }
+    };
+    load();
+  }, [patientKey]);
+  
+  const canSubmit = () => { if(!lastAt) return true; return (Date.now() - new Date(lastAt).getTime()) >= 24*60*60*1000; };
+  const horasRestantes = () => { if(!lastAt) return 0; const diff = (24*60*60*1000) - (Date.now() - new Date(lastAt).getTime()); return diff > 0 ? Math.ceil(diff/(60*60*1000)) : 0; };
+  
+  const handleSave = async () => {
+    const toNum = v => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
+    const sys = toNum(bpMax), dia = toNum(bpMin), w = toNum(peso), g = toNum(glicemia);
+    if(sys === null || w === null || g === null) return alert('Preencha PA Máxima, Peso e Glicemia.');
+    if(!canSubmit()) return alert(`Aguarde ${horasRestantes()}h para atualizar.`);
+    setSaving(true);
+    try {
+      const rid = uuidv4(), now = new Date().toISOString();
+      const localId = await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
+      await enviarRegistroSupabase({ id: localId, registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
+      await syncRegistrosSupabase(patientKey);
+      setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade, updatedAt: now });
+      setLastAt(now);
+      if (isCriticalHealth(sys, g)) {
+        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${now}`);
+      }
+      setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade('');
+      syncManager();
+      alert('✅ Monitoramento salvo!');
+    } finally { setSaving(false); }
+  };
+  
+  return (
+    <div className="p-5 fade-in min-h-screen">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <h2 className="text-xl font-bold">Pressão e Glicemia</h2>
+      </div>
+      <HealthStatusCard pa={lastData?.pa} paDiastolica={lastData?.paDiastolica} glicemia={lastData?.glicemia} peso={lastData?.peso} atividade={lastData?.atividade} lastUpdate={lastData?.updatedAt} />
+      <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm mb-6">
+        <h3 className="text-lg font-extrabold text-emerald-900 mb-1">Monitoramento diário</h3>
+        <p className="text-sm text-emerald-700 mb-4">Preencha os novos valores</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="text-xs text-slate-500 font-semibold">PA Máxima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMax} onChange={e=>setBpMax(e.target.value)} placeholder="120" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">PA Mínima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMin} onChange={e=>setBpMin(e.target.value)} placeholder="80" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">Peso (kg)</label><input className="input-box" type="number" step="0.1" inputMode="decimal" value={peso} onChange={e=>setPeso(e.target.value)} placeholder="70" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">Glicemia (mg/dL)</label><input className="input-box" type="number" inputMode="numeric" value={glicemia} onChange={e=>setGlicemia(e.target.value)} placeholder="100" /></div>
+        </div>
+        <div className="mt-2"><label className="text-xs text-slate-500 font-semibold">Atividade Física</label><select className="input-box" value={atividade} onChange={e=>setAtividade(e.target.value)}><option value="">Nenhuma</option><option value="caminhada">Caminhada</option><option value="corrida">Corrida</option><option value="natacao">Natação</option><option value="musculacao">Musculação</option><option value="yoga">Yoga</option><option value="outro">Outro</option></select></div>
+        {!canSubmit() && <div className="text-xs text-amber-700 font-semibold mt-2">Você poderá atualizar em {horasRestantes()}h.</div>}
+        <button className="btn-primary mt-4" disabled={saving || !canSubmit()} onClick={handleSave}>{saving ? 'SALVANDO...' : 'ATUALIZAR MONITORAMENTO'}</button>
+      </div>
+    </div>
+  );
+};
+
+// Acompanhamento da Gestação
+const AcompanhamentoGestacao = ({ user, onBack }) => {
+  const semanas = user.gestacao_semanas || 0;
+  const previsao = user.previsao_parto || 'Não informado';
+  const pesoInicial = parseFloat(user.peso_inicial) || 0;
+  const pesoAtual = parseFloat(user.peso_atual) || pesoInicial;
+  const ganho = pesoAtual - pesoInicial;
+  const fazPreNatal = user.faz_pre_natal === 'Sim';
+  
+  return (
+    <div className="p-5 fade-in min-h-screen">
+      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button><h2 className="text-xl font-bold">Gestação</h2></div>
+      <div className="status-card" style={{background: 'linear-gradient(135deg, #fff 0%, #fdf2f8 100%)', borderColor: '#fbcfe8'}}>
+        <div className="text-center mb-4"><div className="text-5xl mb-2">🤰</div><h3 className="text-2xl font-extrabold text-pink-700">{semanas} semanas</h3></div>
+        <div className="metric-grid">
+          <div className="metric-item bg-pink-50"><div className="metric-label">Previsão Parto</div><div className="metric-value text-base text-pink-700">{previsao}</div></div>
+          <div className="metric-item bg-pink-50"><div className="metric-label">Pré-natal</div><div className={`metric-value text-base ${fazPreNatal ? 'text-emerald-600' : 'text-amber-600'}`}>{fazPreNatal ? '✅ Em dia' : '⚠️ Pendente'}</div></div>
+          <div className="metric-item"><div className="metric-label">Peso Inicial</div><div className="metric-value">{pesoInicial || '--'} kg</div></div>
+          <div className="metric-item"><div className="metric-label">Ganho de Peso</div><div className="metric-value">{ganho > 0 ? '+' : ''}{ganho.toFixed(1)} kg</div></div>
+        </div>
+      </div>
+      <button className="btn-sec mt-4" onClick={onBack}>← Voltar</button>
+    </div>
+  );
+};
+
+// Acompanhamento da Criança
+const AcompanhamentoCrianca = ({ user, onBack }) => {
+  let filhos = []; try { filhos = user.filhos_json ? JSON.parse(user.filhos_json) : []; } catch {}
+  const criancas = filhos.filter(f => (parseInt(f.idade) || 0) <= 12);
+  
+  return (
+    <div className="p-5 fade-in min-h-screen">
+      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button><h2 className="text-xl font-bold">Crianças</h2></div>
+      {criancas.length === 0 && <div className="card text-center py-8"><div className="text-4xl mb-3">👶</div><div className="text-slate-500">Nenhuma criança cadastrada</div></div>}
+      <div className="space-y-3">
+        {criancas.map((f, idx) => (
+          <div key={idx} className="card border-2 border-blue-100">
+            <div className="font-bold text-slate-800 text-lg">{f.nome || `Filho ${idx+1}`}</div>
+            <div className="text-sm text-slate-500">{f.idade} anos</div>
+            <div className="mt-2 text-sm">Vacina: <span className="font-bold">{f.vacinaStatus || 'Não informado'}</span></div>
+          </div>
+        ))}
+      </div>
+      <button className="btn-sec mt-4" onClick={onBack}>← Voltar</button>
+    </div>
+  );
+};
+
+// ==========================================
+// CHAT - LISTA DE CONVERSAS (Estilo WhatsApp)
+// ==========================================
+const ConverseConosco = ({ user, onBack }) => {
+  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const [conversas, setConversas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [chatAberto, setChatAberto] = useState(null);
+
+  const normalizeReplies = (r) => {
+    if (Array.isArray(r?.replies)) return r.replies;
+    if (Array.isArray(r?.replies_json)) return r.replies_json;
+    if (typeof r?.replies_json === 'string') {
+      try {
+        const parsed = JSON.parse(r.replies_json);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  };
+
+  const getReadKey = (registroId, ultimaData) => `chat_read_${patientKey}_${registroId || ''}_${ultimaData || ''}`;
+  const isRead = (registroId, ultimaData) => localStorage.getItem(getReadKey(registroId, ultimaData)) === '1';
+  
+  const carregarConversas = useCallback(async () => {
+    setLoading(true);
+    await syncRegistrosSupabase(patientKey);
+    const regs = await db.registros.where('patientId').equals(patientKey).toArray();
+    
+    // Filtra apenas conversas (monitoramento só se tiver resposta do profissional)
+    const seenRegistro = new Set();
+    const msgs = regs.filter(r => {
+      const registroId = r.registroId || r.registro_id;
+      if (!registroId) return false;
+      if (seenRegistro.has(registroId)) return false;
+      seenRegistro.add(registroId);
+
+      const replies = normalizeReplies(r);
+      const hasProMsg = !!r.resposta || replies.length > 0;
+      const isMonitoramento = (r.tipo || '').toLowerCase() === 'monitoramento';
+      if (isMonitoramento && !hasProMsg) return false;
+      if (!isMonitoramento && (r.texto || r.tipo === 'midia' || r.tipo === 'texto')) return true;
+      return hasProMsg;
+    });
+    msgs.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
+    
+    const lista = msgs.map(r => {
+      const replies = normalizeReplies(r);
+      const proReplies = replies.filter(rep => rep.from === 'pro');
+      // Pega último profissional real (não genérico)
+      const realProReply = proReplies.slice().reverse().find(rep => rep.pro_name && rep.pro_name !== 'Equipe de Saúde');
+      const ultimaResposta = proReplies.slice(-1)[0];
+      const ultimaData = ultimaResposta?.at || r.resposta_data || r.updatedAt || r.updated_at || r.createdAt || r.created_at;
+      const registroId = r.registroId || r.registro_id;
+      const lidoLocal = isRead(registroId, ultimaData);
+      const temNovaMensagem = (ultimaResposta || r.resposta) && !lidoLocal;
+      const proNome = realProReply?.pro_name || ultimaResposta?.pro_name || r.pro_name || 'Equipe de Saúde';
+      
+      let resumo = r.texto || '';
+      if (!resumo && r.tipo === 'midia') resumo = '📎 Mídia enviada';
+      if (r.resposta) resumo = r.resposta;
+      if (ultimaResposta?.text) resumo = ultimaResposta.text;
+      
+      return {
+        ...r,
+        resumo: resumo.substring(0, 50) + (resumo.length > 50 ? '...' : ''),
+        temNovaMensagem,
+        proNome,
+        ultimaData
+      };
+    });
+
+    lista.forEach(conv => {
+      if (conv.temNovaMensagem) {
+        notifyUser(`Nova mensagem de ${conv.proNome}`, conv.resumo || 'Você recebeu uma nova mensagem.', `chat_${conv.registroId || conv.registro_id}_${conv.ultimaData || ''}`);
+      }
+    });
+
+    setConversas(lista);
+    setLoading(false);
+  }, [patientKey]);
+
+  const marcarComoLida = async (conv) => {
+    const regId = conv.registroId || conv.registro_id;
+    if (!regId) return;
+    try {
+      localStorage.setItem(getReadKey(regId, conv.ultimaData), '1');
+    } catch {}
+    // IMEDIATAMENTE atualiza o estado para remover o badge
+    setConversas(prev => prev.map(c => (c.registroId || c.registro_id) === regId ? { ...c, status: 'lido', temNovaMensagem: false } : c));
+    // Depois atualiza o banco de dados em background
+    setTimeout(async () => {
+      try {
+        const payload = { status: 'lido', updatedAt: new Date().toISOString() };
+        const all = await db.registros.toArray();
+        const matches = all.filter(r => (r.registroId || r.registro_id) === regId);
+        for (const m of matches) {
+          if (m.id) await db.registros.update(m.id, payload);
+        }
+      } catch (e) { console.error('marcarComoLida DB error:', e); }
+    }, 0);
+  };
+
+  useEffect(() => { carregarConversas(); }, [carregarConversas]);
+
+  const formatarDataCurta = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    const hoje = new Date();
+    if (dt.toDateString() === hoje.toDateString()) return dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  if (chatAberto) {
+    return <ChatConversa user={user} registro={chatAberto} onBack={() => { setChatAberto(null); carregarConversas(); }} />;
+  }
+  
+  return (
+    <div className="p-5 fade-in min-h-screen pb-32">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <h2 className="text-xl font-bold">Minhas Conversas</h2>
+      </div>
+      
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl">💬</div>
+          <div>
+            <div className="font-bold text-amber-800">Converse com a equipe de saúde</div>
+            <div className="text-xs text-amber-600">Envie dúvidas, fotos, vídeos ou áudios</div>
+          </div>
+        </div>
+      </div>
+      
+      {loading && <div className="text-center text-gray-400 py-8">Carregando...</div>}
+      
+      {!loading && conversas.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-5xl mb-4">💬</div>
+          <div className="text-gray-500 mb-2">Nenhuma conversa ainda</div>
+          <div className="text-sm text-gray-400">Inicie uma nova conversa</div>
+        </div>
+      )}
+      
+      <div className="space-y-3">
+        {conversas.map((conv, idx) => (
+          <div
+            key={conv.registroId || conv.registro_id || idx}
+            onClick={() => { marcarComoLida(conv); setChatAberto({ ...conv, status: 'lido', temNovaMensagem: false }); }}
+            className={`conv-card ${conv.temNovaMensagem ? 'has-new' : ''}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg">{conv.proNome.charAt(0)}</div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800">{conv.proNome}</span>
+                    {conv.temNovaMensagem && <span className="new-badge">✉ Nova mensagem</span>}
+                  </div>
+                  <div className="text-sm text-slate-500 mt-1">{conv.resumo || 'Mensagem'}</div>
+                </div>
+              </div>
+              <div className="text-xs text-slate-400">{formatarDataCurta(conv.ultimaData)}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 shadow-lg">
+        <NovaConversaButton patientKey={patientKey} onCreated={carregarConversas} />
+      </div>
+    </div>
+  );
+};
+
+// Botão/Form para Nova Conversa
+const NovaConversaButton = ({ patientKey, onCreated }) => {
+  const [showForm, setShowForm] = useState(false);
+  const [txt, setTxt] = useState('');
+  const [files, setFiles] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraMode, setCameraMode] = useState('photo');
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const videoChunksRef = useRef([]);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const timerRef = useRef(null);
+  const videoRecorderRef = useRef(null);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setFiles(prev => [...prev, { file: new File([blob], `audio_${Date.now()}.webm`, { type: 'audio/webm' }), preview: URL.createObjectURL(blob), type: 'audio' }]);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopRecording(); return 60; } return p + 1; }), 1000);
+    } catch { alert('Microfone indisponível'); }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.state !== 'inactive' && mediaRecorderRef.current?.stop();
+    timerRef.current && clearInterval(timerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const openCamera = async (mode) => {
+    setCameraMode(mode);
+    setShowCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: mode === 'video' });
+      streamRef.current = stream;
+      videoRef.current && (videoRef.current.srcObject = stream);
+    } catch { alert('Câmera indisponível'); setShowCamera(false); }
+  };
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    videoRecorderRef.current?.state !== 'inactive' && videoRecorderRef.current?.stop();
+    setShowCamera(false);
+    setIsRecordingVideo(false);
+  };
+
+  const takePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    canvas.toBlob((blob) => {
+      setFiles(prev => [...prev, { file: new File([blob], `foto_${Date.now()}.jpg`, { type: 'image/jpeg' }), preview: URL.createObjectURL(blob), type: 'image' }]);
+      stopCamera();
+    }, 'image/jpeg', 0.9);
+  };
+
+  const startVideoRecording = () => {
+    if (!streamRef.current) return;
+    videoChunksRef.current = [];
+    videoRecorderRef.current = new MediaRecorder(streamRef.current);
+    videoRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+    videoRecorderRef.current.onstop = () => {
+      const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+      setFiles(prev => [...prev, { file: new File([blob], `video_${Date.now()}.webm`, { type: 'video/webm' }), preview: URL.createObjectURL(blob), type: 'video' }]);
+    };
+    videoRecorderRef.current.start();
+    setIsRecordingVideo(true);
+    setRecordingTime(0);
+    timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopVideoRecording(); return 60; } return p + 1; }), 1000);
+  };
+
+  const stopVideoRecording = () => {
+    videoRecorderRef.current?.state !== 'inactive' && videoRecorderRef.current?.stop();
+    timerRef.current && clearInterval(timerRef.current);
+    setIsRecordingVideo(false);
+    stopCamera();
+  };
+
+  const removeFile = idx => { files[idx]?.preview && URL.revokeObjectURL(files[idx].preview); setFiles(prev => prev.filter((_, i) => i !== idx)); };
+  
+  const handleSend = async () => {
+    if(!txt.trim() && !files.length) return alert('Digite mensagem ou anexe arquivo.');
+    setSending(true);
+    try {
+      const rid = uuidv4(), now = new Date().toISOString();
+      const autoReply = { from: 'pro', text: AUTO_REPLY_TEXT, at: now, pro_name: 'Equipe de Saúde' };
+      await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', createdAt: now, updatedAt: now, replies: [autoReply], synced: 0 });
+      for(const item of files) await db.midias.add({ registroId: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
+      syncManager();
+      setTxt('');
+      files.forEach(f => f.preview && URL.revokeObjectURL(f.preview));
+      setFiles([]);
+      setShowForm(false);
+      alert('✅ Mensagem enviada!');
+      onCreated();
+    } finally { setSending(false); }
+  };
+
+  const formatTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+
+  if (!showForm) return <button onClick={() => setShowForm(true)} className="btn-primary">➕ Nova Conversa</button>;
+
+  return (
+    <div className="bg-white">
+      {showCamera && (
+        <div className="modal-bg" style={{flexDirection:'column',gap:'16px'}}>
+          <video ref={videoRef} autoPlay playsInline muted style={{width:'100%',maxWidth:'400px',borderRadius:'16px',background:'#000'}} />
+          <div className="flex gap-4 items-center">
+            {cameraMode === 'photo' ? (
+              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-lg">📸</button>
+            ) : !isRecordingVideo ? (
+              <button onClick={startVideoRecording} className="w-16 h-16 bg-red-500 rounded-full text-white text-2xl shadow-lg">⏺️</button>
+            ) : (
+              <button onClick={stopVideoRecording} className="w-16 h-16 bg-red-700 rounded-full text-white text-xl shadow-lg">⏹️ {formatTime(recordingTime)}</button>
+            )}
+            <button onClick={stopCamera} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">✕</button>
+          </div>
+        </div>
+      )}
+      
+      <div className="flex items-center justify-between mb-3">
+        <span className="font-bold text-slate-700">Nova Conversa</span>
+        <button onClick={() => setShowForm(false)} className="text-slate-400 font-bold">✕</button>
+      </div>
+      
+      <div className="flex gap-2 mb-3">
+        <button onClick={() => openCamera('photo')} className="flex-1 bg-slate-100 rounded-xl p-3 text-center text-sm font-semibold text-slate-600">📷 Foto</button>
+        <button onClick={() => openCamera('video')} className="flex-1 bg-slate-100 rounded-xl p-3 text-center text-sm font-semibold text-slate-600">🎥 Vídeo</button>
+      </div>
+      
+      {isRecording ? (
+        <div className="bg-red-50 border-2 border-red-400 rounded-xl p-3 mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div><span className="font-bold text-red-700 text-sm">Gravando {formatTime(recordingTime)}/1:00</span></div>
+          <button onClick={stopRecording} className="bg-red-500 text-white px-3 py-1 rounded-lg font-bold text-sm">⏹️</button>
+        </div>
+      ) : (
+        <button onClick={startRecording} className="w-full bg-emerald-50 border border-emerald-200 rounded-xl p-2 mb-3 text-emerald-700 font-semibold text-sm">🎙️ Gravar Áudio (até 1 min)</button>
+      )}
+      
+      {files.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-3">
+          {files.map((item, idx) => (
+            <div key={idx} className="bg-green-50 p-2 rounded-lg border border-green-200 text-xs flex items-center gap-2">
+              {item.type === 'image' && <img src={item.preview} style={{width:'32px',height:'32px',objectFit:'cover',borderRadius:'4px'}} />}
+              {item.type === 'video' && <span>🎥</span>}
+              {item.type === 'audio' && <span>🎵</span>}
+              <button className="text-red-500 font-bold" onClick={()=>removeFile(idx)}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      <textarea className="input-box mb-2" placeholder="Digite sua mensagem..." value={txt} onChange={e=>setTxt(e.target.value)} rows={2} />
+      <button className="btn-primary" disabled={sending || isRecording} onClick={handleSend}>{sending ? 'ENVIANDO...' : '📤 ENVIAR'}</button>
+    </div>
+  );
+};
+
+// Tela de Conversa Individual
+const ChatConversa = ({ user, registro, onBack }) => {
+  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const [mensagens, setMensagens] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [txt, setTxt] = useState('');
+  const [files, setFiles] = useState([]);
+  const [sending, setSending] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraMode, setCameraMode] = useState('photo');
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const videoChunksRef = useRef([]);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const timerRef = useRef(null);
+  const videoRecorderRef = useRef(null);
+  const mediaUrlsRef = useRef([]);
+
+  const regId = registro.registroId || registro.registro_id;
+  const normalizeReplies = (r) => {
+    if (Array.isArray(r?.replies)) return r.replies;
+    if (Array.isArray(r?.replies_json)) return r.replies_json;
+    if (typeof r?.replies_json === 'string') {
+      try {
+        const parsed = JSON.parse(r.replies_json);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+    }
+    return [];
+  };
+
+  const replies = normalizeReplies(registro);
+  // Pega o ÚLTIMO profissional que respondeu (ignorando "Equipe de Saúde" genérico se houver nome real)
+  const proReplies = replies.filter(r => r.from === 'pro');
+  const realProReply = proReplies.reverse().find(r => r.pro_name && r.pro_name !== 'Equipe de Saúde') || proReplies[0];
+  const proNome = realProReply?.pro_name || registro.pro_name || 'Equipe de Saúde';
+
+  const carregarMensagens = useCallback(async () => {
+    setLoading(true);
+    mediaUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
+    mediaUrlsRef.current = [];
+    
+    await syncRegistrosSupabase(patientKey);
+    const reg = await db.registros.where('registroId').equals(regId).first() || registro;
+    if (reg?.resposta || normalizeReplies(reg).some(r => r.from === 'pro')) {
+      try {
+        const payload = { status: 'lido', updatedAt: new Date().toISOString() };
+        const matches = await db.registros.where('registroId').equals(regId).toArray();
+        for (const m of matches) {
+          if (m.id) await db.registros.update(m.id, payload);
+        }
+      } catch (e) { console.error('marcar lido chat error:', e); }
+    }
+    
+    const msgs = [];
+    const midias = await db.midias.where('registroId').equals(regId).toArray();
+    const mediaItems = midias.map(m => {
+      const url = m.blob ? URL.createObjectURL(m.blob) : '';
+      if (url) mediaUrlsRef.current.push(url);
+      return { type: m.type || '', name: m.name || 'arquivo', url };
+    });
+    
+    const textoUsuario = reg.texto || (reg.pa_sistolica ? `PA: ${reg.pa_sistolica}/${reg.pa_diastolica || '-'} | Peso: ${reg.peso_kg || '-'}kg | Glicemia: ${reg.glicemia_mg || '-'}` : '');
+    if (textoUsuario || mediaItems.length) {
+      msgs.push({ from: 'user', text: textoUsuario, at: reg.createdAt || reg.created_at, media: mediaItems });
+    }
+    
+    if (reg.resposta) {
+      msgs.push({ from: 'pro', text: reg.resposta, at: reg.resposta_data || reg.updatedAt, media: [], proName: proNome });
+    }
+    
+    const reps = normalizeReplies(reg);
+    reps.forEach(rep => {
+      const repMedia = Array.isArray(rep.media) ? rep.media.map(m => ({ type: m.type || '', name: m.name || 'mídia', url: m.url })) : [];
+      msgs.push({ from: rep.from === 'pro' ? 'pro' : 'user', text: rep.text || '', at: rep.at, media: repMedia, proName: rep.pro_name });
+    });
+    
+    msgs.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+    const lastProAt = msgs
+      .filter(m => m.from === 'pro' && m.at)
+      .map(m => new Date(m.at).getTime())
+      .sort((a, b) => b - a)[0];
+    const withRead = msgs.map(m => {
+      if (m.from !== 'user' || !m.at || !lastProAt) return { ...m, read: false };
+      return { ...m, read: new Date(m.at).getTime() <= lastProAt };
+    });
+    setMensagens(withRead);
+    setLoading(false);
+  }, [patientKey, regId, registro, proNome]);
+
+  useEffect(() => {
+    carregarMensagens();
+    return () => mediaUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
+  }, [carregarMensagens]);
+
+  // Funções de mídia
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setFiles(prev => [...prev, { file: new File([blob], `audio_${Date.now()}.webm`, { type: 'audio/webm' }), preview: URL.createObjectURL(blob), type: 'audio' }]);
+        stream.getTracks().forEach(t => t.stop());
+      };
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopRecording(); return 60; } return p + 1; }), 1000);
+    } catch { alert('Microfone indisponível'); }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.state !== 'inactive' && mediaRecorderRef.current?.stop();
+    timerRef.current && clearInterval(timerRef.current);
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const openCamera = async (mode) => {
+    setCameraMode(mode);
+    setShowCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: mode === 'video' });
+      streamRef.current = stream;
+      videoRef.current && (videoRef.current.srcObject = stream);
+    } catch { alert('Câmera indisponível'); setShowCamera(false); }
+  };
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    videoRecorderRef.current?.state !== 'inactive' && videoRecorderRef.current?.stop();
+    setShowCamera(false);
+    setIsRecordingVideo(false);
+  };
+
+  const takePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(videoRef.current, 0, 0);
+    canvas.toBlob((blob) => {
+      setFiles(prev => [...prev, { file: new File([blob], `foto_${Date.now()}.jpg`, { type: 'image/jpeg' }), preview: URL.createObjectURL(blob), type: 'image' }]);
+      stopCamera();
+    }, 'image/jpeg', 0.9);
+  };
+
+  const startVideoRecording = () => {
+    if (!streamRef.current) return;
+    videoChunksRef.current = [];
+    videoRecorderRef.current = new MediaRecorder(streamRef.current);
+    videoRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) videoChunksRef.current.push(e.data); };
+    videoRecorderRef.current.onstop = () => {
+      const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+      setFiles(prev => [...prev, { file: new File([blob], `video_${Date.now()}.webm`, { type: 'video/webm' }), preview: URL.createObjectURL(blob), type: 'video' }]);
+    };
+    videoRecorderRef.current.start();
+    setIsRecordingVideo(true);
+    setRecordingTime(0);
+    timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopVideoRecording(); return 60; } return p + 1; }), 1000);
+  };
+
+  const stopVideoRecording = () => {
+    videoRecorderRef.current?.state !== 'inactive' && videoRecorderRef.current?.stop();
+    timerRef.current && clearInterval(timerRef.current);
+    setIsRecordingVideo(false);
+    stopCamera();
+  };
+
+  const removeFile = idx => { files[idx]?.preview && URL.revokeObjectURL(files[idx].preview); setFiles(prev => prev.filter((_, i) => i !== idx)); };
+  
+  const handleSend = async () => {
+    if(!txt.trim() && !files.length) return alert('Digite mensagem ou anexe arquivo.');
+    setSending(true);
+    try {
+      const now = new Date().toISOString();
+      const reg = await db.registros.where('registroId').equals(regId).first();
+      if (!reg) { alert('Registro não encontrado'); return; }
+      
+      const reps = Array.isArray(reg.replies) ? reg.replies : [];
+      const newReply = { from: 'user', text: txt.trim(), at: now, media: [] };
+      
+      for(const item of files) {
+        await db.midias.add({ registroId: regId, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
+        newReply.media.push({ type: item.file.type, name: item.file.name });
+      }
+      
+      reps.push(newReply);
+      await db.registros.update(reg.id, { replies: reps, updatedAt: now, synced: 0 });
+      
+      syncManager();
+      setTxt('');
+      files.forEach(f => f.preview && URL.revokeObjectURL(f.preview));
+      setFiles([]);
+      await carregarMensagens();
+    } finally { setSending(false); }
+  };
+
+  const formatTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+  
+  return (
+    <div className="fade-in min-h-screen flex flex-col" style={{background:'#f3fbf5'}}>
+      <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3 sticky top-0 z-10">
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">{proNome.charAt(0)}</div>
+        <div>
+          <div className="font-bold text-slate-800">{proNome}</div>
+          <div className="text-xs text-slate-500">Equipe de Saúde</div>
+        </div>
+      </div>
+      
+      <div className="flex-1 p-4 pb-48 overflow-y-auto">
+        {loading && <div className="text-center text-gray-400 py-8">Carregando...</div>}
+        
+        <div className="space-y-3">
+          {mensagens.map((m, idx) => (
+            <div key={idx} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[80%] p-3 rounded-2xl shadow-sm ${m.from === 'user' ? 'bg-emerald-100 text-emerald-900 rounded-br-md' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-md'}`}>
+                {m.from === 'pro' && m.proName && <div className="text-xs font-bold text-emerald-600 mb-1">{m.proName}</div>}
+                {m.text && <div className="text-sm">{m.text}</div>}
+                {m.media && m.media.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {m.media.map((media, i) => {
+                      const tipo = media.type || '';
+                      if (tipo.startsWith('image') && media.url) return <img key={i} src={media.url} className="rounded-lg max-w-full" style={{maxHeight:'200px'}} />;
+                      if (tipo.startsWith('video') && media.url) return <video key={i} controls src={media.url} className="rounded-lg max-w-full" style={{maxHeight:'200px'}} />;
+                      if (tipo.startsWith('audio') && media.url) return <audio key={i} controls src={media.url} className="w-full" />;
+                      return <div key={i} className="bg-slate-100 p-2 rounded text-xs">📎 {media.name}</div>;
+                    })}
+                  </div>
+                )}
+                <div className={`text-[10px] mt-1 ${m.from === 'user' ? 'text-emerald-600' : 'text-slate-400'} flex items-center gap-1 justify-end`}>
+                  <span>{m.at ? formatDateISO(m.at) : ''}</span>
+                  {m.from === 'user' && <span className="text-[10px]">{m.read ? '✓✓' : '✓'}</span>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {showCamera && (
+        <div className="modal-bg" style={{flexDirection:'column',gap:'16px'}}>
+          <video ref={videoRef} autoPlay playsInline muted style={{width:'100%',maxWidth:'400px',borderRadius:'16px',background:'#000'}} />
+          <div className="flex gap-4 items-center">
+            {cameraMode === 'photo' ? (
+              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full text-3xl shadow-lg">📸</button>
+            ) : !isRecordingVideo ? (
+              <button onClick={startVideoRecording} className="w-16 h-16 bg-red-500 rounded-full text-white text-2xl shadow-lg">⏺️</button>
+            ) : (
+              <button onClick={stopVideoRecording} className="w-16 h-16 bg-red-700 rounded-full text-white text-xl shadow-lg">⏹️ {formatTime(recordingTime)}</button>
+            )}
+            <button onClick={stopCamera} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">✕</button>
+          </div>
+        </div>
+      )}
+      
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 shadow-lg">
+        <div className="flex gap-2 mb-2">
+          <button onClick={() => openCamera('photo')} className="flex-1 bg-slate-100 rounded-xl p-2 text-center text-xs font-semibold text-slate-600">📷</button>
+          <button onClick={() => openCamera('video')} className="flex-1 bg-slate-100 rounded-xl p-2 text-center text-xs font-semibold text-slate-600">🎥</button>
+          {isRecording ? (
+            <button onClick={stopRecording} className="flex-1 bg-red-500 rounded-xl p-2 text-center text-xs font-bold text-white">⏹️ {formatTime(recordingTime)}</button>
+          ) : (
+            <button onClick={startRecording} className="flex-1 bg-emerald-100 rounded-xl p-2 text-center text-xs font-semibold text-emerald-700">🎙️</button>
+          )}
+        </div>
+        
+        {files.length > 0 && (
+          <div className="flex gap-2 flex-wrap mb-2">
+            {files.map((item, idx) => (
+              <div key={idx} className="bg-green-50 p-1 rounded border border-green-200 text-xs flex items-center gap-1">
+                {item.type === 'image' && <img src={item.preview} style={{width:'24px',height:'24px',objectFit:'cover',borderRadius:'2px'}} />}
+                {item.type === 'video' && <span>🎥</span>}
+                {item.type === 'audio' && <span>🎵</span>}
+                <button className="text-red-500 font-bold text-xs" onClick={()=>removeFile(idx)}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          <textarea className="input-box mb-0 flex-1" placeholder="Mensagem..." value={txt} onChange={e=>setTxt(e.target.value)} rows={1} style={{resize:'none'}} />
+          <button className="bg-emerald-500 text-white px-4 rounded-xl font-bold" disabled={sending || isRecording} onClick={handleSend}>{sending ? '...' : '➤'}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Login Profissional
+const ProAuth = ({onAuth, onBack}) => {
+  const [step, setStep] = useState('cpf');
+  const [cpf, setCpf] = useState('');
+  const [reg, setReg] = useState({nome:'', cpf:'', municipio:'', ubs:'', telefone:''});
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState('');
+  
+  const checkCpf = async () => {
+    if(!cpf) return alert('Digite o CPF');
+    const clean = cpf.replace(/\D/g,'');
+    if(clean.length !== 11) return alert('CPF inválido');
+    setLoading(true);
+    try {
+      const localPatient = await db.perfil.where('cpf').equals(clean).first();
+      if(localPatient){ setMsg('CPF é de usuário do SUS.'); setLoading(false); return; }
+      if(navigator.onLine){ try { const { data: remotePatient } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle(); if(remotePatient){ setMsg('CPF é de usuário do SUS.'); setLoading(false); return; } } catch {} }
+      const { data } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
+      if(data){ onAuth(data); }
+      else { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('CPF não encontrado. Complete seu cadastro.'); }
+    } catch { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('Offline. Cadastre-se.'); }
+    setLoading(false);
+  };
+  
+  const register = async () => {
+    if(!reg.municipio || !reg.ubs || !reg.nome || !reg.telefone) return alert('Preencha todos os campos');
+    setLoading(true);
+    try {
+      const cpfClean = reg.cpf.replace(/\D/g,'');
+      const { data, error } = await supabase.from('profissionais').insert({ nome: reg.nome, cpf: cpfClean, municipio: reg.municipio, ubs: reg.ubs, telefone: reg.telefone }).select().maybeSingle();
+      if(error){ alert('Erro: ' + error.message); }
+      else { alert('Cadastrado!'); onAuth(data); }
+    } catch(e) { alert('Falha: ' + e.message); }
+    setLoading(false);
+  };
+  
+  if(loading) return <Loading text="Verificando..." />;
+  if(step==='register') return (
+    <div className="p-6 fade-in">
+      <h2 className="text-2xl font-bold mb-4">Cadastro Profissional</h2>
+      {msg && <div className="text-xs font-bold mb-4 text-blue-700 bg-blue-50 p-3 rounded-lg border border-blue-200">{msg}</div>}
+      <div className="section-title">CPF</div><input className="input-box bg-gray-100" value={reg.cpf} disabled />
+      <div className="section-title">Município</div><select className="input-box" value={reg.municipio} onChange={e=>{ const m = e.target.value; const ubsOpts = m ? getUbsByMunicipio(m) : []; const nextUbs = ubsOpts.length === 1 ? ubsOpts[0] : ''; const names = nextUbs ? getEnfermeirasByMunicipioUbs(m, nextUbs) : []; setReg(prev => ({ ...prev, municipio: m, ubs: nextUbs, nome: names.length === 1 ? names[0] : '' })); }}><option value="">Selecione...</option>{PROFISSIONAL_MUNICIPIOS.map(m => <option key={m} value={m}>{m}</option>)}</select>
+      <div className="section-title">UBS</div><select className="input-box" value={reg.ubs} onChange={e=>{ const ubs = e.target.value; const names = reg.municipio && ubs ? getEnfermeirasByMunicipioUbs(reg.municipio, ubs) : []; setReg(prev => ({ ...prev, ubs, nome: names.length === 1 ? names[0] : '' })); }} disabled={!reg.municipio}><option value="">Selecione...</option>{getUbsByMunicipio(reg.municipio).map(u => <option key={u} value={u}>{u}</option>)}</select>
+      <div className="section-title">Seu Nome</div><select className="input-box" value={reg.nome} onChange={e=>setReg(prev => ({ ...prev, nome: e.target.value }))} disabled={!reg.municipio || !reg.ubs}><option value="">Selecione...</option>{getEnfermeirasByMunicipioUbs(reg.municipio, reg.ubs).map(n => <option key={n} value={n}>{n}</option>)}</select>
+      <div className="section-title">Telefone</div><input className="input-box" value={reg.telefone} onChange={e=>setReg({...reg,telefone:mascaraTelefone(e.target.value)})} placeholder="(91) 98765-4321" inputMode="tel" />
+      <button className="btn-primary mt-4" onClick={register}>CONCLUIR CADASTRO</button>
+      <button className="btn-sec mt-3" onClick={()=>{setStep('cpf'); setCpf(''); setMsg('');}}>Voltar</button>
+    </div>
+  );
+  return (
+    <div className="p-6 fade-in pt-20">
+      <h2 className="text-2xl font-bold mb-4">Acesso Profissional</h2>
+      <p className="text-gray-500 mb-6">Digite seu CPF para entrar</p>
+      {msg && <div className="text-xs font-bold mb-4 text-amber-800 bg-amber-50 p-3 rounded-lg border border-amber-200">{msg}</div>}
+      <input className="input-box text-center text-xl font-bold" value={cpf} onChange={e=>setCpf(mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} />
+      <button className="btn-primary mt-4" onClick={checkCpf}>ACESSAR</button>
+      <button className="btn-sec mt-3" onClick={onBack}>Voltar</button>
+    </div>
+  );
+};
+
+// Dashboard Profissional
+const ProDash = ({user, onLogout}) => {
+  useEffect(() => { sessionStorage.setItem('profissional', JSON.stringify(user)); }, [user]);
+  const abrirMonitoramento = () => { window.location.href = '../monitoramento/monitoramento.html'; };
+  const abrirNovoCadastro = () => { window.location.href = '../profissionais/profissionais.html'; };
+  return (
+    <div className="p-6 fade-in">
+      <div className="flex justify-between items-center mb-8"><div><h2 className="text-xl font-bold flex items-center gap-2" style={{color:'var(--primary)'}}><img src="../img/logo.png" alt="Tecendo Saúde" className="w-6 h-6" style={{objectFit:'contain'}} />{user.enfermeira || user.nome}</h2><p className="text-gray-500 text-sm">{user.ubs} • {user.municipio}</p></div><button onClick={onLogout} className="text-red-500 font-bold text-sm">SAIR</button></div>
+      <div className="grid gap-4">
+        <button className="big-btn" onClick={abrirNovoCadastro}><div className="big-btn-icon bg-emerald-100">📝</div><div className="font-bold text-lg">Novo Cadastro</div><div className="text-gray-400 text-sm">Cadastrar novo usuário do SUS</div></button>
+        <button className="big-btn" onClick={abrirMonitoramento}><div className="big-btn-icon bg-blue-100">📊</div><div className="font-bold text-lg">Monitoramento</div><div className="text-gray-400 text-sm">Dashboard de acompanhamento</div></button>
+      </div>
+    </div>
+  );
+};
+
+// App Principal
+const App = () => {
+  const [route, setRoute] = useState(IS_PROFISSIONAL ? 'pro_login' : 'login');
+  const [user, setUser] = useState(null);
+  const [online, setOnline] = useState(navigator.onLine);
+  useEffect(() => { const f = () => setOnline(navigator.onLine); window.addEventListener('online', f); window.addEventListener('offline', f); return () => { window.removeEventListener('online', f); window.removeEventListener('offline', f); }; }, []);
+  
+  const pullAutomatico = useCallback(async () => {
+    if (!user || IS_PROFISSIONAL) return;
+    const patientId = user.patient_id || user.patientId || '';
+    if (navigator.onLine && supabase && patientId && !String(patientId).startsWith('cpf-')) {
+      try {
+        const { data } = await supabase.from('perfis').select('*').eq('patient_id', patientId).maybeSingle();
+        if (data) {
+          await db.perfil.put({ ...user, ...data, patientId: data.patient_id, synced: 1 });
+          setUser(prev => ({ ...prev, ...data, patientId: data.patient_id }));
+        }
+      } catch {}
+    }
+    await syncRegistrosSupabase(patientId);
+  }, [user]);
+  
+  useEffect(() => {
+    if (IS_PROFISSIONAL) { const raw = sessionStorage.getItem('profissional'); if (raw) { try { const prof = JSON.parse(raw); if (prof) { setUser(prof); setRoute('pro_dash'); return; } } catch {} } }
+    else { const pid = localStorage.getItem('currentProfileId'); if(pid) { db.perfil.where('patientId').equals(pid).first().then(p => { if(p) { setUser(p); setRoute('menu'); syncManager(); } }); } }
+  }, []);
+  
+  useEffect(() => { if (route === 'menu') pullAutomatico(); }, [route, pullAutomatico]);
+  
+  useEffect(() => {
+    const onFocus = () => pullAutomatico();
+    const onVisibility = () => { if (document.visibilityState === 'visible') pullAutomatico(); };
+    const onOnline = () => pullAutomatico();
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('online', onOnline);
+    return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('online', onOnline); };
+  }, [pullAutomatico]);
+  
+  const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patientId = p.patient_id || p.patientId || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patientId); setUser({ ...p, patientId }); setRoute('menu'); } };
+  const logout = () => { localStorage.clear(); sessionStorage.clear(); setUser(null); setRoute(IS_PROFISSIONAL ? 'pro_login' : 'login'); };
+  const proLogin = (data) => { setUser(data); setRoute('pro_dash'); };
+  
+  if(SUPABASE_CONFIG_MISSING) return (<div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center"><img src="../img/logo.png" alt="Tecendo Saúde" className="w-36 h-36 mb-6" /><h1 className="text-2xl font-extrabold text-green-900 mb-2">Configuração necessária</h1><p className="text-gray-600 mb-4">Configure env/env.js com SUPABASE_URL e SUPABASE_KEY.</p></div>);
+  
+  return (
+    <>
+      <OfflineBanner online={online} />
+      {route === 'login' && <PatientLogin onLogin={loginPatient} onBack={() => window.location.href = '../index.html'} />}
+      {route === 'menu' && user && <PatientMainMenu user={user} onSelect={(opt) => setRoute(opt)} onLogout={logout} />}
+      {route === 'saude' && user && <AcompanhamentoSaude user={user} onBack={() => setRoute('menu')} />}
+      {route === 'gestacao' && user && <AcompanhamentoGestacao user={user} onBack={() => setRoute('menu')} />}
+      {route === 'crianca' && user && <AcompanhamentoCrianca user={user} onBack={() => setRoute('menu')} />}
+      {route === 'chat' && user && <ConverseConosco user={user} onBack={() => setRoute('menu')} />}
+      {route === 'pro_login' && <ProAuth onAuth={proLogin} onBack={() => window.location.href = '../index.html'} />}
+      {route === 'pro_dash' && user && <ProDash user={user} onLogout={logout} />}
+    </>
+  );
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
