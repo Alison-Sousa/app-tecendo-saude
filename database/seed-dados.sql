@@ -18,7 +18,7 @@ ON CONFLICT (cpf) DO NOTHING;
 INSERT INTO perfis (
   patient_id, nome, cpf, nascimento, regiao, ubs_referencia, genero, raca,
   endereco, telefone, escolaridade, profissao, mora_sozinho, acs_responsavel,
-  hipertensao, diabetes, vicios, altura, peso_inicial
+  hipertensao, diabetes, dependencias, altura, peso_inicial
 ) VALUES
 ('P001','Maria Silva','11122233344','12/03/1990','Norte','UBS Centro','F','Parda','Rua A, 123','(11) 98888-0001','Ensino Médio','Auxiliar','nao','ACS Joana','nao','sim','nenhum','160','72'),
 ('P002','João Lima','55566677788','01/11/1985','Sul','UBS Sul','M','Branca','Rua B, 45','(11) 97777-0002','Ensino Fundamental','Motorista','sim','ACS Carlos','sim','nao','tabagismo','175','88'),
@@ -197,8 +197,8 @@ SET
   tempo_diag_has = COALESCE(NULLIF(tempo_diag_has,''), CASE WHEN hipertensao = 'sim' OR hipertensao = 'Sim' THEN '3 anos' ELSE 'Não se aplica' END),
   tempo_diag_dm = COALESCE(NULLIF(tempo_diag_dm,''), CASE WHEN diabetes = 'sim' OR diabetes = 'Sim' THEN '2 anos' ELSE 'Não se aplica' END),
   infeccao_urinaria_gestacao = COALESCE(NULLIF(infeccao_urinaria_gestacao,''), 'Não'),
-  vicios = COALESCE(NULLIF(vicios,''), 'nenhum'),
-  tempo_vicio = COALESCE(NULLIF(tempo_vicio,''), CASE WHEN vicios IS NULL OR vicios = '' OR vicios = 'nenhum' THEN 'Não se aplica' ELSE '5 anos' END),
+  dependencias = COALESCE(NULLIF(dependencias,''), 'nenhum'),
+  tempo_vicio = COALESCE(NULLIF(tempo_vicio,''), CASE WHEN dependencias IS NULL OR dependencias = '' OR dependencias = 'nenhum' THEN 'Não se aplica' ELSE '5 anos' END),
   altura = COALESCE(NULLIF(altura,''), '165'),
   peso_inicial = COALESCE(NULLIF(peso_inicial,''), '70'),
   peso_atual = COALESCE(NULLIF(peso_atual,''), peso_inicial),

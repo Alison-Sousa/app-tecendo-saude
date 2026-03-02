@@ -145,7 +145,7 @@ const ProAuth = ({onAuth, onBack}) => {
 // Ficha Médica do usuário do SUS
 const FichaMedica = ({initialData, onSave, onCancel}) => {
   const defaultFicha = {
-    foto_url:'', nome:'', cpf:'', nascimento:'', genero:'', raca:'', endereco:'', telefone:'', escolaridade:'', profissao:'', mora_sozinho:'', mora_companheiro:'', tem_filhos:'', qtd_filhos:'', filhos_json:'', regiao:'', ubs_referencia:'', equipe_ubs:'', acs_responsavel:'', hipertensao:'', tempo_diag_has:'', diabetes:'', tempo_diag_dm:'', infeccao_urinaria_gestacao:'', vicios:'', tempo_vicio:'', altura:'', peso_inicial:'', peso_atual:'', peso_primeira_consulta:'', imc_pre_gestacional:'', dum:'', gestacao_semanas:'', previsao_parto:'', faz_pre_natal:'', inicio_pre_natal:'', data_ultima_consulta_pre_natal:'', enxerga_bem:'', consulta_oftalmo:'', tempo_consulta_oftalmo:'', dificuldade_mastigar_falar_engolir:'', uso_medicacoes:'', nomes_medicacoes:'', posologia_dosagem:'', posologia_horario:'', data_ultima_prescricao:'', data_ultima_dispensacao:'', atividade_fisica:'', freq_atividade:'', tipo_atividade:'', meta_peso:'', meta_glicemia:'', meta_pa_min:'', meta_pa_max:'', condicoes:''
+    foto_url:'', nome:'', cpf:'', nascimento:'', genero:'', raca:'', endereco:'', telefone:'', escolaridade:'', profissao:'', mora_sozinho:'', mora_companheiro:'', tem_filhos:'', qtd_filhos:'', filhos_json:'', regiao:'', ubs_referencia:'', equipe_ubs:'', acs_responsavel:'', hipertensao:'', tempo_diag_has:'', diabetes:'', tempo_diag_dm:'', infeccao_urinaria_gestacao:'', dependencias:'', tempo_dependencia:'', altura:'', peso_inicial:'', peso_atual:'', peso_primeira_consulta:'', imc_pre_gestacional:'', dum:'', gestacao_semanas:'', previsao_parto:'', faz_pre_natal:'', inicio_pre_natal:'', data_ultima_consulta_pre_natal:'', enxerga_bem:'', consulta_oftalmo:'', tempo_consulta_oftalmo:'', dificuldade_mastigar_falar_engolir:'', uso_medicacoes:'', nomes_medicacoes:'', posologia_dosagem:'', posologia_horario:'', data_ultima_prescricao:'', data_ultima_dispensacao:'', atividade_fisica:'', freq_atividade:'', tipo_atividade:'', meta_peso:'', meta_glicemia:'', meta_pa_min:'', meta_pa_max:'', condicoes:''
   };
   const [form, setForm] = useState({ ...defaultFicha, ...(initialData || {}) });
   const [fotoPreview, setFotoPreview] = useState(initialData?.foto_url || '');
@@ -225,7 +225,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     setExtraFotos(prev => prev.filter((_, i) => i !== index));
   };
   
-  const REQUIRED_KEYS = ['nome','cpf','nascimento','genero','raca','endereco','telefone','escolaridade','profissao','mora_sozinho','regiao','ubs_referencia','acs_responsavel','hipertensao','diabetes','vicios','tempo_vicio','peso_inicial','enxerga_bem','consulta_oftalmo','uso_medicacoes','atividade_fisica','freq_atividade','tipo_atividade','meta_peso','meta_glicemia','meta_pa_min','meta_pa_max','tem_filhos'];
+  const REQUIRED_KEYS = ['nome','cpf','nascimento','genero','raca','endereco','telefone','escolaridade','profissao','mora_sozinho','regiao','ubs_referencia','acs_responsavel','hipertensao','diabetes','dependencias','tempo_dependencia','peso_inicial','enxerga_bem','consulta_oftalmo','uso_medicacoes','atividade_fisica','freq_atividade','tipo_atividade','meta_peso','meta_glicemia','meta_pa_min','meta_pa_max','tem_filhos'];
   
   const handleSubmit = async () => {
     if(!fotoPreview && !fotoFile && !form.foto_url){ alert('Envie a foto de perfil.'); return; }
@@ -378,10 +378,10 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       <select className="input-box" value={form.tempo_diag_dm} onChange={e=>updateField('tempo_diag_dm', e.target.value)}><option value="">Escolha...</option><option>Não tem alteração</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
       {requiredLabel('Infecção urinária durante a gestação?')}
       <select className="input-box" value={form.infeccao_urinaria_gestacao} onChange={e=>updateField('infeccao_urinaria_gestacao', e.target.value)}><option value="">Escolha...</option><option>Não é gestante</option><option>Sim</option><option>Não</option></select>
-      {requiredLabel('Vícios')}
-      <select className="input-box" value={form.vicios} onChange={e=>updateField('vicios', e.target.value)}><option value="">Escolha...</option><option>Tabagismo</option><option>Etilismo</option><option>Ex-etilista</option><option>Ex-tabagista</option><option>Uso de drogas ilícitas</option><option>Nenhum relato</option></select>
-      {requiredLabel('Tempo de Vício')}
-      <select className="input-box" value={form.tempo_vicio} onChange={e=>updateField('tempo_vicio', e.target.value)}><option value="">Escolha...</option><option>Não tem vício</option><option>Até 5 anos</option><option>De 5 a 10 anos</option><option>Mais de 10 anos</option></select>
+      {requiredLabel('Dependências')}
+      <select className="input-box" value={form.dependencias} onChange={e=>updateField('dependencias', e.target.value)}><option value="">Escolha...</option><option>Tabagismo</option><option>Etilismo</option><option>Ex-etilista</option><option>Ex-tabagista</option><option>Uso de drogas ilícitas</option><option>Nenhum relato</option></select>
+      {requiredLabel('Tempo de  ')}
+      <select className="input-box" value={form.tempo_dependencia} onChange={e=>updateField('tempo_dependencia', e.target.value)}><option value="">Escolha...</option><option>Não tem Dependência</option><option>Até 5 anos</option><option>De 5 a 10 anos</option><option>Mais de 10 anos</option></select>
       <div className="section-title">Altura (cm)</div>
       <input className="input-box" type="number" min="50" max="250" step="0.1" inputMode="decimal" value={form.altura} onChange={e=>updateField('altura', e.target.value)} placeholder="Ex.: 152" />
       {requiredLabel('Peso Inicial (kg)')}

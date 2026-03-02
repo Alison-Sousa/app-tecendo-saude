@@ -12,12 +12,12 @@ var supabase = SUPABASE_CONFIG_MISSING ? null : window.supabase.createClient(SUP
 // Database IndexedDB (Dexie)
 var db = new Dexie('TecendoSaudeDB_V22_Fixed');
 db.version(1).stores({
-  perfil:'++id,patientId,synced, nome, cpf, nascimento, regiao, ubs_referencia, genero, raca, endereco, telefone, escolaridade, profissao, mora_sozinho, acs_responsavel, hipertensao, diabetes, vicios, tempo_vicio, altura, peso_inicial, enxerga_bem, consulta_oftalmo, uso_medicacoes, atividade_fisica, freq_atividade, tipo_atividade, meta_peso, meta_glicemia, meta_pa_min, meta_pa_max',
+  perfil:'++id,patientId,synced, nome, cpf, nascimento, regiao, ubs_referencia, genero, raca, endereco, telefone, escolaridade, profissao, mora_sozinho, acs_responsavel, hipertensao, diabetes, dependencias, tempo_vicio, altura, peso_inicial, enxerga_bem, consulta_oftalmo, uso_medicacoes, atividade_fisica, freq_atividade, tipo_atividade, meta_peso, meta_glicemia, meta_pa_min, meta_pa_max',
   registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
   midias:'++id,registroId,name,type,synced'
 });
 db.version(3).stores({
-  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
   midias:'++id,registroId,name,type,synced',
   medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -26,7 +26,7 @@ db.version(3).stores({
 });
 
 db.version(4).stores({
-  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
   midias:'++id,registroId,name,type,synced',
   medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -41,7 +41,7 @@ db.version(4).stores({
 });
 
 db.version(5).stores({
-  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,qtd_filhos_outro,filho1_nome,filho1_idade,filho2_nome,filho2_idade,filho3_nome,filho3_idade,filho4_nome,filho4_idade,filho5_nome,filho5_idade,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,qtd_filhos_outro,filho1_nome,filho1_idade,filho2_nome,filho2_idade,filho3_nome,filho3_idade,filho4_nome,filho4_idade,filho5_nome,filho5_idade,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
   midias:'++id,registroId,name,type,synced',
   medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -62,7 +62,7 @@ db.version(5).stores({
 });
 
 db.version(6).stores({
-  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
   midias:'++id,registroId,name,type,synced',
   medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -73,7 +73,7 @@ db.version(6).stores({
 });
 
 db.version(7).stores({
-  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,hipertensao,diabetes,vicios,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patientId,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registroId,patientId,deviceId,createdAt,updatedAt,status,synced',
   midias:'++id,registroId,name,type,synced',
   medicamentos: '++id,medicationId,patientId,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'

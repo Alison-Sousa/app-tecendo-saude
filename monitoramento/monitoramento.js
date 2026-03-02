@@ -1,7 +1,7 @@
- /**
- * TECENDO SAÚDE - MONITORAMENTO DE PACIENTES
- * Dashboard para profissionais de saúde
- */
+/**
+* TECENDO SAÚDE - MONITORAMENTO DE PACIENTES
+* Dashboard para profissionais de saúde
+*/
 
 // ============================================
 // CONFIGURAÇÃO SUPABASE
@@ -10,6 +10,16 @@ const env = window.__ENV || {};
 const SUPABASE_URL = env.SUPABASE_URL || env.VITE_SUPABASE_URL || '';
 const SUPABASE_KEY = env.SUPABASE_KEY || env.VITE_SUPABASE_KEY || '';
 var supabase = window.__supabaseClient || null;
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+const rid = uuidv4();
+
 
 // Aceita tanto formato antigo (eyJ...) quanto novo (sb_publishable_...)
 const isValidKey = SUPABASE_KEY && (SUPABASE_KEY.startsWith('eyJ') || SUPABASE_KEY.startsWith('sb_'));
@@ -122,10 +132,10 @@ const LIMITES = {
 
 // Curva de ganho de peso gestacional (Ministério da Saúde)
 const CURVA_PESO_GESTACIONAL = {
-  BAIXO_PESO: { min: 12.5, max: 18 },   // IMC < 18.5
-  EUTROFIA: { min: 11.5, max: 16 },     // IMC 18.5-24.9
-  SOBREPESO: { min: 7, max: 11.5 },     // IMC 25-29.9
-  OBESIDADE: { min: 5, max: 9 }         // IMC >= 30
+  BAIXO_PESO: { min: 9.7, max: 12.2 },
+  EUTROFIA: { min: 8, max: 12 },
+  SOBREPESO: { min: 7, max: 9 },
+  OBESIDADE: { min: 5, max: 7.2 }
 };
 
 function normalizarSim(valor) {
@@ -171,7 +181,7 @@ function normalizarRepliesJson(reg) {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
-    } catch {}
+    } catch { }
   }
   return [];
 }
@@ -200,7 +210,7 @@ async function notifyProfissional(title, body, tag, minIntervalMs = 60000) {
   try {
     new Notification(title, { body, icon: '../img/logo.png', tag });
     localStorage.setItem(key, String(Date.now()));
-  } catch {}
+  } catch { }
 }
 
 // ============================================
@@ -212,10 +222,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = '../index.html';
     return;
   }
-  
+
   const prof = JSON.parse(profData);
   document.getElementById('profName').textContent = prof.enfermeira || prof.nome || 'Profissional';
-  
+
   await carregarDados();
 });
 
@@ -226,7 +236,7 @@ async function carregarDados() {
   mostrarLoading('Carregando usuários do SUS...');
   // Limpar cache de mídia para buscar dados novos
   mediaCache.clear();
-  
+
   try {
     if (!supabase || typeof supabase.from !== 'function') {
       const lib = await aguardarLibSupabase();
@@ -243,53 +253,53 @@ async function carregarDados() {
       }
       throw new Error('Supabase não configurado - cliente inválido');
     }
-    
+
     console.log('Conectando ao Supabase...');
-    
+
     // 1. Carregar perfis (pacientes)
     const { data: perfisData, error: perfisError } = await supabase
       .from('perfis')
       .select('*')
       .order('nome');
-    
+
     if (perfisError) {
       console.error('Erro ao carregar perfis:', perfisError);
       throw perfisError;
     }
-    
+
     console.log('Perfis recebidos:', perfisData?.length || 0);
-    
+
     // 2. Carregar registros (PA, glicemia, peso)
     const { data: registrosData, error: registrosError } = await supabase
       .from('registros')
       .select('*')
       .order('created_at', { ascending: false });
-    
+
     if (registrosError) {
       console.error('Erro ao carregar registros:', registrosError);
       throw registrosError;
     }
-    
+
     console.log('Registros recebidos:', registrosData?.length || 0);
-    
+
     pacientes = perfisData || [];
     registros = (registrosData || []).map(r => {
       const replies = normalizarRepliesJson(r);
       const texto = (r.texto && String(r.texto).trim()) ? r.texto : montarTextoPadrao(r);
       return { ...r, replies_json: replies, texto };
     });
-    
+
     console.log('Perfis carregados:', pacientes.length);
     console.log('Registros carregados:', registros.length);
-    
+
     if (pacientes.length === 0) {
       mostrarErro('Nenhum usuário do SUS cadastrado no banco de dados. Execute o SQL de seed no Supabase.');
       return;
     }
-    
+
     // 3. Classificar cada paciente com base nos registros
     pacientes = pacientes.map(p => classificarPaciente(p));
-    
+
     // 4. Ordenar: críticos primeiro, depois atenção, estáveis, sem dados
     pacientes.sort((a, b) => {
       const ordem = { critico: 0, atencao: 1, estavel: 2, sem_dados: 3 };
@@ -309,10 +319,10 @@ async function carregarDados() {
     }
     localStorage.setItem('pro_last_msg_count', String(totalNovas));
     localStorage.setItem('pro_last_crit_count', String(criticos));
-    
+
     atualizarEstatisticas();
     renderizarListaPacientes();
-    
+
   } catch (error) {
     console.error('Erro ao carregar dados:', error);
     mostrarErro('Erro: ' + error.message + ' - Verifique o console (F12) para detalhes');
@@ -332,11 +342,11 @@ function classificarPaciente(paciente) {
     || regsOrdenados.find(temVitais)
     || regsOrdenados[0];
   const ultimoReg = ultimoRegClinico; // Preferir registro clínico para classificação
-  
+
   let classificacao = 'sem_dados';
   let alertas = [];
   let dadosVitais = { pa_sistolica: null, pa_diastolica: null, glicemia: null, peso: null, data: null };
-  
+
   if (ultimoReg) {
     // Extrair dados vitais do último registro
     dadosVitais = {
@@ -349,11 +359,11 @@ function classificarPaciente(paciente) {
       atividade_fisica: ultimoReg.atividade_fisica,
       data: ultimoReg.created_at
     };
-    
+
     // ===== AVALIAR PRESSÃO ARTERIAL =====
     const pa = dadosVitais.pa_sistolica;
     const pad = dadosVitais.pa_diastolica || 0;
-    
+
     if (pa) {
       if (pa >= LIMITES.PA_SISTOLICA.CRITICA || pad >= LIMITES.PA_DIASTOLICA.CRITICA) {
         classificacao = 'critico';
@@ -371,10 +381,10 @@ function classificarPaciente(paciente) {
         if (classificacao === 'sem_dados') classificacao = 'estavel';
       }
     }
-    
+
     // ===== AVALIAR GLICEMIA =====
     const glic = dadosVitais.glicemia;
-    
+
     if (glic) {
       if (glic >= LIMITES.GLICEMIA_JEJUM.CRITICA) {
         classificacao = 'critico';
@@ -392,7 +402,7 @@ function classificarPaciente(paciente) {
         if (classificacao === 'sem_dados') classificacao = 'estavel';
       }
     }
-    
+
     // ===== AVALIAR GESTANTE =====
     if (normalizarSim(dadosVitais.gestante) || normalizarSim(paciente.gestante)) {
       const avalGest = avaliarPesoGestacional(paciente, ultimoReg);
@@ -404,13 +414,13 @@ function classificarPaciente(paciente) {
       }
       paciente.dadosGestacionais = avalGest;
     }
-    
+
     // Se tem dados mas sem alertas = estável
     if (classificacao === 'sem_dados' && (pa || glic || dadosVitais.peso)) {
       classificacao = 'estavel';
     }
   }
-  
+
   return {
     ...paciente,
     classificacao,
@@ -429,28 +439,28 @@ function avaliarPesoGestacional(paciente, ultimoReg) {
   const altura = parseFloat(paciente.altura) || 160;
   const pesoAtual = parseFloat(ultimoReg?.peso_kg) || pesoInicial;
   const semanas = parseInt(ultimoReg?.gestacao_semanas) || 0;
-  
+
   if (!pesoInicial || !pesoAtual || !semanas) {
     return { alerta: false, mensagem: '', status: 'sem_dados' };
   }
-  
+
   const imcInfo = calcularClasseIMC(paciente) || { classIMC: 'EUTROFIA', imc: 0 };
   const imc = imcInfo.imc;
   const classIMC = imcInfo.classIMC;
-  
+
   // Ganho de peso
   const ganho = pesoAtual - pesoInicial;
   const curva = CURVA_PESO_GESTACIONAL[classIMC];
-  
+
   // Ganho esperado proporcional às semanas
   const proporcao = Math.min(semanas / 40, 1);
   const ganhoMin = curva.min * proporcao;
   const ganhoMax = curva.max * proporcao;
-  
+
   let status = 'adequado';
   let alerta = false;
   let mensagem = '✅ Ganho de peso adequado';
-  
+
   if (ganho < ganhoMin * 0.8) {
     status = 'insuficiente';
     alerta = true;
@@ -460,7 +470,7 @@ function avaliarPesoGestacional(paciente, ultimoReg) {
     alerta = true;
     mensagem = '⚠️ Ganho de peso excessivo - Orientar controle';
   }
-  
+
   return {
     imc: imc.toFixed(1),
     classIMC,
@@ -483,7 +493,7 @@ function atualizarEstatisticas() {
   const criticos = pacientes.filter(p => p.classificacao === 'critico').length;
   const atencao = pacientes.filter(p => p.classificacao === 'atencao').length;
   const estaveis = pacientes.filter(p => p.classificacao === 'estavel').length;
-  
+
   document.getElementById('statCriticos').textContent = criticos;
   document.getElementById('statAtencao').textContent = atencao;
   document.getElementById('statEstaveis').textContent = estaveis;
@@ -496,17 +506,17 @@ function atualizarEstatisticas() {
 function renderizarListaPacientes() {
   const container = document.getElementById('patientList');
   const busca = (document.getElementById('searchInput')?.value || '').toLowerCase();
-  
+
   let lista = pacientes;
-  
+
   // Filtrar por busca
   if (busca) {
-    lista = lista.filter(p => 
-      (p.nome || '').toLowerCase().includes(busca) || 
+    lista = lista.filter(p =>
+      (p.nome || '').toLowerCase().includes(busca) ||
       (p.cpf || '').includes(busca)
     );
   }
-  
+
   // Filtrar por status e condições
   if (filtroAtual !== 'all') {
     const map = { critical: 'critico', warning: 'atencao', stable: 'estavel' };
@@ -528,7 +538,7 @@ function renderizarListaPacientes() {
       });
     }
   }
-  
+
   if (lista.length === 0) {
     container.innerHTML = `
       <div class="empty-state">
@@ -538,25 +548,25 @@ function renderizarListaPacientes() {
     `;
     return;
   }
-  
+
   container.innerHTML = lista.map(p => {
     const inicial = (p.nome || 'P').charAt(0).toUpperCase();
-    const classe = p.classificacao === 'critico' ? 'critical' : 
-                   p.classificacao === 'atencao' ? 'warning' : '';
-    
-    const pa = p.dadosVitais?.pa_sistolica ? 
-               `${p.dadosVitais.pa_sistolica}/${p.dadosVitais.pa_diastolica || '-'}` : '-';
+    const classe = p.classificacao === 'critico' ? 'critical' :
+      p.classificacao === 'atencao' ? 'warning' : '';
+
+    const pa = p.dadosVitais?.pa_sistolica ?
+      `${p.dadosVitais.pa_sistolica}/${p.dadosVitais.pa_diastolica || '-'}` : '-';
     const glic = p.dadosVitais?.glicemia || '-';
-    
+
     const badge = p.classificacao === 'critico' ? '<span class="badge badge-danger">Crítico</span>' :
-                  p.classificacao === 'atencao' ? '<span class="badge badge-warning">Atenção</span>' :
-                  p.classificacao === 'estavel' ? '<span class="badge badge-success">Estável</span>' :
-                  '<span class="badge badge-neutral">Sem dados</span>';
-    
+      p.classificacao === 'atencao' ? '<span class="badge badge-warning">Atenção</span>' :
+        p.classificacao === 'estavel' ? '<span class="badge badge-success">Estável</span>' :
+          '<span class="badge badge-neutral">Sem dados</span>';
+
     const dataUlt = p.dadosVitais?.data ? formatarData(p.dadosVitais.data) : 'Sem registro';
     const hasNovas = contarNovasMensagens(p.historico || p.ultimoRegistro) > 0;
     const badgeMsg = hasNovas ? `<span class="msg-badge">✉ Nova mensagem</span>` : '';
-    
+
     const isGest = normalizarSim(p.dadosVitais?.gestante) || normalizarSim(p.gestante) || (parseInt(p.gestacao_semanas) || 0) > 0;
     const semanas = p.dadosVitais?.gestacao_semanas || p.gestacao_semanas;
     const gestText = isGest ? `🤰 Gestação ${semanas ? semanas + ' semanas' : ''}` : '';
@@ -646,16 +656,16 @@ function filtrarPacientes() {
 function selecionarPaciente(patientId) {
   pacienteSelecionado = pacientes.find(p => p.patient_id === patientId);
   if (!pacienteSelecionado) return;
-  
+
   abrirPainelDetalhe();
-  
+
   document.getElementById('detailName').textContent = pacienteSelecionado.nome || 'Usuário do SUS';
-  
+
   // Calcular idade e verificar se é idoso
   const idadePac = calcularIdade(pacienteSelecionado.nascimento);
   const idadeNum = parseInt(idadePac) || 0;
   const ehIdosoPac = idadeNum >= 60;
-  
+
   // Verificar se tem filhos
   const temFilhosPac = pacienteSelecionado.tem_filhos === 'Sim' || pacienteSelecionado.tem_filhos === 'sim';
   let qtdFilhosPac = 0;
@@ -664,17 +674,17 @@ function selecionarPaciente(patientId) {
     qtdFilhosPac = Array.isArray(filhosArr) ? filhosArr.length : 0;
   } catch { qtdFilhosPac = 0; }
   if (!qtdFilhosPac && pacienteSelecionado.qtd_filhos) qtdFilhosPac = parseInt(pacienteSelecionado.qtd_filhos) || 0;
-  
+
   // Labels
   const gestSemanas = pacienteSelecionado.dadosVitais?.gestacao_semanas;
   const gestLabel = pacienteSelecionado.dadosGestacionais ? ` • 🤰 Gestação ${gestSemanas ? gestSemanas + ' semanas' : ''}` : '';
   const idosoLabel = ehIdosoPac ? ' • 👴 Idoso' : '';
   const filhosLabel = (temFilhosPac || qtdFilhosPac > 0) ? ` • 👶 ${qtdFilhosPac} filho${qtdFilhosPac !== 1 ? 's' : ''}` : '';
-  
+
   document.getElementById('detailMeta').innerHTML = `
     ${pacienteSelecionado.cpf || ''} • ${idadePac}${idosoLabel}${filhosLabel}${gestLabel}
   `;
-  
+
   const header = document.getElementById('detailHeader');
   if (pacienteSelecionado.classificacao === 'critico') {
     header.style.background = 'linear-gradient(135deg, #dc2626, #991b1b)';
@@ -683,7 +693,7 @@ function selecionarPaciente(patientId) {
   } else {
     header.style.background = 'linear-gradient(135deg, var(--primary), var(--primary-dark))';
   }
-  
+
   showTab('resumo');
 }
 
@@ -710,9 +720,9 @@ function showTab(tabName) {
   document.querySelectorAll('.detail-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.tab === tabName);
   });
-  
+
   const content = document.getElementById('detailContent');
-  
+
   if (tabName === 'resumo') renderizarResumo(content);
   else if (tabName === 'graficos') renderizarGraficos(content);
   else if (tabName === 'mensagens') renderizarMensagens(content);
@@ -733,13 +743,13 @@ function renderizarResumo(container) {
   if (v.peso == null && ultimo.peso_kg != null) v.peso = ultimo.peso_kg;
   if (v.data == null && (ultimo.created_at || ultimo.updated_at)) v.data = ultimo.created_at || ultimo.updated_at;
   if (v.atividade_fisica == null && ultimo.atividade_fisica != null) v.atividade_fisica = ultimo.atividade_fisica;
-  
-  const classPA = v.pa_sistolica >= LIMITES.PA_SISTOLICA.ALTA ? 'danger' : 
-                  v.pa_sistolica >= LIMITES.PA_SISTOLICA.ELEVADA ? 'warning' : '';
+
+  const classPA = v.pa_sistolica >= LIMITES.PA_SISTOLICA.ALTA ? 'danger' :
+    v.pa_sistolica >= LIMITES.PA_SISTOLICA.ELEVADA ? 'warning' : '';
   const classGlic = v.glicemia >= LIMITES.GLICEMIA_JEJUM.ALTA ? 'danger' :
-                    v.glicemia >= LIMITES.GLICEMIA_JEJUM.ELEVADA ? 'warning' :
-                    v.glicemia && v.glicemia < LIMITES.GLICEMIA_JEJUM.BAIXA ? 'danger' : '';
-  
+    v.glicemia >= LIMITES.GLICEMIA_JEJUM.ELEVADA ? 'warning' :
+      v.glicemia && v.glicemia < LIMITES.GLICEMIA_JEJUM.BAIXA ? 'danger' : '';
+
   let html = `
     <div class="vital-grid mb-4">
       <div class="vital-card ${classPA}">
@@ -760,7 +770,7 @@ function renderizarResumo(container) {
       </div>
     </div>
   `;
-  
+
   // Alertas
   if (p.alertas && p.alertas.length > 0) {
     html += `<div class="section-title">Alertas</div>`;
@@ -769,7 +779,7 @@ function renderizarResumo(container) {
       html += `<div class="alert alert-${tipo} mb-2"><div class="alert-content"><div class="alert-text">${alerta}</div></div></div>`;
     });
   }
-  
+
   // Gestante
   if (p.dadosGestacionais) {
     const g = p.dadosGestacionais;
@@ -794,7 +804,7 @@ function renderizarResumo(container) {
       </div>
     `;
   }
-  
+
   // Idade e verificação de idoso
   const idadePaciente = (() => {
     if (!p.nascimento) return null;
@@ -826,11 +836,11 @@ function renderizarResumo(container) {
       ${temFilhosCheck || qtdFilhosNum > 0 ? `<span class="badge badge-info" style="background:#0891b2;color:#fff;">👶 ${qtdFilhosNum} filho${qtdFilhosNum !== 1 ? 's' : ''}</span>` : ''}
       ${p.hipertensao === 'Sim' ? '<span class="badge badge-danger">❤️ Hipertensão</span>' : ''}
       ${p.diabetes === 'Sim' ? '<span class="badge badge-danger">🩸 Diabetes</span>' : ''}
-      ${p.vicios && !['Nenhum relato','nenhum','Não tem vício'].includes(p.vicios) ? `<span class="badge badge-warning">⚠️ ${p.vicios}</span>` : ''}
+      ${p.dependencias && !['Nenhum relato', 'nenhum', 'Não tem vício'].includes(p.dependencias) ? `<span class="badge badge-warning">⚠️ ${p.dependencias}</span>` : ''}
       ${(!p.hipertensao || p.hipertensao === 'Não' || p.hipertensao === 'nao') && (!p.diabetes || p.diabetes === 'Não' || p.diabetes === 'nao') && !ehIdoso ? '<span class="badge badge-success">✅ Sem comorbidades</span>' : ''}
     </div>
   `;
-  
+
   // Atividade Física
   if (v.atividade_fisica && v.atividade_fisica !== 'nenhuma') {
     html += `
@@ -847,14 +857,14 @@ function renderizarResumo(container) {
       </div>
     `;
   }
-  
+
   html += `
     <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 10px;">
       <button class="btn btn-primary btn-block" onclick="abrirFichaCadastral()">📋 Ficha Cadastral</button>
       <button class="btn btn-secondary btn-block" onclick="abrirModalMensagem()">💬 Enviar Mensagem</button>
     </div>
   `;
-  
+
   container.innerHTML = html;
 }
 
@@ -944,7 +954,7 @@ async function abrirFichaCadastral() {
   body.innerHTML = `
     <div class="flex items-center gap-4 mb-4">
       ${fotoPerfil ? `<img src="${escapeHtml(fotoPerfil)}" alt="foto" style="width:72px;height:72px;border-radius:16px;object-fit:cover;border:2px solid #e2e8f0;" />`
-        : `<div style="width:72px;height:72px;border-radius:16px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;color:#475569;">${iniciais}</div>`}
+      : `<div style="width:72px;height:72px;border-radius:16px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;color:#475569;">${iniciais}</div>`}
       <div>
         <div class="text-lg font-bold">${formatarCampo(p.nome)}</div>
         <div class="text-xs text-muted">${formatarCampo(p.cpf)} • ${idade || 'Idade não informada'}</div>
@@ -1013,7 +1023,7 @@ async function abrirFichaCadastral() {
       ${renderCampo('Diabetes', p.diabetes)}
       ${renderCampo('Tempo diagnóstico - DM', p.tempo_diag_dm)}
       ${renderCampo('Infecção urinária na gestação', p.infeccao_urinaria_gestacao)}
-      ${renderCampo('Vícios', p.vicios)}
+      ${renderCampo('Dependências', p.dependencias)}
       ${renderCampo('Tempo de vício', p.tempo_vicio)}
       ${renderCampo('Condições (marcadas)', p.condicoes)}
     </div>
@@ -1086,17 +1096,17 @@ function renderizarGraficos(container) {
   const histFull = (p.historico || []).slice().reverse();
   const isGestante = normalizarSim(p.dadosVitais?.gestante) || normalizarSim(p.gestante);
   const histGest = histFull.filter(r => r.gestacao_semanas && r.peso_kg);
-  
+
   if (!window.Chart) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>Chart.js não carregado</p></div>`;
     return;
   }
-  
+
   if (hist.length < 2) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>Dados insuficientes (mínimo 2 registros)</p></div>`;
     return;
   }
-  
+
   const chartWidth = Math.max(600, hist.length * 40);
   container.innerHTML = `
     <div class="section-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
@@ -1113,12 +1123,12 @@ function renderizarGraficos(container) {
       <div style="height:300px; width:100%;"><canvas id="gestChart"></canvas></div>
     ` : ''}
   `;
-  
+
   if (chartInstance) chartInstance.destroy();
   if (activityChartInstance) activityChartInstance.destroy();
-  
+
   const ctx = document.getElementById('healthChart').getContext('2d');
-  
+
   chartInstance = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -1363,7 +1373,7 @@ async function obterMensagensRegistro(reg) {
       if (m.path && supabase) {
         const parts = String(m.path).split('/');
         const fileName = parts.pop() || '';
-        const safeName = fileName.replace(/[^a-zA-Z0-9.]/g,'_');
+        const safeName = fileName.replace(/[^a-zA-Z0-9.]/g, '_');
         const safePath = [...parts, safeName].join('/');
         const { data } = supabase.storage.from('midias').getPublicUrl(safePath);
         return { ...m, url: data.publicUrl, path: safePath, type: m.type || tipoMidiaPorNome(safePath) };
@@ -1530,11 +1540,11 @@ async function enviarMensagem() {
     alert('Usuário do SUS sem registro para responder');
     return;
   }
-  
+
   try {
     const profData = sessionStorage.getItem('profissional');
     const prof = profData ? JSON.parse(profData) : {};
-    
+
     const replies = reg.replies_json || [];
     const media = [];
     if (replyAudioBlob) {
@@ -1553,16 +1563,16 @@ async function enviarMensagem() {
       media,
       at: new Date().toISOString()
     });
-    
+
     const { error } = await supabase
       .from('registros')
-      .update({ 
+      .update({
         replies_json: replies,
         status: 'respondido',
         updated_at: new Date().toISOString()
       })
       .eq('registro_id', reg.registro_id);
-    
+
     if (error) throw error;
 
     // Atualizar estado local imediatamente (sem recarregar página)
@@ -1586,7 +1596,7 @@ async function enviarMensagem() {
 
     alert('Mensagem enviada!');
     fecharModal();
-    
+
   } catch (error) {
     alert('Erro ao enviar: ' + error.message);
   }
@@ -1611,9 +1621,9 @@ function renderizarMidiaHtml(m) {
 
 function tipoMidiaPorNome(nome) {
   const ext = String(nome).split('.').pop().toLowerCase();
-  if (['jpg','jpeg','png','gif','webp'].includes(ext)) return 'image';
-  if (['mp4','webm','mov','m4v'].includes(ext)) return 'video';
-  if (['mp3','wav','ogg','webm','m4a'].includes(ext)) return 'audio';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+  if (['mp4', 'webm', 'mov', 'm4v'].includes(ext)) return 'video';
+  if (['mp3', 'wav', 'ogg', 'webm', 'm4a'].includes(ext)) return 'audio';
   return 'file';
 }
 
@@ -1710,6 +1720,333 @@ function formatarDuracao(segundos) {
 }
 
 // ============================================
+// ABRIR MODAL DE VALORES DE PÂNICO
+// ============================================
+/*function abrirValoresPanicoModal() {
+  if (!pacienteSelecionado) {
+    alert("Por favor, selecione um usuário do SUS primeiro.");
+    return;
+  }
+  
+  // CORREÇÃO: Pegando o ID correto do container do Modal
+  const modal = document.getElementById('valoresPanicoModal');
+  if (!modal) {
+    console.error('Modal de Valores de Pânico não encontrado');
+    return;
+  }
+
+  // Preenche os campos com os dados do paciente selecionado (se existirem)
+  const p = pacienteSelecionado;
+  await carregarMetasPanico(pacienteAtual.patient_id || pacienteAtual.patientId);
+  document.getElementById('paSistolicaMax').value = p.pa_sistolica_max || '';
+  document.getElementById('paSistolicaMin').value = p.pa_sistolica_min || '';
+  document.getElementById('paDiastolicaMax').value = p.pa_diastolica_max || '';
+  document.getElementById('paDiastolicaMin').value = p.pa_diastolica_min || '';
+  document.getElementById('glicemiaMax').value = p.glicemia_max || '';
+  document.getElementById('glicemiaMin').value = p.glicemia_min || '';
+
+  // Configura o clique do botão salvar
+  const btnSalvar = document.getElementById('btnSalvarPanico');
+  btnSalvar.onclick = () => salvarValoresPanicoPaciente(p.id || p.patient_id);
+
+  modal.style.display = 'flex';
+}
+async function abrirValoresPanicoModal() {
+  // 1. Verifica se tem paciente selecionado
+  let p = pacienteSelecionado
+  if (!p) {
+    alert("Por favor, selecione um paciente na lista lateral primeiro.");
+    return;
+  }
+
+  // 2. Abre o modal
+  const modal = document.getElementById('modalValoresPanico');
+  if (modal) modal.style.display = 'flex';
+
+  // 3. LIMPEZA DOS CAMPOS (O segredo para não repetir valores)
+  const campos = [
+    'pa_sistolica_max', 'pa_sistolica_min', 
+    'pa_diastolica_max', 'pa_diastolica_min', 
+    'glicemia_max', 'glicemia_min'
+  ];
+  
+  campos.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = ''; // Limpa o valor
+      el.placeholder = 'Carregando...'; // Feedback visual
+    }
+  });
+
+  if (document.getElementById('infoTipoMeta')) {
+    document.getElementById('infoTipoMeta').innerText = "Buscando dados no servidor...";
+  }
+
+  // 4. Busca os dados específicos DESTE paciente atual
+  // Usamos o ID que o monitoramento.js já gerencia na global pacienteAtual
+  const idParaBusca = p.patient_id || p.patientId || p.cpf;
+  
+  await carregarMetasPanico(idParaBusca);
+}*/
+
+async function salvarMetasPaciente() {
+  let pacienteAtual = pacienteSelecionado
+  if (!pacienteAtual) return alert("Selecione um paciente primeiro.");
+
+  const pid = pacienteAtual.patient_id || pacienteAtual.patientId;
+  const btn = document.querySelector('#modalValoresPanico .btn-primary');
+  
+  // Captura os valores dos inputs do modal e garante que são números (ou null se vazios)
+  const dadosMetas = {
+    meta_pa_sis_max: parseInt(document.getElementById('paSistolicaMax').value) || null,
+    meta_pa_sis_min: parseInt(document.getElementById('paSistolicaMin').value) || null,
+    meta_pa_dia_max: parseInt(document.getElementById('paDiastolicaMax').value) || null,
+    meta_pa_dia_min: parseInt(document.getElementById('paDiastolicaMin').value) || null,
+    //meta_glicemia_max: parseInt(document.getElementById('glicemiaMax').value) || null,
+    //meta_glicemia_min: parseInt(document.getElementById('glicemiaMin').value) || null,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    if(btn) { 
+      btn.disabled = true; 
+      btn.innerText = "A guardar..."; 
+    }
+
+    // Fazemos o UPDATE na tabela 'perfis' onde o ID coincide
+    const { error } = await supabase
+      .from('perfis')
+      .update(dadosMetas)
+      .eq('patient_id', pid);
+
+    if (error) throw error;
+
+    alert("✅ Limites de pânico atualizados com sucesso!");
+    
+    // Atualiza o objeto do paciente na memória para refletir a mudança imediata na interface
+    pacienteAtual = { ...pacienteAtual, ...dadosMetas };
+    
+    // Fecha o modal
+    document.getElementById('modalValoresPanico').style.display = 'none';
+    
+  } catch (e) {
+    console.error("Erro ao guardar metas:", e);
+    alert("Falha ao guardar: " + e.message);
+  } finally {
+    if(btn) { 
+      btn.disabled = false; 
+      btn.innerText = "Guardar Metas"; 
+    }
+  }
+}
+async function abrirValoresPanicoModal() {
+  let pacienteAtual = pacienteSelecionado 
+  if (!pacienteAtual) {
+    alert("Selecione um paciente primeiro.");
+    return;
+  }
+
+  const modal = document.getElementById('modalValoresPanico');
+  if (modal) {
+    // Força o display e o alinhamento
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '9999';
+  } else {
+    console.error("Elemento modalValoresPanico não encontrado no HTML!");
+    return;
+  }
+
+  // Limpa campos antes de carregar
+  ['paSistolicaMax', 'paSistolicaMin', 'paDiastolicaMax', 'paDiastolicaMin', 'glicemiaMax', 'glicemiaMin'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+
+  const pid = pacienteAtual.patient_id || pacienteAtual.patientId;
+  await carregarMetasPanico(pid);
+}
+async function salvarValoresPanicoPaciente(patientId) {
+  if (!supabase) return alert('Supabase não conectado');
+
+  // Mapeando os campos do Modal para as colunas existentes na tabela 'perfis'
+  const dados = {
+    meta_pa_max: document.getElementById('paSistolicaMax').value || null,
+    meta_pa_min: document.getElementById('paSistolicaMin').value || null,
+    // Se quiser salvar diastólica e glicemia, use as colunas que preferir ou adicione-as via SQL
+    meta_glicemia: document.getElementById('glicemiaMax').value || null,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    mostrarLoading('Salvando limites personalizados...');
+
+    const { error } = await supabase
+      .from('perfis') // NOME CORRETO DA TABELA
+      .update(dados)
+      .eq('patient_id', patientId); // USANDO O patient_id (TEXT) CONFORME SEU SQL
+
+    if (error) throw error;
+
+    // Atualiza o objeto local para refletir na interface na hora
+    if (pacienteSelecionado) {
+        Object.assign(pacienteSelecionado, dados);
+    }
+
+    alert('✅ Limites salvos na ficha do usuário!');
+    fecharValoresPanicoModal();
+    
+    // Recarrega o resumo para mostrar os novos limites
+    if (typeof renderizarResumo === 'function') {
+        renderizarResumo(document.getElementById('detailContent'));
+    }
+
+  } catch (e) {
+    console.error('Erro detalhado:', e);
+    alert('Erro ao salvar: ' + (e.message || 'Verifique o console'));
+  } finally {
+      // Opcional: remover o estado de loading se necessário
+  }
+}
+
+function verificarAlerta(p, registro) {
+  const sistolica = registro.pa_sistolica;
+  // Usa o limite do paciente ou, se nulo, um fallback global
+  const maxSist = p.pa_sistolica_max || 140;
+
+  if (sistolica >= maxSist) {
+    return 'badge-danger'; // Alerta crítico
+  }
+  return 'badge-success';
+}
+
+function fecharValoresPanicoModal() {
+  const modal = document.getElementById('valoresPanicoModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function salvarValoresPanicoSupabaseGlobal() {
+  const paSistMax = parseFloat(document.getElementById('paSistolicaMax').value) || null;
+  const paSistMin = parseFloat(document.getElementById('paSistolicaMin').value) || null;
+  const paDiastMax = parseFloat(document.getElementById('paDiastolicaMax').value) || null;
+  const paDiastMin = parseFloat(document.getElementById('paDiastolicaMin').value) || null;
+  const glicemiaMax = parseFloat(document.getElementById('glicemiaMax').value) || null;
+  const glicemiaMin = parseFloat(document.getElementById('glicemiaMin').value) || null;
+
+  const rid = uuidv4();
+  const now = new Date().toISOString();
+
+  if (!supabase) return alert('Supabase não conectado');
+
+  try {
+    await supabase.from('registros').insert({
+      registro_id: rid,
+      patient_id: null, // null para global
+      device_id: 'web',
+      texto: 'Valores de Pânico',
+      tipo: 'valores_panico',
+      status: 'pendente',
+      pa_sistolica_max: paSistMax,
+      pa_sistolica_min: paSistMin,
+      pa_diastolica_max: paDiastMax,
+      pa_diastolica_min: paDiastMin,
+      glicemia_max: glicemiaMax,
+      glicemia_min: glicemiaMin,
+      created_at: now,
+      updated_at: now
+    });
+    alert('✅ Valores de pânico salvos com sucesso!');
+    fecharValoresPanicoModal();
+  } catch (e) {
+    console.error('Erro ao salvar no Supabase', e);
+    alert('❌ Erro ao salvar valores de pânico globais.');
+  }
+}
+
+// Função para carregar as metas (Pânico) do paciente selecionado
+async function carregarMetasPanico(patientId) {
+  try {
+    // 1. Busca os dados direto no perfil do paciente
+    const { data: perfil, error } = await supabase
+      .from('perfis')
+      .select('meta_pa_max, meta_pa_min, meta_glicemia')
+      .eq('patient_id', patientId)
+      .single();
+
+    if (perfil && (perfil.meta_pa_max || perfil.meta_glicemia)) {
+      // Se o perfil tem metas definidas, usamos elas
+      preencherInputsPanico({
+        pa_sistolica_max: perfil.meta_pa_max,
+        pa_sistolica_min: perfil.meta_pa_min,
+        glicemia_max: perfil.meta_glicemia,
+        // Diastólica não tem campo explícito no seu SQL 'perfis', 
+        // mas podemos usar valores padrão ou adaptar
+        pa_diastolica_max: 100, 
+        pa_diastolica_min: 60
+      }, true);
+    } else {
+      // 2. Fallback para os valores globais (que ficam na tabela registros como tipo 'valores_panico')
+      const { data: global } = await supabase
+        .from('registros')
+        .select('*')
+        .eq('tipo', 'valores_panico')
+        .eq('patient_id', 'global')
+        .maybeSingle();
+
+      preencherInputsPanico(global || {
+        pa_sistolica_max: 160, pa_sistolica_min: 90,
+        pa_diastolica_max: 100, pa_diastolica_min: 60,
+        glicemia_max: 200, glicemia_min: 70
+      }, false);
+    }
+  } catch (e) {
+    console.error("Erro ao carregar metas:", e);
+  }
+}
+
+// Função para colocar os valores nos campos do HTML
+function preencherInputsPanico(dados, isCustom) {
+  // Mapeamento dos dados do banco para os IDs que você já usa no HTML
+  const campos = {
+    'paSistolicaMax': dados.pa_sistolica_max,
+    'paSistolicaMin': dados.pa_sistolica_min,
+    'paDiastolicaMax': dados.pa_diastolica_max,
+    'paDiastolicaMin': dados.pa_diastolica_min,
+    'glicemiaMax': dados.glicemia_max,
+    'glicemiaMin': dados.glicemia_min
+  };
+
+  // Preenche cada campo apenas se ele existir no DOM
+  Object.keys(campos).forEach(id => {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+      elemento.value = campos[id] || '';
+    } else {
+      console.warn(`Campo ${id} não encontrado no HTML.`);
+    }
+  });
+
+  // Atualiza a legenda para o médico saber a origem do dado
+  const infoTipo = document.getElementById('infoTipoMeta');
+  if (infoTipo) {
+    infoTipo.innerText = isCustom ? "✨ Meta Individual" : "🌍 Meta Global";
+    infoTipo.className = isCustom ? "text-primary font-bold" : "text-muted";
+  }
+}
+
+// Sua função que você já tem, apenas para garantir a busca global
+async function fetchValoresPanicoGlobais() {
+  const { data } = await supabase
+    .from('registros')
+    .select('*')
+    .eq('tipo', 'valores_panico')
+    .eq('patient_id', 'global')
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+// ============================================
 // UTILITÁRIOS
 // ============================================
 function formatarData(iso) {
@@ -1753,4 +2090,70 @@ function mostrarErro(msg) {
       <p>${msg}</p>
     </div>
   `;
+
+
+
+
 }
+
+async function salvarValoresPanicoSupabase(patientKey) {
+  if (!patientKey) return alert('Paciente não selecionado');
+
+  const paSistMax = parseFloat(document.getElementById('paSistolicaMax').value) || null;
+  const paSistMin = parseFloat(document.getElementById('paSistolicaMin').value) || null;
+  const paDiastMax = parseFloat(document.getElementById('paDiastolicaMax').value) || null;
+  const paDiastMin = parseFloat(document.getElementById('paDiastolicaMin').value) || null;
+  const glicemiaMax = parseFloat(document.getElementById('glicemiaMax').value) || null;
+  const glicemiaMin = parseFloat(document.getElementById('glicemiaMin').value) || null;
+
+  const rid = uuidv4();
+  const now = new Date().toISOString();
+
+  // Salva localmente
+  const localId = await db.registros.add({
+    registroId: rid,
+    patientId: patientKey,
+    deviceId: 'web',
+    texto: `Valores de Pânico`,
+    tipo: 'valores_panico',
+    status: 'pendente',
+    createdAt: now,
+    updatedAt: now,
+    pa_sistolica_max: paSistMax,
+    pa_sistolica_min: paSistMin,
+    pa_diastolica_max: paDiastMax,
+    pa_diastolica_min: paDiastMin,
+    glicemia_max: glicemiaMax,
+    glicemia_min: glicemiaMin,
+    synced: 0
+  });
+
+  // Envia para o Supabase
+  if (supabase) {
+    try {
+      await supabase.from('registros').insert({
+        registro_id: rid,
+        patient_id: patientKey,
+        device_id: 'web',
+        texto: `Valores de Pânico`,
+        tipo: 'valores_panico',
+        status: 'pendente',
+        pa_sistolica_max: paSistMax,
+        pa_sistolica_min: paSistMin,
+        pa_diastolica_max: paDiastMax,
+        pa_diastolica_min: paDiastMin,
+        glicemia_max: glicemiaMax,
+        glicemia_min: glicemiaMin,
+        created_at: now,
+        updated_at: now
+      });
+      await db.registros.update(localId, { synced: 1 });
+      alert('✅ Valores de pânico salvos com sucesso!');
+      fecharValoresPanicoModal();
+    } catch (e) {
+      console.error('Erro ao salvar no Supabase', e);
+      alert('❌ Erro ao salvar valores de pânico.');
+    }
+  }
+}
+

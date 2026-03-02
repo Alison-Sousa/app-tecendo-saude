@@ -10,6 +10,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="../env/env.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/9.0.0/uuidv4.min.js"></script>
+
   <style>
     /* Estilos específicos do monitoramento */
     .monitor-layout {
@@ -507,6 +509,98 @@
       color: var(--text-muted);
       text-transform: uppercase;
     }
+
+    /* =========================
+   Modal de Valores de Pânico
+========================= */
+#valoresPanicoModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#valoresPanicoModal .modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Inputs */
+#valoresPanicoModal label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+#valoresPanicoModal input {
+  width: 100px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* Botões */
+#valoresPanicoModal button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#valoresPanicoModal button:first-child {
+  background: #f0f0f0; /* Fechar */
+  color: #333;
+}
+
+#valoresPanicoModal button:first-child:hover {
+  background: #e0e0e0;
+}
+
+#valoresPanicoModal button:last-child {
+  background: #ff4d4f; /* Salvar */
+  color: #fff;
+}
+
+#valoresPanicoModal button:last-child:hover {
+  background: #e04344;
+}
+
+/* Container dos botões alinhados à direita */
+#valoresPanicoModal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Botão de Valores de Pânico destacado */
+.panic-btn {
+  background-color: #000;   /* Preto */
+  color: #fff;              /* Letra branca */
+  font-weight: 700;
+  border: 2px solid #000000; /* Borda vermelha */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: all 0.2s;
+}
+
+.panic-btn:hover {
+  background-color: #222;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
+}
+
+    
   </style>
 </head>
 <body>
@@ -581,6 +675,7 @@
           <button class="detail-tab active" data-tab="resumo" onclick="showTab('resumo')">📋 Resumo</button>
           <button class="detail-tab" data-tab="graficos" onclick="showTab('graficos')">📈 Gráficos</button>
           <button class="detail-tab" data-tab="mensagens" onclick="showTab('mensagens')">💬 Mensagens</button>
+          <button id="btnValoresPanico" class="detail-tab" title="Configurar limites de pânico para profissionais"onclick="abrirValoresPanicoModal()"> Valores de Pânico</button>
         </div>
         
         <div class="detail-content" id="detailContent">
@@ -648,7 +743,72 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal de Valores de Pânico -->
+  <div id="valoresPanicoModal">
+    <div class="modal-content">
+      <h2>Valores de Pânico</h2>
+
+      <div>
+        <label>PA Sistólica Máx: <input type="number" id="paSistolicaMax"></label>
+        <label>PA Sistólica Min: <input type="number" id="paSistolicaMin"></label>
+        <label>PA Diastólica Máx: <input type="number" id="paDiastolicaMax"></label>
+        <label>PA Diastólica Min: <input type="number" id="paDiastolicaMin"></label>
+        <label>Glicemia Máx: <input type="number" id="glicemiaMax"></label>
+        <label>Glicemia Min: <input type="number" id="glicemiaMin"></label>
+      </div>
+
+      <div class="modal-actions">
+        <button onclick="fecharValoresPanicoModal()">Fechar</button>
+        <button id="btnSalvarPanico">Salvar</button>      </div>
+    </div>
+  </div>
   
   <script src="monitoramento.js"></script>
+
+  <div class="modal-overlay" id="modalValoresPanico" style="display:none;">
+  <div class="modal" style="max-width: 450px;">
+    <div class="modal-header">
+      <h3 class="modal-title">🚨 Limites de Pânico</h3>
+      <button class="modal-close" onclick="document.getElementById('modalValoresPanico').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="infoTipoMeta" class="text-xs mb-3 font-bold"></p>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="input-group">
+          <label class="section-title">PA Sistólica Máx</label>
+          <input type="number" id="paSistolicaMax" class="input-box" placeholder="Ex: 160">
+        </div>
+        <div class="input-group">
+          <label class="section-title">PA Sistólica Mín</label>
+          <input type="number" id="paSistolicaMin" class="input-box" placeholder="Ex: 90">
+        </div>
+        <div class="input-group">
+          <label class="section-title">PA Diastólica Máx</label>
+          <input type="number" id="paDiastolicaMax" class="input-box" placeholder="Ex: 100">
+        </div>
+        <div class="input-group">
+          <label class="section-title">PA Diastólica Mín</label>
+          <input type="number" id="paDiastolicaMin" class="input-box" placeholder="Ex: 60">
+        </div>
+        <div class="input-group">
+          <label class="section-title">Glicemia Máx</label>
+          <input type="number" id="glicemiaMax" class="input-box" placeholder="Ex: 200">
+        </div>
+        <div class="input-group">
+          <label class="section-title">Glicemia Mín</label>
+          <input type="number" id="glicemiaMin" class="input-box" placeholder="Ex: 70">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modalValoresPanico').style.display='none'">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMetasPaciente()">Salvar Metas</button>
+    </div>
+  </div>
+</div>
+
+
+
 </body>
 </html>

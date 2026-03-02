@@ -49,7 +49,7 @@ create table perfis (
   diabetes text,
   tempo_diag_dm text,
   infeccao_urinaria_gestacao text,
-  vicios text,
+  dependencias text,
   tempo_vicio text,
   altura text,
   peso_inicial text,
@@ -83,7 +83,13 @@ create table perfis (
   created_by_ubs text,
   created_by_cpf text,
   created_at timestamptz default now(),
-  updated_at timestamptz default now()
+  updated_at timestamptz default now(),
+  meta_glicemia_max integer, -- Limite superior (ex: acima de 200 mg/dL)
+meta_glicemia_min integer, -- Limite inferior (ex: abaixo de 70 mg/dL)
+meta_pa_sis_max integer,   -- Pressão Sistólica Máxima (ex: 160)
+meta_pa_sis_min integer,   -- Pressão Sistólica Mínima (ex: 90)
+meta_pa_dia_max integer,   -- Pressão Diastólica Máxima (ex: 100)
+meta_pa_dia_min integer,   -- Pressão Diastólica Mínima (ex: 60)
 );
 create index perfis_patient_id_idx on perfis (patient_id);
 create index perfis_cpf_idx on perfis (cpf);

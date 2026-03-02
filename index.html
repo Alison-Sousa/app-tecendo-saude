@@ -141,7 +141,27 @@ const ConfigErrorScreen = () => (
     <p className="text-gray-500 text-sm">Use o env/env.example.js como modelo.</p>
   </div>
 );
+const btnPolitica = document.getElementById('btnPolitica');
+  const btnFechar = document.getElementById('btnFecharPolitica');
+  const modal = document.getElementById('politicaModal');
 
+  btnPolitica.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex'); // exibe o modal
+  });
+
+  btnFechar.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex'); // oculta o modal
+  });
+
+  // Fechar modal clicando fora da caixa
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  });
 // Aplicativo principal - Roteador
 const App = () => {
   const [route, setRoute] = useState('welcome');
@@ -219,5 +239,27 @@ const App = () => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
+
 </body>
+<footer class="bg-green-50 border-t border-green-200 text-center py-4 text-xs text-green-700">
+  © 2026 Tecendo Saúde. 
+  <button id="btnPolitica" class="underline hover:text-green-900">Política de Privacidade</button>
+</footer>
+
+<!-- Modal da Política de Privacidade -->
+<div id="politicaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+  <div class="bg-white rounded-2xl max-w-lg w-11/12 p-6 shadow-lg overflow-y-auto max-h-[80vh]">
+    <h2 class="text-xl font-bold text-green-900 mb-4">Política de Privacidade</h2>
+    <div class="text-sm text-gray-700 space-y-2">
+      <p>A Tecendo Saúde valoriza sua privacidade. Seus dados de saúde são coletados para monitoramento individual e alertas de saúde.</p>
+      <p>Os dados são armazenados localmente no seu dispositivo e sincronizados de forma segura para análise de monitoramento e histórico.</p>
+      <p>Não compartilhamos seus dados com terceiros sem seu consentimento. Você pode solicitar a exclusão dos seus dados a qualquer momento.</p>
+      <p>As informações são protegidas por criptografia e boas práticas de segurança, de acordo com a LGPD.</p>
+      <p>Ao utilizar o aplicativo, você concorda com esta política.</p>
+    </div>
+    <div class="mt-6 text-center">
+      <button id="btnFecharPolitica" class="btn-primary w-full">Fechar</button>
+    </div>
+  </div>
+</div>
 </html>
