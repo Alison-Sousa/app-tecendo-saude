@@ -196,7 +196,8 @@ const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpd
   
   return (
     <div className={`status-card ${isCritical ? 'alert' : ''}`}>
-      <h3 className="text-lg font-extrabold text-slate-800 mb-3">Seu Status de Saúde</h3>
+      <h3 className="text-lg font-extrabold text-slate-800 mb-3">Como está sua saúde?</h3>
+      <h3 className="text-sm text-slate-800 mb-3">Abaixo estão seus últimos registros</h3>
       <div className="metric-grid">
         <div className={`metric-item ${statusPA.bg}`}>
           <div className="metric-label">Pressão Arterial</div>
@@ -289,15 +290,15 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
         <button onClick={onLogout} className="bg-red-50 text-red-500 px-4 py-2 rounded-lg font-bold text-xs">SAIR</button>
       </div>
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
-        <div className="text-sm font-bold text-emerald-800 mb-1">🔔 Lembrete diário</div>
-        <div className="text-xs text-emerald-700">Verifique sua saúde e atualize seu monitoramento.</div>
+        <div className="text-base font-bold text-emerald-800 mb-1">🔔 Lembrete diário</div>
+        <div className="text-base text-emerald-700">Verifique sua saúde e atualize seu monitoramento!</div>
       </div>
       <div className="section-title">O que você deseja fazer?</div>
       <div className="space-y-3">
         <button className="big-btn" onClick={() => onSelect('saude')}>
           <div className="big-btn-icon bg-emerald-100">❤️</div>
           <div className="font-bold text-lg text-slate-800">Pressão e Glicemia</div>
-          <div className="text-gray-400 text-sm">Registre PA, peso, glicemia</div>
+          <div className="text-gray-400 text-sm">Registre sua pressão arterial, peso e glicemia</div>
         </button>
         {mostrarGestacao && (
           <button className="big-btn" onClick={() => onSelect('gestacao')}>
@@ -316,7 +317,7 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
         <button className="big-btn" onClick={() => onSelect('chat')}>
           <div className="big-btn-icon bg-amber-100">💬</div>
           <div className="font-bold text-lg text-slate-800">Converse Conosco</div>
-          <div className="text-gray-400 text-sm">Mensagens para a equipe de saúde</div>
+          <div className="text-gray-400 text-sm">Se necessário, envie mensagens para sua equipe de saúde</div>
         </button>
       </div>
     </div>
@@ -750,7 +751,7 @@ const ConverseConosco = ({ user, onBack }) => {
         <div className="flex items-center gap-3">
           <div className="text-2xl">💬</div>
           <div>
-            <div className="font-bold text-amber-800">Converse com a equipe de saúde</div>
+            <div className="font-bold text-amber-800">Converse com sua equipe de saúde</div>
             <div className="text-xs text-amber-600">Envie dúvidas, fotos, vídeos ou áudios</div>
           </div>
         </div>

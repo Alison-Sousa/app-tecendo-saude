@@ -368,15 +368,15 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       <select className="input-box" value={form.equipe_ubs} onChange={e=>updateField('equipe_ubs', e.target.value)}><option value="">Escolha...</option><option>ESF</option><option>ESFR</option></select>
       {requiredLabel('Agente Comunitário de Saúde')}
       <select className="input-box" value={form.acs_responsavel} onChange={e=>updateField('acs_responsavel', e.target.value)}><option value="">Escolha algo</option>{LISTA_ACS.map(a => <option key={a}>{a}</option>)}</select>
-      {requiredLabel('Hipertensão')}
+      {requiredLabel('Tem hipertensão?')}
       <select className="input-box" value={form.hipertensao} onChange={e=>updateField('hipertensao', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo de diagnóstico - HAS')}
       <select className="input-box" value={form.tempo_diag_has} onChange={e=>updateField('tempo_diag_has', e.target.value)}><option value="">Escolha...</option><option>Não tem alteração</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
-      {requiredLabel('Diabetes')}
+      {requiredLabel('Tem diabetes?')}
       <select className="input-box" value={form.diabetes} onChange={e=>updateField('diabetes', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo de diagnóstico - DM')}
       <select className="input-box" value={form.tempo_diag_dm} onChange={e=>updateField('tempo_diag_dm', e.target.value)}><option value="">Escolha...</option><option>Não tem alteração</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
-      {requiredLabel('Infecção urinária durante a gestação?')}
+      {requiredLabel('Teve infecção urinária durante a gestação?')}
       <select className="input-box" value={form.infeccao_urinaria_gestacao} onChange={e=>updateField('infeccao_urinaria_gestacao', e.target.value)}><option value="">Escolha...</option><option>Não é gestante</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Dependências')}
       <select className="input-box" value={form.dependencias} onChange={e=>updateField('dependencias', e.target.value)}><option value="">Escolha...</option><option>Tabagismo</option><option>Etilismo</option><option>Ex-etilista</option><option>Ex-tabagista</option><option>Uso de drogas ilícitas</option><option>Nenhum relato</option></select>
@@ -410,7 +410,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       <select className="input-box" value={form.consulta_oftalmo} onChange={e=>updateField('consulta_oftalmo', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo da consulta com oftalmologista')}
       <select className="input-box" value={form.tempo_consulta_oftalmo} onChange={e=>updateField('tempo_consulta_oftalmo', e.target.value)}><option value="">Escolha...</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
-      {requiredLabel('Sente dificuldade para mastigar, falar ou engolir?')}
+      {requiredLabel('Você sente dificuldade para mastigar, falar ou engolir?')}
       <select className="input-box" value={form.dificuldade_mastigar_falar_engolir} onChange={e=>updateField('dificuldade_mastigar_falar_engolir', e.target.value)}><option value="">Escolha...</option><option>Não</option><option>Mastigar</option><option>Falar</option><option>Engolir</option><option>Mastigar e Falar</option><option>Mastigar e Engolir</option><option>Falar e Engolir</option><option>Mastigar, Falar e Engolir</option><option>Dor na língua</option><option>Voz rouca</option><option>Ferida na boca que não cicatriza</option></select>
       {requiredLabel('Faz uso de medicações?')}
       <select className="input-box" value={form.uso_medicacoes} onChange={e=>updateField('uso_medicacoes', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
