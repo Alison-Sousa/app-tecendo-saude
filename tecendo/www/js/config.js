@@ -130,7 +130,7 @@ var LEARN_ITEMS = [
       'Se sentir dor no peito, falta de ar, tontura forte ou visão turva, procure ajuda.'
     ],
     video: 'https://www.youtube.com/watch?v=B3sm1ey3VyI',
-    audio: 'Hipertensão.mp3'
+    audio: 'Hipertensao.mp3'
   },
   {
     title: 'Cuidados Infantis',

@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="br.com.tecendosaude" version="1.0.0" xmlns="http://www.w3.org/ns/widgets">
+    <name>Tecendo Saude</name>
+    <description>Aplicativo de Saúde</description>
+    <author email="seu-email@dominio.com">Tecendo Saude</author>
+    
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+
+    <platform name="android">
+        <icon src="www/img/logo.png" />
+        
+<preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/img/logo.png" />
+    <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />    </platform>
+</widget>

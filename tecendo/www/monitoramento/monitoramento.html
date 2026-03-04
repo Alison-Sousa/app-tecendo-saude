@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Monitoramento</title>
+  <link rel="icon" href="../img/logo.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../styles/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="../env/env.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/9.0.0/uuidv4.min.js"></script>
+
+  <style>
+    /* Estilos específicos do monitoramento */
+    .monitor-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 24px;
+      min-height: calc(100vh - 140px);
+    }
+
+    .monitor-layout > * {
+      min-width: 0;
+    }
+    
+    @media (max-width: 1200px) {
+      .monitor-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .search-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .search-input {
+      flex: 1;
+      padding: 12px 16px 12px 44px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 12px center;
+      background-size: 20px;
+    }
+    
+    .filter-btn {
+      padding: 12px 20px;
+      border: 2px solid #e2e8f0;
+      background: white;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    
+    .filter-btn:hover, .filter-btn.active {
+      border-color: var(--primary);
+      background: var(--bg-hover);
+      color: var(--primary);
+    }
+    
+    .filter-btn.danger.active {
+      border-color: var(--danger);
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    .msg-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #ffedd5;
+      color: #c2410c;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+    }
+
+    .media-item {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 8px;
+    }
+
+    .media-item img,
+    .media-item video {
+      width: 100%;
+      border-radius: 8px;
+    }
+    
+    .patient-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: calc(100vh - 320px);
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    
+    .patient-row {
+      display: grid;
+      grid-template-columns: 48px 1fr 80px 80px 100px 100px;
+      gap: 12px;
+      align-items: center;
+      padding: 14px 16px;
+      background: white;
+      border-radius: var(--radius-md);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .patient-row:hover {
+      border-color: var(--primary);
+      transform: translateX(4px);
+    }
+    
+    .patient-row.critical {
+      background: var(--danger-bg);
+      border-color: var(--danger);
+    }
+    
+    .patient-row.critical:hover {
+      animation: alertPulse 2s infinite;
+    }
+    
+    .patient-row.warning {
+      background: var(--warning-bg);
+      border-left: 4px solid var(--warning);
+    }
+    
+    @media (max-width: 900px) {
+      .patient-row {
+        grid-template-columns: 48px 1fr 80px;
+      }
+      .patient-row > *:nth-child(4),
+      .patient-row > *:nth-child(5),
+      .patient-row > *:nth-child(6) {
+        display: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        overflow-x: hidden;
+      }
+
+      body.detail-open {
+        overflow: hidden;
+      }
+
+      .container-fluid {
+        padding: 12px !important;
+      }
+
+      .monitor-layout {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        min-height: auto;
+      }
+
+      .search-bar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .filter-btn {
+        width: 100%;
+      }
+
+      .patient-list {
+        max-height: none;
+        padding-right: 0;
+      }
+
+      .patient-row {
+        grid-template-columns: 40px 1fr;
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .patient-row > *:nth-child(3),
+      .patient-row > *:nth-child(4),
+      .patient-row > *:nth-child(5),
+      .patient-row > *:nth-child(6) {
+        display: none;
+      }
+
+      .detail-panel {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .detail-content {
+        max-height: calc(100vh - 170px);
+        padding-bottom: 24px;
+      }
+
+      .detail-close {
+        display: inline-flex !important;
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+    
+    .patient-initial {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    
+    .patient-row.critical .patient-initial {
+      background: linear-gradient(135deg, #f87171, var(--danger));
+    }
+    
+    .detail-panel {
+      background: white;
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      position: sticky;
+      top: 24px;
+    }
+    
+    .detail-header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 24px 64px 24px 24px;
+      position: relative;
+    }
+
+    .detail-close {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: 800;
+      border: 2px solid rgba(255, 255, 255, 0.7);
+      z-index: 2;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .detail-close:hover {
+      background: rgba(255, 255, 255, 0.35);
+    }
+    
+    .detail-name {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .detail-meta {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    
+    .detail-tabs {
+      display: flex;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .detail-tab {
+      flex: 1;
+      padding: 14px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .detail-tab:hover {
+      color: var(--text);
+    }
+    
+    .detail-tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+    
+    .detail-content {
+      padding: 20px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    
+    .vital-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    
+    .vital-card {
+      padding: 16px;
+      border-radius: var(--radius-md);
+      background: #f8fafc;
+    }
+    
+    .vital-card.danger {
+      background: var(--danger-bg);
+    }
+    
+    .vital-card.warning {
+      background: var(--warning-bg);
+    }
+    
+    .vital-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    
+    .vital-value {
+      font-size: 24px;
+      font-weight: 800;
+    }
+    
+    .vital-card.danger .vital-value {
+      color: var(--danger);
+    }
+    
+    .vital-card.warning .vital-value {
+      color: var(--warning);
+    }
+    
+    .chart-wrapper {
+      position: relative;
+      height: 250px;
+    }
+    
+    .message-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 16px;
+    }
+
+    .modal.chat-expanded .message-list {
+      max-height: calc(90vh - 260px);
+    }
+
+    .modal.chat-expanded {
+      width: 90vw;
+      max-width: 1100px;
+      height: 90vh;
+    }
+
+    .modal.chat-expanded .modal-body {
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal .modal-body {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .modal.chat-expanded .message-list {
+      max-height: none;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .chat-composer {
+      position: sticky;
+      bottom: 0;
+      background: #ffffff;
+      padding-top: 12px;
+      box-shadow: 0 -8px 20px rgba(0,0,0,0.04);
+    }
+    
+    .message-bubble {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+    }
+    
+    .message-bubble.sent {
+      background: var(--primary);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    
+    .message-bubble.received {
+      background: #f1f5f9;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    
+    .message-time {
+      font-size: 10px;
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    
+    .message-input-area {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    /* Curva de peso gestacional */
+    .weight-curve-container {
+      background: linear-gradient(180deg, 
+        var(--danger-bg) 0%, 
+        var(--warning-bg) 15%,
+        var(--success-bg) 35%,
+        var(--success-bg) 65%,
+        var(--warning-bg) 85%,
+        var(--danger-bg) 100%
+      );
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      position: relative;
+      min-height: 200px;
+    }
+    
+    .weight-marker {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: var(--primary);
+      border: 3px solid white;
+      border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      transform: translate(-50%, -50%);
+    }
+    
+    .gestational-info {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .gest-item {
+      text-align: center;
+      padding: 12px;
+      background: white;
+      border-radius: var(--radius-md);
+    }
+    
+    .gest-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    
+    .gest-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    /* =========================
+   Modal de Valores de Pânico
+========================= */
+#valoresPanicoModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#valoresPanicoModal .modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Inputs */
+#valoresPanicoModal label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+#valoresPanicoModal input {
+  width: 100px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* Botões */
+#valoresPanicoModal button {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#valoresPanicoModal button:first-child {
+  background: #f0f0f0; /* Fechar */
+  color: #333;
+}
+
+#valoresPanicoModal button:first-child:hover {
+  background: #e0e0e0;
+}
+
+#valoresPanicoModal button:last-child {
+  background: #ff4d4f; /* Salvar */
+  color: #fff;
+}
+
+#valoresPanicoModal button:last-child:hover {
+  background: #e04344;
+}
+
+/* Container dos botões alinhados à direita */
+#valoresPanicoModal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Botão de Valores de Pânico destacado */
+.panic-btn {
+  background-color: #000;   /* Preto */
+  color: #fff;              /* Letra branca */
+  font-weight: 700;
+  border: 2px solid #000000; /* Borda vermelha */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transition: all 0.2s;
+}
+
+.panic-btn:hover {
+  background-color: #222;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+  transform: translateY(-2px);
+}
+
+    
+  </style>
+</head>
+<body>
+  <div class="container-fluid" style="max-width: 1600px; margin: 0 auto;">
+    <!-- Header -->
+    <header class="flex items-center justify-between py-4 mb-4">
+      <div class="flex items-center gap-3">
+        <img src="../img/logo.png" alt="Tecendo Saúde" style="width:48px; height:48px; border-radius:12px; object-fit:cover;" />
+        <div>
+          <h1 class="text-xl font-bold" style="color: var(--primary);">Tecendo Saúde</h1>
+          <p class="text-sm text-muted">Monitoramento de Usuários do SUS</p>
+        </div>
+      </div>
+      <div class="flex gap-3 items-center">
+        <span id="profName" class="text-sm font-semibold"></span>
+        <a href="../index.html#profissional" class="btn btn-secondary btn-sm">← Voltar</a>
+      </div>
+    </header>
+    
+    <!-- Stats Cards -->
+    <div class="dashboard-stats" id="statsContainer">
+      <div class="stat-card danger">
+        <div class="stat-value" id="statCriticos">0</div>
+        <div class="stat-label">🚨 Casos Críticos</div>
+      </div>
+      <div class="stat-card warning">
+        <div class="stat-value" id="statAtencao">0</div>
+        <div class="stat-label">⚠️ Atenção Necessária</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-value" id="statEstaveis">0</div>
+        <div class="stat-label">✅ Estáveis</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">📊 Total de Usuários do SUS</div>
+      </div>
+    </div>
+    
+    <!-- Main Layout -->
+    <div class="monitor-layout">
+      <!-- Left: Patient List -->
+      <div>
+        <div class="search-bar">
+          <input type="text" class="input-box search-input" placeholder="Buscar usuário do SUS por nome ou CPF..." id="searchInput" onkeyup="filtrarPacientes()">
+          <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Todos</button>
+          <button class="filter-btn danger" data-filter="critical" onclick="setFilter('critical')">🚨 Críticos</button>
+          <button class="filter-btn" data-filter="warning" onclick="setFilter('warning')">⚠️ Atenção</button>
+          <button class="filter-btn" data-filter="stable" onclick="setFilter('stable')">✅ Estáveis</button>
+          <button class="filter-btn" data-filter="gestante" onclick="setFilter('gestante')">🤰 Gestantes</button>
+          <button class="filter-btn" data-filter="filhos" onclick="setFilter('filhos')">👶 Com Filhos</button>
+          <button class="filter-btn" data-filter="idoso" onclick="setFilter('idoso')">👴 Idosos 60+</button>
+        </div>
+        
+        <div class="patient-list" id="patientList">
+          <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <p>Carregando usuários do SUS...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right: Detail Panel -->
+      <div class="detail-panel" id="detailPanel" style="display: none;">
+        <div class="detail-header" id="detailHeader">
+          <div class="detail-name" id="detailName">Selecione um usuário do SUS</div>
+          <div class="detail-meta" id="detailMeta"></div>
+          <button class="detail-close" type="button" onclick="fecharPainelDetalhe()">×</button>
+        </div>
+        
+        <div class="detail-tabs">
+          <button class="detail-tab active" data-tab="resumo" onclick="showTab('resumo')">📋 Resumo</button>
+          <button class="detail-tab" data-tab="graficos" onclick="showTab('graficos')">📈 Gráficos</button>
+          <button class="detail-tab" data-tab="mensagens" onclick="showTab('mensagens')">💬 Mensagens</button>
+          <button id="btnValoresPanico" class="detail-tab" title="Configurar limites de pânico para profissionais"onclick="abrirValoresPanicoModal()"> Valores de Pânico</button>
+        </div>
+        
+        <div class="detail-content" id="detailContent">
+          <!-- Content loaded dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal de Ficha Cadastral -->
+  <div class="modal-overlay" id="fichaModal" style="display: none;">
+    <div class="modal modal-lg" style="display:flex;flex-direction:column;">
+      <div class="modal-header">
+        <h3 class="modal-title">📋 Ficha Cadastral</h3>
+        <button class="modal-close" onclick="fecharFichaCadastral()">&times;</button>
+      </div>
+      <div class="modal-body" id="fichaModalBody">
+        <!-- Conteúdo dinâmico -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Mensagem -->
+  <div class="modal-overlay" id="messageModal" style="display: none;">
+    <div class="modal" id="messageModalBox" style="max-height:90vh;display:flex;flex-direction:column;">
+      <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <h3 class="modal-title">💬 Enviar Mensagem</h3>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-ghost btn-sm" id="toggleChatSize" onclick="toggleChatSize()">Expandir chat</button>
+          <button class="modal-close" onclick="fecharModal()">&times;</button>
+        </div>
+      </div>
+      <div class="modal-body" style="flex:1;overflow:hidden;">
+        <div class="message-list" id="messageList" style="flex:1;overflow-y:auto;min-height:0;"></div>
+        <div class="chat-composer">
+          <div class="section-title text-xs mt-3">Áudio do profissional (até 1 min)</div>
+          <div class="flex gap-2 items-center mt-2">
+            <button class="btn btn-ghost" id="btnStartAudio" onclick="iniciarGravacaoAudio()">🎙️ Gravar</button>
+            <button class="btn btn-ghost" id="btnStopAudio" onclick="pararGravacaoAudio()" disabled>⏹️ Parar</button>
+            <span id="audioTimer" class="text-xs text-muted"></span>
+          </div>
+          <div id="audioPreviewWrap" style="display:none; margin-top:8px;">
+            <audio id="audioPreview" controls class="w-full"></audio>
+            <button class="btn btn-ghost mt-2" onclick="limparAudio()">Remover áudio</button>
+          </div>
+          <div class="input-group">
+            <textarea id="messageInput" class="input-box" rows="3" placeholder="Digite sua mensagem para o usuário do SUS..."></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="flex-shrink:0;">
+        <button class="btn btn-ghost" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarMensagem()">Enviar Mensagem</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="mediaModal" style="display:none;">
+    <div class="modal" style="max-width:90vw;max-height:90vh;padding:12px;">
+      <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;">
+        <h3 class="modal-title">📷 Mídia</h3>
+        <button class="modal-close" onclick="fecharMidia()">&times;</button>
+      </div>
+      <div class="modal-body" id="mediaModalBody" style="display:flex;align-items:center;justify-content:center;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Valores de Pânico -->
+  <div id="valoresPanicoModal">
+    <div class="modal-content">
+      <h2>Valores de Pânico</h2>
+
+      <div>
+        <label>PA Sistólica Máx: <input type="number" id="paSistolicaMax"></label>
+        <label>PA Sistólica Min: <input type="number" id="paSistolicaMin"></label>
+        <label>PA Diastólica Máx: <input type="number" id="paDiastolicaMax"></label>
+        <label>PA Diastólica Min: <input type="number" id="paDiastolicaMin"></label>
+        <label>Glicemia Máx: <input type="number" id="glicemiaMax"></label>
+        <label>Glicemia Min: <input type="number" id="glicemiaMin"></label>
+      </div>
+
+      <div class="modal-actions">
+        <button onclick="fecharValoresPanicoModal()">Fechar</button>
+        <button id="btnSalvarPanico">Salvar</button>      </div>
+    </div>
+  </div>
+  
+  <script src="monitoramento.js"></script>
+
+  <div class="modal-overlay" id="modalValoresPanico" style="display:none;">
+  <div class="modal" style="max-width: 450px;">
+    <div class="modal-header">
+      <h3 class="modal-title">🚨 Limites de Pânico</h3>
+      <button class="modal-close" onclick="document.getElementById('modalValoresPanico').style.display='none'">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="infoTipoMeta" class="text-xs mb-3 font-bold"></p>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="input-group">
+          <label class="section-title">PA Sistólica Máx</label>
+          <input type="number" id="paSistolicaMax" class="input-box" placeholder="Ex: 160">
+        </div>
+        <div class="input-group">
+          <label class="section-title">PA Sistólica Mín</label>
+          <input type="number" id="paSistolicaMin" class="input-box" placeholder="Ex: 90">
+        </div>
+        <div class="input-group">
+          <label class="section-title">PA Diastólica Máx</label>
+          <input type="number" id="paDiastolicaMax" class="input-box" placeholder="Ex: 100">
+        </div>
+        <div class="input-group">
+          <label class="section-title">PA Diastólica Mín</label>
+          <input type="number" id="paDiastolicaMin" class="input-box" placeholder="Ex: 60">
+        </div>
+        <div class="input-group">
+          <label class="section-title">Glicemia Máx</label>
+          <input type="number" id="glicemiaMax" class="input-box" placeholder="Ex: 200">
+        </div>
+        <div class="input-group">
+          <label class="section-title">Glicemia Mín</label>
+          <input type="number" id="glicemiaMin" class="input-box" placeholder="Ex: 70">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modalValoresPanico').style.display='none'">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarMetasPaciente()">Salvar Metas</button>
+    </div>
+  </div>
+</div>
+
+
+
+</body>
+</html>

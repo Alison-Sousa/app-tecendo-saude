@@ -28,20 +28,19 @@
   .section-title { font-size: 13px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin: 24px 0 8px 0; letter-spacing: 1px; }
   .loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; font-weight: 700; color: var(--primary); }
 </style>
-</head>
+<script src='cordova.js'></script></head>
 <body>
-
-<div id="downloadLoading" class="fixed inset-0 bg-white/80 backdrop-blur-sm z-[100] hidden flex-col items-center justify-center">
-  <div class="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4"></div>
-  <p class="font-bold text-emerald-900">Iniciando download...</p>
-  <p class="text-xs text-gray-500">Aguarde um momento.</p>
-</div>
-
 <div id="root"></div>
-
 <script type="text/babel" src="./js/components.js"></script>
 <script type="text/babel">
-const { useState, useEffect } = React;
+  
+// ================================================
+// TELA INICIAL - ROTEADOR PRINCIPAL
+// ================================================
+
+// LEARN_ITEMS vem de config.js
+// getYoutubeId vem de utils.js
+// Loading e OfflineBanner vêm de components.js
 
 // Tela de boas-vindas
 const WelcomeScreen = ({onPatient, onProfessional}) => (
@@ -56,7 +55,7 @@ const WelcomeScreen = ({onPatient, onProfessional}) => (
   </div>
 );
 
-// Tela de tópicos educativos
+// Tela de tópicos educativos do usuário do SUS
 const PatientTopicsScreen = ({onContinue, onBack, online}) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   
@@ -79,6 +78,7 @@ const PatientTopicsScreen = ({onContinue, onBack, online}) => {
           <div>
             <p className="text-sm text-emerald-700 font-semibold">Conteúdo educativo</p>
             <h1 className="text-3xl font-extrabold text-emerald-900">Escolha um tema</h1>
+            <p className="text-gray-600">Tire dúvidas sobre aferição e monitoramento com vídeos, textos e áudios.</p>
           </div>
           <button className="btn-sec w-auto px-5" onClick={onBack}>← Voltar</button>
         </div>
@@ -89,6 +89,7 @@ const PatientTopicsScreen = ({onContinue, onBack, online}) => {
             <div className="card text-left border-2 border-emerald-500 bg-emerald-50">
               <div className="text-xs uppercase tracking-[0.3em] text-emerald-500 font-bold">{currentItem?.title}</div>
               <div className="text-lg font-extrabold text-slate-900 mt-2">{currentItem?.kicker}</div>
+              <div className="text-sm text-slate-600 mt-2">Use as setas para trocar o tema</div>
             </div>
           </div>
           <button className="btn-sec w-auto px-3" onClick={nextItem}>→</button>
@@ -96,76 +97,142 @@ const PatientTopicsScreen = ({onContinue, onBack, online}) => {
         
         {currentItem && (
           <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm">
+            <div className="text-[11px] uppercase tracking-[0.3em] text-emerald-500 font-bold mb-2">{currentItem.title}</div>
             <h2 className="text-2xl font-extrabold text-slate-900 mb-3">{currentItem.kicker}</h2>
             <div className="space-y-2 text-sm text-slate-700">
               {currentItem.body.map((p,i) => (<p key={i}>{p}</p>))}
             </div>
-            {online && currentItem.video && videoId && (
-              <div className="mt-4 rounded-xl overflow-hidden border border-emerald-200">
-                <iframe className="w-full h-56" src={`https://www.youtube.com/embed/${videoId}`} frameBorder="0" allowFullScreen></iframe>
+            {currentItem.audio && (
+              <div className="mt-3">
+                <audio controls src={`audios/${encodeURIComponent(currentItem.audio)}`} className="w-full" />
               </div>
+            )}
+            {online && currentItem.video && videoId && (
+              <div className="mt-4 rounded-xl overflow-hidden border border-emerald-200 shadow-sm">
+                <iframe
+                  className="w-full h-56"
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  title={currentItem.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            )}
+            {!online && (
+              <div className="mt-4 text-sm text-slate-500">Sem internet: vídeo indisponível no momento.</div>
             )}
           </div>
         )}
+        
         <button className="btn-primary" onClick={onContinue}>Continuar para Login</button>
       </div>
     </div>
   );
 };
 
+// Tela de erro de configuração
+const ConfigErrorScreen = () => (
+  <div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center">
+    <div className="w-44 h-44 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-lg overflow-hidden">
+      <img src="img/logo.png" alt="Tecendo Saúde" className="w-36 h-36 object-contain" />
+    </div>
+    <h1 className="text-2xl font-extrabold text-green-900 mb-2">Configuração necessária</h1>
+    <p className="text-gray-600 mb-4">Crie o arquivo env/env.js e preencha SUPABASE_URL/SUPABASE_KEY (ou VITE_SUPABASE_*).</p>
+    <p className="text-gray-500 text-sm">Use o env/env.example.js como modelo.</p>
+  </div>
+);
+const btnPolitica = document.getElementById('btnPolitica');
+  const btnFechar = document.getElementById('btnFecharPolitica');
+  const modal = document.getElementById('politicaModal');
+
+  btnPolitica.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex'); // exibe o modal
+  });
+
+  btnFechar.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex'); // oculta o modal
+  });
+
+  // Fechar modal clicando fora da caixa
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  });
+// Aplicativo principal - Roteador
 const App = () => {
   const [route, setRoute] = useState('welcome');
   const [online, setOnline] = useState(navigator.onLine);
   
+  // Monitora status de conexão
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
     window.addEventListener('online', updateOnline);
     window.addEventListener('offline', updateOnline);
-    
-    // CORREÇÃO DA POLÍTICA: Configura os eventos após o React montar o rodapé
-    const timer = setTimeout(() => {
-      const btnPol = document.getElementById('btnPolitica');
-      const btnFech = document.getElementById('btnFecharPolitica');
-      const mod = document.getElementById('politicaModal');
-      if(btnPol && mod && btnFech) {
-        btnPol.onclick = () => mod.classList.replace('hidden', 'flex');
-        btnFech.onclick = () => mod.classList.replace('flex', 'hidden');
-      }
-    }, 500);
-
     return () => {
       window.removeEventListener('online', updateOnline);
       window.removeEventListener('offline', updateOnline);
-      clearTimeout(timer);
     };
   }, []);
-
+  
+  // Verifica se há hash na URL para área profissional
+  useEffect(() => {
+    if (window.location.hash === '#profissional') {
+      window.location.href = 'usuarios/usuarios.html#profissional';
+    }
+  }, []);
+  
+  // Verifica se há perfil de paciente salvo
+  useEffect(() => {
+    const pid = localStorage.getItem('currentProfileId');
+    if (pid) {
+      // Redireciona para área do usuário do SUS se já estiver logado
+      window.location.href = 'usuarios/usuarios.html';
+    }
+  }, []);
+  
+  // Verifica configuração do Supabase
+  if (SUPABASE_CONFIG_MISSING) {
+    return <ConfigErrorScreen />;
+  }
+  
+  // Navegar para área do usuário do SUS
   const goToPatient = () => setRoute('patient_topics');
-  const goToProfessional = () => window.location.href = 'usuarios/usuarios.html#profissional';
-  const goToPatientLogin = () => window.location.href = 'usuarios/usuarios.html';
+  
+  // Navegar para área do profissional
+  const goToProfessional = () => {
+    window.location.href = 'usuarios/usuarios.html#profissional';
+  };
+  
+  // Navegar para login do usuário do SUS
+  const goToPatientLogin = () => {
+    window.location.href = 'usuarios/usuarios.html';
+  };
+  
+  // Voltar para tela inicial
   const goToWelcome = () => setRoute('welcome');
-
+  
   return (
     <>
       <OfflineBanner online={online} />
       
-      {/* BOTÃO DE DOWNLOAD INTEGRADO NO REACT PARA NÃO SUMIR */}
-      <div className="fixed top-4 right-4 z-[60]">
-        <button onClick={() => window.handleDownload()} 
-           className="bg-[#2f6b3f] text-white px-4 py-2 text-sm font-bold rounded-md shadow-lg hover:opacity-90 transition-all flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          DOWNLOAD APP
-        </button>
-      </div>
-
       {route === 'welcome' && (
-        <WelcomeScreen onPatient={goToPatient} onProfessional={goToProfessional} />
+        <WelcomeScreen 
+          onPatient={goToPatient} 
+          onProfessional={goToProfessional} 
+        />
       )}
       
       {route === 'patient_topics' && (
-        <PatientTopicsScreen onContinue={goToPatientLogin} onBack={goToWelcome} online={online} />
+        <PatientTopicsScreen 
+          onContinue={goToPatientLogin} 
+          onBack={goToWelcome}
+          online={online}
+        />
       )}
     </>
   );
@@ -173,41 +240,29 @@ const App = () => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 
-// FUNÇÃO GLOBAL DE DOWNLOAD
-window.handleDownload = function() {
-  const loading = document.getElementById('downloadLoading');
-  if (loading) loading.classList.replace('hidden', 'flex');
 
-  setTimeout(() => {
-    const link = document.createElement('a');
-    link.href = 'downloads/tecendo-saude.apk'; 
-    link.download = 'tecendo-saude.apk';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    if (loading) loading.classList.replace('flex', 'hidden');
-    alert("O download foi iniciado!");
-  }, 1000);
-}
 </script>
 
+</body>
 <footer class="bg-green-50 border-t border-green-200 text-center py-4 text-xs text-green-700">
   © 2026 Tecendo Saúde. 
   <button id="btnPolitica" class="underline hover:text-green-900">Política de Privacidade</button>
 </footer>
 
-<div id="politicaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-[100]">
+<!-- Modal da Política de Privacidade -->
+<div id="politicaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
   <div class="bg-white rounded-2xl max-w-lg w-11/12 p-6 shadow-lg overflow-y-auto max-h-[80vh]">
     <h2 class="text-xl font-bold text-green-900 mb-4">Política de Privacidade</h2>
     <div class="text-sm text-gray-700 space-y-2">
-      <p>A Tecendo Saúde valoriza sua privacidade. Seus dados são protegidos por criptografia de acordo com a LGPD.</p>
+      <p>A Tecendo Saúde valoriza sua privacidade. Seus dados de saúde são coletados para monitoramento individual e alertas de saúde.</p>
+      <p>Os dados são armazenados localmente no seu dispositivo e sincronizados de forma segura para análise de monitoramento e histórico.</p>
+      <p>Não compartilhamos seus dados com terceiros sem seu consentimento. Você pode solicitar a exclusão dos seus dados a qualquer momento.</p>
+      <p>As informações são protegidas por criptografia e boas práticas de segurança, de acordo com a LGPD.</p>
+      <p>Ao utilizar o aplicativo, você concorda com esta política.</p>
     </div>
-    <div class="mt-6">
+    <div class="mt-6 text-center">
       <button id="btnFecharPolitica" class="btn-primary w-full">Fechar</button>
     </div>
   </div>
 </div>
-
-</body>
 </html>
