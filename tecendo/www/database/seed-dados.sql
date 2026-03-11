@@ -198,7 +198,7 @@ SET
   tempo_diag_dm = COALESCE(NULLIF(tempo_diag_dm,''), CASE WHEN diabetes = 'sim' OR diabetes = 'Sim' THEN '2 anos' ELSE 'Não se aplica' END),
   infeccao_urinaria_gestacao = COALESCE(NULLIF(infeccao_urinaria_gestacao,''), 'Não'),
   dependencias = COALESCE(NULLIF(dependencias,''), 'nenhum'),
-  tempo_vicio = COALESCE(NULLIF(tempo_vicio,''), CASE WHEN dependencias IS NULL OR dependencias = '' OR dependencias = 'nenhum' THEN 'Não se aplica' ELSE '5 anos' END),
+  tempo_dependencia = COALESCE(NULLIF(tempo_dependencia,''), CASE WHEN dependencias IS NULL OR dependencias = '' OR dependencias = 'nenhum' THEN 'Não se aplica' ELSE '5 anos' END),
   altura = COALESCE(NULLIF(altura,''), '165'),
   peso_inicial = COALESCE(NULLIF(peso_inicial,''), '70'),
   peso_atual = COALESCE(NULLIF(peso_atual,''), peso_inicial),

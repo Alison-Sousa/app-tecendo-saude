@@ -1024,7 +1024,7 @@ async function abrirFichaCadastral() {
       ${renderCampo('Tempo diagnóstico - DM', p.tempo_diag_dm)}
       ${renderCampo('Infecção urinária na gestação', p.infeccao_urinaria_gestacao)}
       ${renderCampo('Dependências', p.dependencias)}
-      ${renderCampo('Tempo de vício', p.tempo_vicio)}
+      ${renderCampo('Tempo de dependência', p.tempo_dependencia)}
       ${renderCampo('Condições (marcadas)', p.condicoes)}
     </div>
 

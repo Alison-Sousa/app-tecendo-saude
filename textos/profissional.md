@@ -187,7 +187,7 @@ Mais de 3 anos
 ### secao_habitos
 Hábitos
 
-### campo_vicios
+### campo_dependencias
 Vícios (hábitos)
 
 ### opcao_tabagismo
@@ -202,7 +202,7 @@ Tabagismo e Etilismo
 ### opcao_nenhum
 Nenhum
 
-### campo_tempo_vicio
+### campo_tempo_dependencia
 Tempo do Vício
 
 ### opcao_ate_5_anos

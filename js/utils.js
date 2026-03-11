@@ -93,7 +93,7 @@ async function syncManager() {
       'patient_id','nome','cpf','nascimento','regiao','foto_url','ubs_referencia','genero','raca','endereco',
       'telefone','escolaridade','profissao','mora_sozinho','mora_companheiro','tem_filhos','qtd_filhos','filhos_json','acs_responsavel','equipe_ubs',
       'hipertensao','tempo_diag_has','diabetes','tempo_diag_dm','infeccao_urinaria_gestacao','dependencias',
-      'tempo_vicio','altura','peso_inicial','peso_atual','peso_primeira_consulta','imc_pre_gestacional','dum',
+      'tempo_dependencia','altura','peso_inicial','peso_atual','peso_primeira_consulta','imc_pre_gestacional','dum',
       'gestacao_semanas','previsao_parto','faz_pre_natal','inicio_pre_natal','data_ultima_consulta_pre_natal',
       'enxerga_bem','consulta_oftalmo','tempo_consulta_oftalmo','dificuldade_mastigar_falar_engolir',
       'uso_medicacoes','nomes_medicacoes','posologia_dosagem','posologia_horario','data_ultima_prescricao','data_ultima_dispensacao',

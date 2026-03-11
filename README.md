@@ -164,7 +164,7 @@ app-tecendo-saude/
   - Dados demográficos
   - Comorbidades (HAS, DM, gestação)
   - Metas de saúde (PA, glicemia, peso)
-  - Histórico de vícios
+  - Histórico de dependências
   - Informações de pré-natal
 - Acesso ao dashboard de monitoramento.
 - Envio de fotos clínicas no cadastro.

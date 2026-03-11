@@ -50,7 +50,7 @@ create table perfis (
   tempo_diag_dm text,
   infeccao_urinaria_gestacao text,
   dependencias text,
-  tempo_vicio text,
+  tempo_dependencia text,
   altura text,
   peso_inicial text,
   peso_atual text,
