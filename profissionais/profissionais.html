@@ -151,6 +151,10 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   const [fotoPreview, setFotoPreview] = useState(initialData?.foto_url || '');
   const [fotoFile, setFotoFile] = useState(null);
   const [extraFotos, setExtraFotos] = useState([]);
+  const [ubsSearch, setUbsSearch] = useState('');
+  const [equipeSearch, setEquipeSearch] = useState('');
+  const [acsSearch, setAcsSearch] = useState('');
+  const [medicacoes, setMedicacoes] = useState([{ nome:'', dosagem:'', horario:'' }]);
   const [saving, setSaving] = useState(false);
   
   useEffect(() => {
@@ -171,6 +175,18 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     setFotoPreview(normalized.foto_url || '');
     setFotoFile(null);
     setExtraFotos(prev => { prev.forEach(item => { if(item?.preview) URL.revokeObjectURL(item.preview); }); return []; });
+
+    const split = (value) => String(value || '').split('|').map(v => v.trim());
+    const nomes = split(normalized.nomes_medicacoes);
+    const dosagens = split(normalized.posologia_dosagem);
+    const horarios = split(normalized.posologia_horario);
+    const maxLen = Math.max(nomes.length, dosagens.length, horarios.length, 1);
+    const meds = Array.from({ length: maxLen }).map((_, i) => ({
+      nome: nomes[i] || '',
+      dosagem: dosagens[i] || '',
+      horario: horarios[i] || ''
+    }));
+    setMedicacoes(meds);
   }, [initialData]);
   
   const hasBasicDataOnly = initialData && initialData.nome && initialData.cpf && !initialData.foto_url && !initialData.genero;
@@ -232,6 +248,10 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     setSaving(true);
     try {
       const cleaned = { ...form };
+      const medsClean = medicacoes.filter(m => m.nome || m.dosagem || m.horario);
+      cleaned.nomes_medicacoes = medsClean.map(m => m.nome || '').join('|');
+      cleaned.posologia_dosagem = medsClean.map(m => m.dosagem || '').join('|');
+      cleaned.posologia_horario = medsClean.map(m => m.horario || '').join('|');
       if (cleaned.tem_filhos !== 'Sim') {
         cleaned.qtd_filhos = '0';
         cleaned.filhos_json = '[]';
@@ -304,29 +324,60 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       {requiredLabel('Profissão')}
       <input className="input-box" value={form.profissao} onChange={e=>updateField('profissao', e.target.value)} placeholder="Profissão" />
       {requiredLabel('Mora sozinho?')}
-      <select className="input-box" value={form.mora_sozinho} onChange={e=>updateField('mora_sozinho', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
-      {requiredLabel('Mora com companheiro(a)?')}
-      <select className="input-box" value={form.mora_companheiro} onChange={e=>updateField('mora_companheiro', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
-      {requiredLabel('Filhos')}
+<select 
+  className="input-box" 
+  value={form.mora_sozinho} 
+  onChange={e => {
+    const val = e.target.value;
+    // Atualiza o campo atual
+    updateField('mora_sozinho', val);
+    
+    // Comportamento idêntico ao dos filhos: 
+    // Se Sim, força o próximo campo a ser "Não se aplica" e bloqueia
+    if (val === 'Sim') {
+      updateField('mora_companheiro', 'Não se aplica');
+    } else {
+      // Se mudar para Não ou vazio, reseta o próximo campo para escolha
+      updateField('mora_companheiro', '');
+    }
+  }}
+>
+  <option value="">Escolha...</option>
+  <option>Sim</option>
+  <option>Não</option>
+</select>      
+{requiredLabel('Mora com companheiro(a)?')}
+<select 
+  className={`input-box ${form.mora_sozinho === 'Sim' ? 'bg-gray-100' : ''}`} 
+  value={form.mora_companheiro} 
+  onChange={e => updateField('mora_companheiro', e.target.value)}
+  disabled={form.mora_sozinho === 'Sim'}
+>
+  <option value="">Escolha...</option>
+  <option>Sim</option>
+  <option>Não</option>
+  <option>Não se aplica</option>
+</select>      {requiredLabel('Filhos')}
       <select className="input-box" value={form.tem_filhos} onChange={e=>updateField('tem_filhos', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Quantidade de filhos')}
       <input
-        className="input-box"
-        type="number"
-        min="0"
-        max="20"
-        inputMode="numeric"
-        value={form.qtd_filhos}
-        onChange={e=>{
-          const raw = e.target.value.replace(/\D/g,'');
-          updateField('qtd_filhos', raw);
-          const total = parseInt(raw, 10) || 0;
-          const current = Array.isArray(form.__filhosState) ? [...form.__filhosState] : [];
-          const next = Array.from({length: total}).map((_, i) => current[i] || { nome:'', idade:'', vacinaStatus:'', vacinaData:'' });
-          setFilhosState(next);
-        }}
-        placeholder="Ex: 3"
-      />
+  className={`input-box ${form.tem_filhos !== 'Sim' ? 'bg-gray-100' : ''}`} // Adiciona um fundo cinza quando desabilitado
+  type="number"
+  min="0"
+  max="20"
+  inputMode="numeric"
+  value={form.qtd_filhos}
+  disabled={form.tem_filhos !== 'Sim'} // DESABILITA o campo se não for 'Sim'
+  onChange={e => {
+    const raw = e.target.value.replace(/\D/g, '');
+    updateField('qtd_filhos', raw);
+    const total = parseInt(raw, 10) || 0;
+    const current = Array.isArray(form.__filhosState) ? [...form.__filhosState] : [];
+    const next = Array.from({ length: total }).map((_, i) => current[i] || { nome: '', idade: '', vacinaStatus: '', vacinaData: '' });
+    setFilhosState(next);
+  }}
+  placeholder={form.tem_filhos === 'Sim' ? "Ex: 3" : "0"}
+/>
       {form.tem_filhos === 'Sim' && (Array.isArray(form.__filhosState) ? form.__filhosState.length : 0) > 0 && (
         <>
           <div className="section-title">Filhos (nome, idade e vacinação)</div>
@@ -363,25 +414,168 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       {requiredLabel('Região')}
       <select className="input-box" value={form.regiao} onChange={e=>updateField('regiao', e.target.value)}><option value="">Escolha...</option>{LISTA_REGIOES.map(r => <option key={r}>{r}</option>)}</select>
       {requiredLabel('Unidade de Referência')}
-      <select className="input-box" value={form.ubs_referencia} onChange={e=>updateField('ubs_referencia', e.target.value)}><option value="">Escolha...</option>{LISTA_UBS.map(u => <option key={u}>{u}</option>)}</select>
+      <div className="input-box">
+        <div className="flex gap-2">
+          <input
+            className="input-box flex-1"
+            placeholder="🔍 Pesquisar..."
+            value={ubsSearch}
+            onChange={(e) => {
+              const val = e.target.value;
+              setUbsSearch(val);
+              const match = LISTA_UBS.find(u => u.toLowerCase() === val.toLowerCase());
+              if (match) updateField('ubs_referencia', match);
+            }}
+          />
+          <select
+            className="input-box flex-1"
+            value={form.ubs_referencia}
+            onChange={(e) => updateField('ubs_referencia', e.target.value)}
+          >
+            <option value="">Escolha...</option>
+            {LISTA_UBS.filter((u) =>
+              u.toLowerCase().includes(ubsSearch.toLowerCase()),
+            ).map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
+        </div>
+
+      </div>
       {requiredLabel('Equipe UBS')}
-      <select className="input-box" value={form.equipe_ubs} onChange={e=>updateField('equipe_ubs', e.target.value)}><option value="">Escolha...</option><option>ESF</option><option>ESFR</option></select>
+      <div className="input-box">
+        <div className="flex gap-2">
+          <input
+            className="input-box flex-1"
+            placeholder="🔍 Pesquisar..."
+            value={equipeSearch}
+            onChange={(e) => {
+              const val = e.target.value;
+              setEquipeSearch(val);
+              const match = ['ESF', 'ESFR'].find((team) => team.toLowerCase() === val.toLowerCase());
+              if (match) updateField('equipe_ubs', match);
+            }}
+          />
+          <select
+            className="input-box flex-1"
+            value={form.equipe_ubs}
+            onChange={(e) => updateField('equipe_ubs', e.target.value)}
+          >
+            <option value="">Escolha...</option>
+            {['ESF', 'ESFR']
+              .filter((team) =>
+                team.toLowerCase().includes(equipeSearch.toLowerCase()),
+              )
+              .map((team) => (
+                <option key={team} value={team}>
+                  {team}
+                </option>
+              ))}
+          </select>
+        </div>
+
+      </div>
       {requiredLabel('Agente Comunitário de Saúde')}
-      <select className="input-box" value={form.acs_responsavel} onChange={e=>updateField('acs_responsavel', e.target.value)}><option value="">Escolha algo</option>{LISTA_ACS.map(a => <option key={a}>{a}</option>)}</select>
+      <div className="input-box">
+        <div className="flex gap-2">
+          <input
+            className="input-box flex-1"
+            placeholder="🔍 Pesquisar..."
+            value={acsSearch}
+            onChange={(e) => {
+              const val = e.target.value;
+              setAcsSearch(val);
+              const match = LISTA_ACS.find((a) => a.toLowerCase() === val.toLowerCase());
+              if (match) updateField('acs_responsavel', match);
+            }}
+          />
+          <select
+            className="input-box flex-1"
+            value={form.acs_responsavel}
+            onChange={(e) => updateField('acs_responsavel', e.target.value)}
+          >
+            <option value="">Escolha algo</option>
+            {LISTA_ACS.filter((a) =>
+              a.toLowerCase().includes(acsSearch.toLowerCase()),
+            ).map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        </div>
+
+      </div>
       {requiredLabel('Tem hipertensão?')}
-      <select className="input-box" value={form.hipertensao} onChange={e=>updateField('hipertensao', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      <select className="input-box" value={form.hipertensao} onChange={e => {
+        const val = e.target.value;
+        updateField('hipertensao', val);
+        if (val === 'Não') updateField('tempo_diag_has', 'Não se aplica');
+        else if (form.tempo_diag_has === 'Não se aplica') updateField('tempo_diag_has', '');
+      }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo de diagnóstico - HAS')}
-      <select className="input-box" value={form.tempo_diag_has} onChange={e=>updateField('tempo_diag_has', e.target.value)}><option value="">Escolha...</option><option>Não tem alteração</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
+      <input className="input-box" value={form.hipertensao === 'Não' ? 'Não se aplica' : form.tempo_diag_has} onChange={e=>updateField('tempo_diag_has', e.target.value)} disabled={form.hipertensao === 'Não'} placeholder="Ex.: 2 anos" />
       {requiredLabel('Tem diabetes?')}
-      <select className="input-box" value={form.diabetes} onChange={e=>updateField('diabetes', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      <select className="input-box" value={form.diabetes} onChange={e => {
+        const val = e.target.value;
+        updateField('diabetes', val);
+        if (val === 'Não') updateField('tempo_diag_dm', 'Não se aplica');
+        else if (form.tempo_diag_dm === 'Não se aplica') updateField('tempo_diag_dm', '');
+      }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo de diagnóstico - DM')}
-      <select className="input-box" value={form.tempo_diag_dm} onChange={e=>updateField('tempo_diag_dm', e.target.value)}><option value="">Escolha...</option><option>Não tem alteração</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
+      <input className="input-box" value={form.diabetes === 'Não' ? 'Não se aplica' : form.tempo_diag_dm} onChange={e=>updateField('tempo_diag_dm', e.target.value)} disabled={form.diabetes === 'Não'} placeholder="Ex.: 3 anos" />
       {requiredLabel('Teve infecção urinária durante a gestação?')}
       <select className="input-box" value={form.infeccao_urinaria_gestacao} onChange={e=>updateField('infeccao_urinaria_gestacao', e.target.value)}><option value="">Escolha...</option><option>Não é gestante</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Dependências')}
-      <select className="input-box" value={form.dependencias} onChange={e=>updateField('dependencias', e.target.value)}><option value="">Escolha...</option><option>Tabagismo</option><option>Etilismo</option><option>Ex-etilista</option><option>Ex-tabagista</option><option>Uso de drogas ilícitas</option><option>Nenhum relato</option></select>
-      {requiredLabel('Tempo de  ')}
-      <select className="input-box" value={form.tempo_dependencia} onChange={e=>updateField('tempo_dependencia', e.target.value)}><option value="">Escolha...</option><option>Não tem Dependência</option><option>Até 5 anos</option><option>De 5 a 10 anos</option><option>Mais de 10 anos</option></select>
+      <div className="grid grid-cols-2 gap-2 pb-4">
+        {['Tabagismo','Etilismo','Ex-etilista','Ex-tabagista','Uso de drogas ilícitas','Nenhum relato'].map(option => {
+          const selected = String(form.dependencias || '').split('|').map(v => v.trim()).filter(Boolean);
+          const checked = selected.includes(option);
+          const hasNone = selected.includes('Nenhum relato');
+          return (
+            <label key={option} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={checked}
+                onChange={e => {
+                  let next;
+                  if (option === 'Nenhum relato') {
+                    next = e.target.checked ? ['Nenhum relato'] : [];
+                  } else {
+                    next = e.target.checked ? [...selected.filter(v => v !== 'Nenhum relato'), option] : selected.filter(v => v !== option);
+                  }
+                  updateField('dependencias', next.join('|'));
+
+                  if (option === 'Nenhum relato' && e.target.checked) {
+                    updateField('tempo_dependencia', 'Não se aplica');
+                  }
+
+                  if (hasNone && !checked) {
+                    if (form.tempo_dependencia === 'Não se aplica') updateField('tempo_dependencia', '');
+                  }
+                }}
+              />
+              {option}
+            </label>
+          );
+        })}
+      </div>
+      <div className="section-title">Tempo de dependência</div>
+      <select
+        className="input-box"
+        value={String(form.dependencias || '').split('|').map(v => v.trim()).includes('Nenhum relato') ? 'Não se aplica' : form.tempo_dependencia}
+        onChange={e=>updateField('tempo_dependencia', e.target.value)}
+        disabled={String(form.dependencias || '').split('|').map(v => v.trim()).includes('Nenhum relato')}
+      >
+        <option value="">Escolha...</option>
+        <option>Não tem Dependência</option>
+        <option>Até 5 anos</option>
+        <option>De 5 a 10 anos</option>
+        <option>Mais de 10 anos</option>
+      </select>
       <div className="section-title">Altura (cm)</div>
       <input className="input-box" type="number" min="50" max="250" step="0.1" inputMode="decimal" value={form.altura} onChange={e=>updateField('altura', e.target.value)} placeholder="Ex.: 152" />
       {requiredLabel('Peso Inicial (kg)')}
@@ -407,29 +601,92 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       {requiredLabel('Enxerga bem?')}
       <select className="input-box" value={form.enxerga_bem} onChange={e=>updateField('enxerga_bem', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Consulta com oftalmologista')}
-      <select className="input-box" value={form.consulta_oftalmo} onChange={e=>updateField('consulta_oftalmo', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      <select className="input-box" value={form.consulta_oftalmo} onChange={e => {
+        const val = e.target.value;
+        updateField('consulta_oftalmo', val);
+        if (val === 'Não') updateField('tempo_consulta_oftalmo', 'Não se aplica');
+        else if (form.tempo_consulta_oftalmo === 'Não se aplica') updateField('tempo_consulta_oftalmo', '');
+      }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo da consulta com oftalmologista')}
-      <select className="input-box" value={form.tempo_consulta_oftalmo} onChange={e=>updateField('tempo_consulta_oftalmo', e.target.value)}><option value="">Escolha...</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
+      <select className="input-box" value={form.consulta_oftalmo === 'Não' ? 'Não se aplica' : form.tempo_consulta_oftalmo} onChange={e=>updateField('tempo_consulta_oftalmo', e.target.value)} disabled={form.consulta_oftalmo === 'Não'}><option value="">Escolha...</option><option value="Não se aplica">Não se aplica</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
       {requiredLabel('Você sente dificuldade para mastigar, falar ou engolir?')}
       <select className="input-box" value={form.dificuldade_mastigar_falar_engolir} onChange={e=>updateField('dificuldade_mastigar_falar_engolir', e.target.value)}><option value="">Escolha...</option><option>Não</option><option>Mastigar</option><option>Falar</option><option>Engolir</option><option>Mastigar e Falar</option><option>Mastigar e Engolir</option><option>Falar e Engolir</option><option>Mastigar, Falar e Engolir</option><option>Dor na língua</option><option>Voz rouca</option><option>Ferida na boca que não cicatriza</option></select>
       {requiredLabel('Faz uso de medicações?')}
-      <select className="input-box" value={form.uso_medicacoes} onChange={e=>updateField('uso_medicacoes', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
-      <div className="section-title">Nomes das medicações</div>
-      <input className="input-box" value={form.nomes_medicacoes} onChange={e=>updateField('nomes_medicacoes', e.target.value)} placeholder="Ex.: Losartana, Metformina" />
-      <div className="section-title">Posologia das medicações - Dosagem</div>
-      <input className="input-box" value={form.posologia_dosagem} onChange={e=>updateField('posologia_dosagem', e.target.value)} placeholder="Ex.: 5mg, 10mg, 15mg" />
-      <div className="section-title">Posologia das medicações - Horário</div>
-      <input className="input-box" value={form.posologia_horario} onChange={e=>updateField('posologia_horario', e.target.value)} placeholder="Ex.: 8h, 12h, 20h" />
+      <select className="input-box" value={form.uso_medicacoes} onChange={e => {
+        const val = e.target.value;
+        updateField('uso_medicacoes', val);
+        if (val === 'Não') {
+          setMedicacoes([{ nome: 'Não se aplica', dosagem: 'Não se aplica', horario: 'Não se aplica' }]);
+        } else if (medicacoes.length === 1 && medicacoes[0].nome === 'Não se aplica') {
+          setMedicacoes([{ nome:'', dosagem:'', horario:'' }]);
+        }
+      }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      <div className="section-title">Medicações</div>
+      <div className="space-y-2">
+        {medicacoes.map((med, idx) => (
+          <div key={idx} className="flex gap-2 items-center">
+            <input className="input-box" style={{flex:1, minWidth:120}} value={med.nome} onChange={e => {
+              const next = [...medicacoes];
+              next[idx] = { ...next[idx], nome: e.target.value };
+              setMedicacoes(next);
+            }} placeholder="Nome" disabled={form.uso_medicacoes === 'Não'} />
+            <input className="input-box" style={{flex:1, minWidth:120}} value={med.dosagem} onChange={e => {
+              const next = [...medicacoes];
+              next[idx] = { ...next[idx], dosagem: e.target.value };
+              setMedicacoes(next);
+            }} placeholder="Dosagem" disabled={form.uso_medicacoes === 'Não'} />
+            <input className="input-box" style={{flex:1, minWidth:120}} value={med.horario} onChange={e => {
+              const next = [...medicacoes];
+              next[idx] = { ...next[idx], horario: e.target.value };
+              setMedicacoes(next);
+            }} placeholder="Horário" disabled={form.uso_medicacoes === 'Não'} />
+            <button type="button" className="btn-sec" style={{width:40, padding:'0 8px'}} onClick={() => setMedicacoes(prev => [...prev, { nome:'', dosagem:'', horario:'' }])} disabled={form.uso_medicacoes === 'Não'}>+</button>
+            {idx > 0 && (
+              <button type="button" className="btn-sec" style={{width:40, padding:'0 8px'}} onClick={() => setMedicacoes(prev => prev.filter((_, i) => i !== idx))} disabled={form.uso_medicacoes === 'Não'}>-</button>
+            )}
+          </div>
+        ))}
+      </div>
       <div className="section-title">Data da última prescrição</div>
       <input className="input-box" value={form.data_ultima_prescricao} onChange={e=>updateField('data_ultima_prescricao', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
       <div className="section-title">Data da última dispensação</div>
       <input className="input-box" value={form.data_ultima_dispensacao} onChange={e=>updateField('data_ultima_dispensacao', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
       {requiredLabel('Faz Atividade Física?')}
-      <select className="input-box" value={form.atividade_fisica} onChange={e=>updateField('atividade_fisica', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      <select className="input-box" value={form.atividade_fisica} onChange={e => {
+        const val = e.target.value;
+        updateField('atividade_fisica', val);
+        if (val === 'Não') {
+          updateField('freq_atividade', 'Não se aplica');
+          updateField('tipo_atividade', 'Não se aplica');
+        } else {
+          if (form.freq_atividade === 'Não se aplica') updateField('freq_atividade', '');
+          if (form.tipo_atividade === 'Não se aplica') updateField('tipo_atividade', '');
+        }
+      }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Frequência da Atividade Física')}
-      <select className="input-box" value={form.freq_atividade} onChange={e=>updateField('freq_atividade', e.target.value)}><option value="">Escolha...</option><option>1x semana</option><option>2-3x semana</option><option>4-5x semana</option><option>Diário</option><option>Nunca</option></select>
+      <select className="input-box" value={form.atividade_fisica === 'Não' ? 'Não se aplica' : form.freq_atividade} onChange={e=>updateField('freq_atividade', e.target.value)} disabled={form.atividade_fisica === 'Não'}><option value="">Escolha...</option><option value="Não se aplica">Não se aplica</option><option>1x semana</option><option>2-3x semana</option><option>4-5x semana</option><option>Diário</option><option>Nunca</option></select>
       {requiredLabel('Que tipo de Atividade Física?')}
-      <select className="input-box" value={form.tipo_atividade} onChange={e=>updateField('tipo_atividade', e.target.value)}><option value="">Escolha...</option><option>Caminhada</option><option>Corrida</option><option>Musculação</option><option>Dança</option><option>Esportes</option><option>Outra</option></select>
+      <div className="grid grid-cols-2 gap-2 pb-4">
+        {['Caminhada','Corrida','Musculação','Dança','Esportes','Outra'].map(option => {
+          const selected = String(form.tipo_atividade || '').split('|').map(v => v.trim()).filter(Boolean);
+          const checked = selected.includes(option);
+          return (
+            <label key={option} className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={checked}
+                disabled={form.atividade_fisica === 'Não'}
+                onChange={e => {
+                  const next = e.target.checked ? [...selected, option] : selected.filter(v => v !== option);
+                  updateField('tipo_atividade', next.join('|'));
+                }}
+              />
+              {option}
+            </label>
+          );
+        })}
+      </div>
       {requiredLabel('Meta de Peso')}
       <input className="input-box" value={form.meta_peso} onChange={e=>updateField('meta_peso', e.target.value)} placeholder="Ex.: 60" />
       {requiredLabel('Meta Glicemia')}
