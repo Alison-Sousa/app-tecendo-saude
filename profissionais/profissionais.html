@@ -724,7 +724,7 @@ const ProDash = ({user, onLogout}) => {
     try {
       const clean = f.cpf.replace(/\D/g,'');
       const profNome = user?.enfermeira || user?.nome || 'Profissional';
-      const payload = { ...f, patient_id: 'cpf-'+clean, cpf: clean, created_by_nome: profNome, created_by_ubs: user?.ubs || '', created_by_cpf: user?.cpf || '', updated_at: new Date().toISOString() };
+      const payload = { ...f, patient_id: 'cpf-' + clean, cpf: clean, created_by_nome: profNome, created_by_ubs: user?.ubs || '', created_by_cpf: user?.cpf || '', updated_at: new Date().toISOString() };
       const { error } = await supabase.from('perfis').upsert(payload, { onConflict: 'patient_id' });
       if(error && payload.condicoes){ const fallback = { ...payload }; delete fallback.condicoes; const { error: retryError } = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' }); if(retryError) throw retryError; }
       else if(error) { throw error; }

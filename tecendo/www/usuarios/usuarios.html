@@ -92,12 +92,12 @@ function isCriticalWithPanico(userData, panico) {
   );
 }
 // Sync registros do Supabase
-const syncRegistrosSupabase = async (patientId) => {
-  if (!navigator.onLine || !supabase || !patientId || String(patientId).startsWith('cpf-')) return;
+const syncRegistrosSupabase = async (patient_id) => {
+  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
   try {
-    const { data, error } = await supabase.from('registros').select('*').eq('patient_id', patientId);
+    const { data, error } = await supabase.from('registros').select('*').eq('patient_id', patient_id);
     if (error || !data) return;
-    const existing = await db.registros.where('patientId').equals(patientId).toArray();
+    const existing = await db.registros.where('patient_id').equals(patient_id).toArray();
     const idByRegistro = new Map();
     const seen = new Set();
     existing.forEach(reg => {
@@ -121,7 +121,7 @@ const syncRegistrosSupabase = async (patientId) => {
       }
       return ({
         registroId: r.registro_id,
-        patientId: r.patient_id,
+        patient_id: r.patient_id,
         deviceId: r.device_id || 'server',
         texto: r.texto || '',
         tipo: r.tipo || 'monitoramento',
@@ -144,20 +144,20 @@ const syncRegistrosSupabase = async (patientId) => {
   } catch {}
 };
 
-const fetchUltimoMonitoramentoSupabase = async (patientId) => {
-  if (!navigator.onLine || !supabase || !patientId || String(patientId).startsWith('cpf-')) return null;
+const fetchUltimoMonitoramentoSupabase = async (patient_id) => {
+  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return null;
   try {
-    const { data } = await supabase.from('registros').select('*').eq('patient_id', patientId).eq('tipo', 'monitoramento').order('created_at', { ascending: false }).limit(1);
+    const { data } = await supabase.from('registros').select('*').eq('patient_id', patient_id).eq('tipo', 'monitoramento').order('created_at', { ascending: false }).limit(1);
     return Array.isArray(data) && data.length ? data[0] : null;
   } catch { return null; }
 };
 
 const enviarRegistroSupabase = async (registro) => {
-  if (!navigator.onLine || !supabase || !registro?.patientId || String(registro.patientId).startsWith('cpf-')) return;
+  if (!navigator.onLine || !supabase || !registro?.patient_id || String(registro.patient_id).startsWith('cpf-')) return;
   try {
     await supabase.from('registros').insert({
       registro_id: registro.registroId,
-      patient_id: registro.patientId,
+      patient_id: registro.patient_id,
       device_id: registro.deviceId || 'web',
       texto: registro.texto || '',
       tipo: registro.tipo || 'monitoramento',
@@ -238,7 +238,7 @@ const PatientLogin = ({onLogin, onBack}) => {
       try {
         const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
         if(data){
-          await db.perfil.put({ ...local, ...data, patientId: data.patient_id || local.patientId, synced: 1 });
+          await db.perfil.put({ ...local, ...data, patient_id: data.patient_id || local.patient_id, synced: 1 });
           setTimeout(()=>onLogin(clean, { ...local, ...data }),300);
         } else { setTimeout(()=>onLogin(clean, local),300); }
       } catch { setTimeout(()=>onLogin(clean, local),300); }
@@ -246,8 +246,14 @@ const PatientLogin = ({onLogin, onBack}) => {
       setTimeout(()=>onLogin(clean, local),300);
     } else if(navigator.onLine){
       try {
+            console.log("entrou aqui")
+
         const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
-        if(data){ await db.perfil.add({ ...data, patientId: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
+                console.log("Teste")
+        console.log(data)
+                        console.log("Teste")
+
+        if(data){ await db.perfil.add({ ...data, patient_id: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
         else { setMsg('CPF não encontrado.'); }
       } catch { setMsg('Erro de conexão.'); }
     } else { setMsg('Offline: CPF não encontrado.'); }
@@ -326,7 +332,7 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
 
 // Acompanhamento Pressão e Glicemia
 const AcompanhamentoSaude = ({ user, onBack }) => {
-  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const [lastData, setLastData] = useState(null);
   const [bpMax, setBpMax] = useState('');
   const [bpMin, setBpMin] = useState('');
@@ -349,7 +355,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
         return;
       }
       await syncRegistrosSupabase(patientKey);
-      const r = await db.registros.where('patientId').equals(patientKey).toArray();
+      const r = await db.registros.where('patient_id').equals(patientKey).toArray();
       const monitors = r.filter(i => i.tipo === 'monitoramento' || i.pa_sistolica);
       if(!monitors.length) return;
       const last = monitors.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
@@ -422,14 +428,14 @@ const fetchValoresPanicoGlobais = async () => {
     setSaving(true);
     try {
       const rid = uuidv4(), now = new Date().toISOString();
-      //const localId = await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
+      //const localId = await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
       
       // 🔹 1. Buscar valores de pânico globais
       const panico = await fetchValoresPanicoGlobais();
       // 🔹 2. Salvar local
     const localId = await db.registros.add({
       registroId: rid,
-      patientId: patientKey,
+      patient_id: patientKey,
       deviceId: 'dev',
       texto: `PA: ${sys}/${dia || '-'} | Glicemia: ${g}`,
       tipo: 'monitoramento',
@@ -445,12 +451,12 @@ const fetchValoresPanicoGlobais = async () => {
     });
     
       
-      //await enviarRegistroSupabase({ id: localId, registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
+      //await enviarRegistroSupabase({ id: localId, registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
       // 🔹 3. Enviar para Supabase
     await enviarRegistroSupabase({
       id: localId,
       registroId: rid,
-      patientId: patientKey,
+      patient_id: patientKey,
       deviceId: 'dev',
       texto: `PA: ${sys}/${dia || '-'} | Glicemia: ${g}`,
       tipo: 'monitoramento',
@@ -499,7 +505,7 @@ const fetchValoresPanicoGlobais = async () => {
   try {
     const rid = uuidv4();
     const now = new Date().toISOString();
-    const patientKey = user.patient_id || user.patientId;
+    const patientKey = user.patient_id || user.patient_id;
 
     // 2. Busca de Limites de Pânico (Prioridade: Individual > Global > Padrão)
     const panicoGlobal = await fetchValoresPanicoGlobais();
@@ -526,7 +532,7 @@ const fetchValoresPanicoGlobais = async () => {
     // 4. Salva no Dexie (Banco Local)
     await db.registros.add({
       registroId: rid,
-      patientId: patientKey,
+      patient_id: patientKey,
       deviceId: 'web',
       tipo: 'monitoramento',
       pa_sistolica: sys || null,
@@ -653,7 +659,7 @@ const AcompanhamentoCrianca = ({ user, onBack }) => {
 // CHAT - LISTA DE CONVERSAS (Estilo WhatsApp)
 // ==========================================
 const ConverseConosco = ({ user, onBack }) => {
-  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const [conversas, setConversas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chatAberto, setChatAberto] = useState(null);
@@ -676,7 +682,7 @@ const ConverseConosco = ({ user, onBack }) => {
   const carregarConversas = useCallback(async () => {
     setLoading(true);
     await syncRegistrosSupabase(patientKey);
-    const regs = await db.registros.where('patientId').equals(patientKey).toArray();
+    const regs = await db.registros.where('patient_id').equals(patientKey).toArray();
     
     // Filtra apenas conversas (monitoramento só se tiver resposta do profissional)
     const seenRegistro = new Set();
@@ -927,7 +933,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
     try {
       const rid = uuidv4(), now = new Date().toISOString();
       const autoReply = { from: 'pro', text: AUTO_REPLY_TEXT, at: now, pro_name: 'Equipe de Saúde' };
-      await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', createdAt: now, updatedAt: now, replies: [autoReply], synced: 0 });
+      await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', createdAt: now, updatedAt: now, replies: [autoReply], synced: 0 });
       for(const item of files) await db.midias.add({ registroId: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
       syncManager();
       setTxt('');
@@ -1001,7 +1007,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
 
 // Tela de Conversa Individual
 const ChatConversa = ({ user, registro, onBack }) => {
-  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const [mensagens, setMensagens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [txt, setTxt] = useState('');
@@ -1404,22 +1410,22 @@ const App = () => {
   
   const pullAutomatico = useCallback(async () => {
     if (!user || IS_PROFISSIONAL) return;
-    const patientId = user.patient_id || user.patientId || '';
-    if (navigator.onLine && supabase && patientId && !String(patientId).startsWith('cpf-')) {
+    const patient_id = user.patient_id || user.patient_id || '';
+    if (navigator.onLine && supabase && patient_id && !String(patient_id).startsWith('cpf-')) {
       try {
-        const { data } = await supabase.from('perfis').select('*').eq('patient_id', patientId).maybeSingle();
+        const { data } = await supabase.from('perfis').select('*').eq('patient_id', patient_id).maybeSingle();
         if (data) {
-          await db.perfil.put({ ...user, ...data, patientId: data.patient_id, synced: 1 });
-          setUser(prev => ({ ...prev, ...data, patientId: data.patient_id }));
+          await db.perfil.put({ ...user, ...data, patient_id: data.patient_id, synced: 1 });
+          setUser(prev => ({ ...prev, ...data, patient_id: data.patient_id }));
         }
       } catch {}
     }
-    await syncRegistrosSupabase(patientId);
+    await syncRegistrosSupabase(patient_id);
   }, [user]);
   
   useEffect(() => {
     if (IS_PROFISSIONAL) { const raw = sessionStorage.getItem('profissional'); if (raw) { try { const prof = JSON.parse(raw); if (prof) { setUser(prof); setRoute('pro_dash'); return; } } catch {} } }
-    else { const pid = localStorage.getItem('currentProfileId'); if(pid) { db.perfil.where('patientId').equals(pid).first().then(p => { if(p) { setUser(p); setRoute('menu'); syncManager(); } }); } }
+    else { const pid = localStorage.getItem('currentProfileId'); if(pid) { db.perfil.where('patient_id').equals(pid).first().then(p => { if(p) { setUser(p); setRoute('menu'); syncManager(); } }); } }
   }, []);
   
   useEffect(() => { if (route === 'menu') pullAutomatico(); }, [route, pullAutomatico]);
@@ -1434,7 +1440,7 @@ const App = () => {
     return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('online', onOnline); };
   }, [pullAutomatico]);
   
-  const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patientId = p.patient_id || p.patientId || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patientId); setUser({ ...p, patientId }); setRoute('saude'); } };
+  const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patient_id = p.patient_id || p.patient_id || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patient_id); setUser({ ...p, patient_id }); setRoute('saude'); } };
   const logout = () => { localStorage.clear(); sessionStorage.clear(); setUser(null); setRoute(IS_PROFISSIONAL ? 'pro_login' : 'login'); };
   const proLogin = (data) => { setUser(data); setRoute('pro_dash'); };
   

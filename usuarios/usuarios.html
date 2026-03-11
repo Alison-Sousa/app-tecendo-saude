@@ -82,15 +82,7 @@ const notifyUser = async (title, body, tag) => {
 };
 
 const isCriticalHealth = (pa, glicemia) => (pa && pa >= 160) || (glicemia && glicemia >= 200) || (glicemia && glicemia < 70);
-function isCriticalWithPanico(userData, panico) {
-  if (!panico) return false; // sem limites globais, volta falso
-  const { pa_sistolica, pa_diastolica, glicemia } = userData;
-  return (
-    (pa_sistolica != null && (pa_sistolica > panico.pa_sistolica_max || pa_sistolica < panico.pa_sistolica_min)) ||
-    (pa_diastolica != null && (pa_diastolica > panico.pa_diastolica_max || pa_diastolica < panico.pa_diastolica_min)) ||
-    (glicemia != null && (glicemia > panico.glicemia_max || glicemia < panico.glicemia_min))
-  );
-}
+
 // Sync registros do Supabase
 const syncRegistrosSupabase = async (patientId) => {
   if (!navigator.onLine || !supabase || !patientId || String(patientId).startsWith('cpf-')) return;
@@ -196,8 +188,7 @@ const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpd
   
   return (
     <div className={`status-card ${isCritical ? 'alert' : ''}`}>
-      <h3 className="text-lg font-extrabold text-slate-800 mb-3">Como está sua saúde?</h3>
-      <h3 className="text-sm text-slate-800 mb-3">Abaixo estão seus últimos registros</h3>
+      <h3 className="text-lg font-extrabold text-slate-800 mb-3">Seu Status de Saúde</h3>
       <div className="metric-grid">
         <div className={`metric-item ${statusPA.bg}`}>
           <div className="metric-label">Pressão Arterial</div>
@@ -234,10 +225,13 @@ const PatientLogin = ({onLogin, onBack}) => {
     setChecking(true); setMsg('Verificando...');
     const clean = cpf.replace(/\D/g,'');
     const local = await db.perfil.where('cpf').equals(clean).first();
+    console.log({ local, online: navigator.onLine });
     if(local && navigator.onLine){
       try {
         const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
+        console.log(data)
         if(data){
+          console.log(data)
           await db.perfil.put({ ...local, ...data, patientId: data.patient_id || local.patientId, synced: 1 });
           setTimeout(()=>onLogin(clean, { ...local, ...data }),300);
         } else { setTimeout(()=>onLogin(clean, local),300); }
@@ -246,7 +240,11 @@ const PatientLogin = ({onLogin, onBack}) => {
       setTimeout(()=>onLogin(clean, local),300);
     } else if(navigator.onLine){
       try {
+
         const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
+        
+        console.log({ ...data, patientId: data.patient_id, synced: 1 })
+
         if(data){ await db.perfil.add({ ...data, patientId: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
         else { setMsg('CPF não encontrado.'); }
       } catch { setMsg('Erro de conexão.'); }
@@ -290,15 +288,15 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
         <button onClick={onLogout} className="bg-red-50 text-red-500 px-4 py-2 rounded-lg font-bold text-xs">SAIR</button>
       </div>
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
-        <div className="text-base font-bold text-emerald-800 mb-1">🔔 Lembrete diário</div>
-        <div className="text-base text-emerald-700">Verifique sua saúde e atualize seu monitoramento!</div>
+        <div className="text-sm font-bold text-emerald-800 mb-1">🔔 Lembrete diário</div>
+        <div className="text-xs text-emerald-700">Verifique sua saúde e atualize seu monitoramento.</div>
       </div>
       <div className="section-title">O que você deseja fazer?</div>
       <div className="space-y-3">
         <button className="big-btn" onClick={() => onSelect('saude')}>
           <div className="big-btn-icon bg-emerald-100">❤️</div>
           <div className="font-bold text-lg text-slate-800">Pressão e Glicemia</div>
-          <div className="text-gray-400 text-sm">Registre sua pressão arterial, peso e glicemia</div>
+          <div className="text-gray-400 text-sm">Registre PA, peso, glicemia</div>
         </button>
         {mostrarGestacao && (
           <button className="big-btn" onClick={() => onSelect('gestacao')}>
@@ -317,7 +315,7 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
         <button className="big-btn" onClick={() => onSelect('chat')}>
           <div className="big-btn-icon bg-amber-100">💬</div>
           <div className="font-bold text-lg text-slate-800">Converse Conosco</div>
-          <div className="text-gray-400 text-sm">Se necessário, envie mensagens para sua equipe de saúde</div>
+          <div className="text-gray-400 text-sm">Mensagens para a equipe de saúde</div>
         </button>
       </div>
     </div>
@@ -364,56 +362,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
   
   const canSubmit = () => { if(!lastAt) return true; return (Date.now() - new Date(lastAt).getTime()) >= 24*60*60*1000; };
   const horasRestantes = () => { if(!lastAt) return 0; const diff = (24*60*60*1000) - (Date.now() - new Date(lastAt).getTime()); return diff > 0 ? Math.ceil(diff/(60*60*1000)) : 0; };
-  // Função para buscar os limites globais de "valores de pânico"
-const fetchValoresPanicoGlobais = async () => {
-  if (!supabase) return null;
-
-  const fallback = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('registros')
-        .select('*')
-        .eq('tipo', 'valores_panico')
-        .eq('patient_id', 'global')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error || !data || !data.length) return null;
-      return data[0];
-    } catch {
-      return null;
-    }
-  };
-
-  try {
-    const { data, error } = await supabase
-      .from('valores_panico')
-      .select('*')
-      .limit(1) // pegamos apenas a primeira linha, assumindo que existe só 1 registro global
-      .maybeSingle();
-
-    if (error) {
-      // Some environments may not have this table; fall back silently
-      if (error.code === 'PGRST205' || (error.message || '').includes('Could not find the table')) {
-        return await fallback();
-      }
-      console.error('Erro ao buscar valores de pânico globais', error);
-      return null;
-    }
-
-    if (!data) return await fallback();
-    return data;
-  } catch (e) {
-    if (e?.code === 'PGRST205' || (e?.message || '').includes('Could not find the table')) {
-      return await fallback();
-    }
-    console.error('Erro ao buscar valores de pânico globais', e);
-    return null;
-  }
-};
-
-
-/*
+  
   const handleSave = async () => {
     const toNum = v => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
     const sys = toNum(bpMax), dia = toNum(bpMin), w = toNum(peso), g = toNum(glicemia);
@@ -422,160 +371,20 @@ const fetchValoresPanicoGlobais = async () => {
     setSaving(true);
     try {
       const rid = uuidv4(), now = new Date().toISOString();
-      //const localId = await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
-      
-      // 🔹 1. Buscar valores de pânico globais
-      const panico = await fetchValoresPanicoGlobais();
-      // 🔹 2. Salvar local
-    const localId = await db.registros.add({
-      registroId: rid,
-      patientId: patientKey,
-      deviceId: 'dev',
-      texto: `PA: ${sys}/${dia || '-'} | Glicemia: ${g}`,
-      tipo: 'monitoramento',
-      status: 'pendente',
-      createdAt: now,
-      updatedAt: now,
-      replies: [],
-      synced: 0,
-      pa_sistolica: sys,
-      pa_diastolica: dia,
-      glicemia_mg: g,
-      atividade_fisica: atividade || null
-    });
-    
-      
-      //await enviarRegistroSupabase({ id: localId, registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
-      // 🔹 3. Enviar para Supabase
-    await enviarRegistroSupabase({
-      id: localId,
-      registroId: rid,
-      patientId: patientKey,
-      deviceId: 'dev',
-      texto: `PA: ${sys}/${dia || '-'} | Glicemia: ${g}`,
-      tipo: 'monitoramento',
-      status: 'pendente',
-      createdAt: now,
-      updatedAt: now,
-      pa_sistolica: sys,
-      pa_diastolica: dia,
-      glicemia_mg: g,
-      atividade_fisica: atividade || null
-    });
+      const localId = await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
+      await enviarRegistroSupabase({ id: localId, registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
       await syncRegistrosSupabase(patientKey);
       setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade, updatedAt: now });
       setLastAt(now);
-    const critical = isCriticalWithPanico({ pa_sistolica: sys, pa_diastolica: dia, glicemia: g }, panico);
-
-      if(critical){
-      notifyUser(
-        '⚠️ Alerta de Saúde',
-        'Seus dados indicam valores críticos. Procure atendimento na unidade de saúde mais próxima.'
-      );
-    }
+      if (isCriticalHealth(sys, g)) {
+        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${now}`);
+      }
       setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade('');
       syncManager();
-      alert(critical 
-      ? '🚨 Alerta de Saúde: Valores críticos detectados, dirija-se ao serviço de saúde mais próximo de sua residência! ✅ Monitoramento salvo com sucesso!'
-      : '✅ Monitoramento salvo com sucesso!'
-    );
+      alert('✅ Monitoramento salvo!');
     } finally { setSaving(false); }
   };
-  */
-
-  const handleSave = async () => {
-  // 1. Validação de dados numéricos
-  const sys = parseInt(bpMax);
-  const dia = parseInt(bpMin);
-  const g = parseInt(glicemia);
-  const p = parseFloat(peso);
-
-  if (!sys && !g && !p) {
-    alert('Por favor, preencha pelo menos um campo (PA, Glicemia ou Peso).');
-    return;
-  }
-
-  setSaving(true);
-  try {
-    const rid = uuidv4();
-    const now = new Date().toISOString();
-    const patientKey = user.patient_id || user.patientId;
-
-    // 2. Busca de Limites de Pânico (Prioridade: Individual > Global > Padrão)
-    const panicoGlobal = await fetchValoresPanicoGlobais();
-    
-    const limites = {
-      pa_sis_max: user.meta_pa_max || panicoGlobal?.pa_sistolica_max || 160,
-      pa_sis_min: user.meta_pa_min || panicoGlobal?.pa_sistolica_min || 90,
-      pa_dia_max: user.meta_pad_max || panicoGlobal?.pa_diastolica_max || 100,
-      pa_dia_min: user.meta_pad_min || panicoGlobal?.pa_diastolica_min || 60,
-      glic_max: user.meta_glicemia_max || panicoGlobal?.glicemia_max || 200,
-      glic_min: user.meta_glicemia_min || panicoGlobal?.glicemia_min || 70,
-    };
-
-    // 3. Verificação de Craticidade (Lógica de Pânico)
-    let isCritico = false;
-    
-    if (sys && (sys >= limites.pa_sis_max || sys <= limites.pa_sis_min)) isCritico = true;
-    if (dia && (dia >= limites.pa_dia_max || dia <= limites.pa_dia_min)) isCritico = true;
-    if (g && (g >= limites.glic_max || g <= limites.glic_min)) isCritico = true;
-
-    // Define o status que será filtrado pelo painel do profissional
-    const statusRegistro = isCritico ? 'critico' : 'pendente';
-
-    // 4. Salva no Dexie (Banco Local)
-    await db.registros.add({
-      registroId: rid,
-      patientId: patientKey,
-      deviceId: 'web',
-      tipo: 'monitoramento',
-      pa_sistolica: sys || null,
-      pa_diastolica: dia || null,
-      glicemia_mg: g || null,
-      peso_kg: p || null,
-      status: statusRegistro,
-      createdAt: now,
-      updatedAt: now,
-      synced: 0,
-      // Metadados para facilitar a filtragem no Supabase
-      municipio: user.municipio,
-      ubs: user.ubs
-    });
-
-    // 5. Feedback e Notificação
-    if (isCritico) {
-      // Alerta visual imediato
-      alert("🚨 ALERTA DE SAÚDE: Seus valores estão fora da meta recomendada. A equipe de saúde recebeu um alerta prioritário. Se sentir mal-estar forte, procure a UBS mais próxima.");
-      
-      // Notificação Push/Nativa (usando a função que já tens no chat)
-      if (typeof notifyUser === 'function') {
-        notifyUser(
-          "🚨 Atenção Necessária", 
-          "Registramos valores alterados no seu acompanhamento.", 
-          `panic_${rid}`
-        );
-      }
-    } else {
-      alert("✅ Registro salvo com sucesso!");
-    }
-
-    // 6. Sincronização e Reset
-    if (typeof syncManager === 'function') syncManager();
-    
-    setBpMax('');
-    setBpMin('');
-    setGlicemia('');
-    setPeso('');
-    
-    if (onBack) onBack();
-
-  } catch (error) {
-    console.error('Erro ao salvar monitoramento:', error);
-    alert('Erro ao salvar os dados localmente.');
-  } finally {
-    setSaving(false);
-  }
-};
+  
   return (
     <div className="p-5 fade-in min-h-screen">
       <div className="flex items-center gap-4 mb-6">
@@ -777,7 +586,7 @@ const ConverseConosco = ({ user, onBack }) => {
         <div className="flex items-center gap-3">
           <div className="text-2xl">💬</div>
           <div>
-            <div className="font-bold text-amber-800">Converse com sua equipe de saúde</div>
+            <div className="font-bold text-amber-800">Converse com a equipe de saúde</div>
             <div className="text-xs text-amber-600">Envie dúvidas, fotos, vídeos ou áudios</div>
           </div>
         </div>
@@ -1372,27 +1181,6 @@ const ProDash = ({user, onLogout}) => {
       </div>
     </div>
   );
-
-
-async function fetchValoresPanicoGlobais() {
-  if (!supabase) return null;
-  try {
-    const { data, error } = await supabase
-      .from('registros')
-      .select('*')
-      .eq('tipo', 'valores_panico')
-      .eq('patient_id', 'global')
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (error || !data || !data.length) return null;
-
-    return data[0];
-  } catch (e) {
-    console.error('Erro ao buscar valores de pânico globais', e);
-    return null;
-  }
-}
 };
 
 // App Principal
@@ -1434,7 +1222,7 @@ const App = () => {
     return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('online', onOnline); };
   }, [pullAutomatico]);
   
-  const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patientId = p.patient_id || p.patientId || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patientId); setUser({ ...p, patientId }); setRoute('saude'); } };
+  const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patientId = p.patient_id || p.patientId || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patientId); setUser({ ...p, patientId }); setRoute('menu'); } };
   const logout = () => { localStorage.clear(); sessionStorage.clear(); setUser(null); setRoute(IS_PROFISSIONAL ? 'pro_login' : 'login'); };
   const proLogin = (data) => { setUser(data); setRoute('pro_dash'); };
   
