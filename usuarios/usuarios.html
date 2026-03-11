@@ -241,22 +241,15 @@ const PatientLogin = ({onLogin, onBack}) => {
           await db.perfil.put({ ...local, ...data, patientId: data.patient_id || local.patientId, synced: 1 });
           setTimeout(()=>onLogin(clean, { ...local, ...data }),300);
         } else { setTimeout(()=>onLogin(clean, local),300); }
-      } catch (e) { console.error('Falha ao sincronizar perfil local com Supabase:', e); setTimeout(()=>onLogin(clean, local),300); }
+      } catch { setTimeout(()=>onLogin(clean, local),300); }
     } else if(local){
       setTimeout(()=>onLogin(clean, local),300);
     } else if(navigator.onLine){
       try {
-        const { data, error } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
-        if (error) {
-          console.error('Erro Supabase [perfis]:', error);
-          setMsg('Erro de conexão. ' + (error.message || ''));
-        } else if(data){
-          await db.perfil.add({ ...data, patientId: data.patient_id, synced: 1 });
-          setTimeout(()=>onLogin(clean, data),300);
-        } else {
-          setMsg('CPF não encontrado.');
-        }
-      } catch (e) { console.error('Erro ao buscar perfil do SUS:', e); setMsg('Erro de conexão. ' + (e?.message || '')); }
+        const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
+        if(data){ await db.perfil.add({ ...data, patientId: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
+        else { setMsg('CPF não encontrado.'); }
+      } catch { setMsg('Erro de conexão.'); }
     } else { setMsg('Offline: CPF não encontrado.'); }
     setChecking(false);
   };
