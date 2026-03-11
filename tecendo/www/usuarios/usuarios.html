@@ -176,6 +176,7 @@ const enviarRegistroSupabase = async (registro) => {
 
 // Card de Status de Saúde
 const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpdate }) => {
+  const atividadeLabel = atividade ? String(atividade).split('|').filter(Boolean).join(', ') : 'nenhuma';
   const getStatusPA = (val) => {
     if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'Não informado' };
     if (val >= 180) return { color: 'text-red-600', bg: 'bg-red-100', label: 'Crítica' };
@@ -215,7 +216,7 @@ const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpd
         </div>
         <div className="metric-item">
           <div className="metric-label">Atividade</div>
-          <div className="metric-value text-base">{atividade || 'nenhuma'}</div>
+          <div className="metric-value text-base">{atividadeLabel}</div>
         </div>
       </div>
       {lastUpdate && <div className="mt-3 text-xs text-slate-500 text-center">Última atualização: {formatDateISO(lastUpdate)}</div>}
@@ -332,13 +333,21 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
 
 // Acompanhamento Pressão e Glicemia
 const AcompanhamentoSaude = ({ user, onBack }) => {
+  const ATIVIDADES_OPCOES = [
+    { value: 'caminhada', label: 'Caminhada' },
+    { value: 'corrida', label: 'Corrida' },
+    { value: 'natacao', label: 'Natação' },
+    { value: 'musculacao', label: 'Musculação' },
+    { value: 'yoga', label: 'Yoga' },
+    { value: 'outro', label: 'Outro' }
+  ];
   const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const [lastData, setLastData] = useState(null);
   const [bpMax, setBpMax] = useState('');
   const [bpMin, setBpMin] = useState('');
   const [peso, setPeso] = useState('');
   const [glicemia, setGlicemia] = useState('');
-  const [atividade, setAtividade] = useState('');
+  const [atividade, setAtividade] = useState([]);
   const [lastAt, setLastAt] = useState(null);
   const [saving, setSaving] = useState(false);
   
@@ -367,6 +376,12 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
     };
     load();
   }, [patientKey]);
+
+  const toggleAtividade = (valor) => {
+    setAtividade(prev => prev.includes(valor)
+      ? prev.filter(item => item !== valor)
+      : [...prev, valor]);
+  };
   
   const canSubmit = () => { if(!lastAt) return true; return (Date.now() - new Date(lastAt).getTime()) >= 24*60*60*1000; };
   const horasRestantes = () => { if(!lastAt) return 0; const diff = (24*60*60*1000) - (Date.now() - new Date(lastAt).getTime()); return diff > 0 ? Math.ceil(diff/(60*60*1000)) : 0; };
@@ -419,82 +434,13 @@ const fetchValoresPanicoGlobais = async () => {
 };
 
 
-/*
-  const handleSave = async () => {
-    const toNum = v => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
-    const sys = toNum(bpMax), dia = toNum(bpMin), w = toNum(peso), g = toNum(glicemia);
-    if(sys === null || w === null || g === null) return alert('Preencha PA Máxima, Peso e Glicemia.');
-    if(!canSubmit()) return alert(`Aguarde ${horasRestantes()}h para atualizar.`);
-    setSaving(true);
-    try {
-      const rid = uuidv4(), now = new Date().toISOString();
-      //const localId = await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
-      
-      // 🔹 1. Buscar valores de pânico globais
-      const panico = await fetchValoresPanicoGlobais();
-      // 🔹 2. Salvar local
-    const localId = await db.registros.add({
-      registroId: rid,
-      patient_id: patientKey,
-      deviceId: 'dev',
-      texto: `PA: ${sys}/${dia || '-'} | Glicemia: ${g}`,
-      tipo: 'monitoramento',
-      status: 'pendente',
-      createdAt: now,
-      updatedAt: now,
-      replies: [],
-      synced: 0,
-      pa_sistolica: sys,
-      pa_diastolica: dia,
-      glicemia_mg: g,
-      atividade_fisica: atividade || null
-    });
-    
-      
-      //await enviarRegistroSupabase({ id: localId, registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
-      // 🔹 3. Enviar para Supabase
-    await enviarRegistroSupabase({
-      id: localId,
-      registroId: rid,
-      patient_id: patientKey,
-      deviceId: 'dev',
-      texto: `PA: ${sys}/${dia || '-'} | Glicemia: ${g}`,
-      tipo: 'monitoramento',
-      status: 'pendente',
-      createdAt: now,
-      updatedAt: now,
-      pa_sistolica: sys,
-      pa_diastolica: dia,
-      glicemia_mg: g,
-      atividade_fisica: atividade || null
-    });
-      await syncRegistrosSupabase(patientKey);
-      setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade, updatedAt: now });
-      setLastAt(now);
-    const critical = isCriticalWithPanico({ pa_sistolica: sys, pa_diastolica: dia, glicemia: g }, panico);
-
-      if(critical){
-      notifyUser(
-        '⚠️ Alerta de Saúde',
-        'Seus dados indicam valores críticos. Procure atendimento na unidade de saúde mais próxima.'
-      );
-    }
-      setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade('');
-      syncManager();
-      alert(critical 
-      ? '🚨 Alerta de Saúde: Valores críticos detectados, dirija-se ao serviço de saúde mais próximo de sua residência! ✅ Monitoramento salvo com sucesso!'
-      : '✅ Monitoramento salvo com sucesso!'
-    );
-    } finally { setSaving(false); }
-  };
-  */
-
   const handleSave = async () => {
   // 1. Validação de dados numéricos
   const sys = parseInt(bpMax);
   const dia = parseInt(bpMin);
   const g = parseInt(glicemia);
   const p = parseFloat(peso);
+  const atividadeConcatenada = atividade.join('|') || null;
 
   if (!sys && !g && !p) {
     alert('Por favor, preencha pelo menos um campo (PA, Glicemia ou Peso).');
@@ -540,6 +486,7 @@ const fetchValoresPanicoGlobais = async () => {
       glicemia_mg: g || null,
       peso_kg: p || null,
       status: statusRegistro,
+      atividade_fisica: atividadeConcatenada,
       createdAt: now,
       updatedAt: now,
       synced: 0,
@@ -551,7 +498,7 @@ const fetchValoresPanicoGlobais = async () => {
     // 5. Feedback e Notificação
     if (isCritico) {
       // Alerta visual imediato
-      alert("🚨 ALERTA DE SAÚDE: Seus valores estão fora da meta recomendada. A equipe de saúde recebeu um alerta prioritário. Se sentir mal-estar forte, procure a UBS mais próxima.");
+      alert('Foi identificado registro crítico, procure atendimento médico mais próximo.');
       
       // Notificação Push/Nativa (usando a função que já tens no chat)
       if (typeof notifyUser === 'function') {
@@ -572,6 +519,7 @@ const fetchValoresPanicoGlobais = async () => {
     setBpMin('');
     setGlicemia('');
     setPeso('');
+    setAtividade([]);
     
     if (onBack) onBack();
 
@@ -598,7 +546,21 @@ const fetchValoresPanicoGlobais = async () => {
           <div><label className="text-xs text-slate-500 font-semibold">Peso (kg)</label><input className="input-box" type="number" step="0.1" inputMode="decimal" value={peso} onChange={e=>setPeso(e.target.value)} placeholder="70" /></div>
           <div><label className="text-xs text-slate-500 font-semibold">Glicemia (mg/dL)</label><input className="input-box" type="number" inputMode="numeric" value={glicemia} onChange={e=>setGlicemia(e.target.value)} placeholder="100" /></div>
         </div>
-        <div className="mt-2"><label className="text-xs text-slate-500 font-semibold">Atividade Física</label><select className="input-box" value={atividade} onChange={e=>setAtividade(e.target.value)}><option value="">Nenhuma</option><option value="caminhada">Caminhada</option><option value="corrida">Corrida</option><option value="natacao">Natação</option><option value="musculacao">Musculação</option><option value="yoga">Yoga</option><option value="outro">Outro</option></select></div>
+        <div className="mt-2">
+          <label className="text-xs text-slate-500 font-semibold block mb-2">Atividade Física</label>
+          <div className="grid grid-cols-2 gap-2">
+            {ATIVIDADES_OPCOES.map(opcao => (
+              <label key={opcao.value} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={atividade.includes(opcao.value)}
+                  onChange={() => toggleAtividade(opcao.value)}
+                />
+                <span>{opcao.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
         {!canSubmit() && <div className="text-xs text-amber-700 font-semibold mt-2">Você poderá atualizar em {horasRestantes()}h.</div>}
         <button className="btn-primary mt-4" disabled={saving || !canSubmit()} onClick={handleSave}>{saving ? 'SALVANDO...' : 'ATUALIZAR MONITORAMENTO'}</button>
       </div>

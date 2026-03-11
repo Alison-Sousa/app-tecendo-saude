@@ -154,6 +154,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   const [ubsSearch, setUbsSearch] = useState('');
   const [equipeSearch, setEquipeSearch] = useState('');
   const [acsSearch, setAcsSearch] = useState('');
+  const [medicacoes, setMedicacoes] = useState([{ nome:'', dosagem:'', horario:'' }]);
   const [saving, setSaving] = useState(false);
   
   useEffect(() => {
@@ -174,9 +175,6 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     setFotoPreview(normalized.foto_url || '');
     setFotoFile(null);
     setExtraFotos(prev => { prev.forEach(item => { if(item?.preview) URL.revokeObjectURL(item.preview); }); return []; });
-    setUbsSearch(normalized.ubs_referencia || '');
-    setEquipeSearch(normalized.equipe_ubs || '');
-    setAcsSearch(normalized.acs_responsavel || '');
 
     const split = (value) => String(value || '').split('|').map(v => v.trim());
     const nomes = split(normalized.nomes_medicacoes);
@@ -326,44 +324,60 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       {requiredLabel('Profissão')}
       <input className="input-box" value={form.profissao} onChange={e=>updateField('profissao', e.target.value)} placeholder="Profissão" />
       {requiredLabel('Mora sozinho?')}
-      <select className="input-box" value={form.mora_sozinho} onChange={e=>updateField('mora_sozinho', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
-      {requiredLabel('Mora com companheiro(a)?')}
-      <select className="input-box" value={form.mora_companheiro} onChange={e=>updateField('mora_companheiro', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option><option>Não se aplica</option></select>
-      {requiredLabel('Filhos')}
 <select 
   className="input-box" 
-  value={form.tem_filhos} 
+  value={form.mora_sozinho} 
   onChange={e => {
-    const temFilhos = e.target.value;
-    updateField('tem_filhos', temFilhos);
-    if (temFilhos === 'Não') {
-      updateField('qtd_filhos', '0');
-      setFilhosState([]);
+    const val = e.target.value;
+    // Atualiza o campo atual
+    updateField('mora_sozinho', val);
+    
+    // Comportamento idêntico ao dos filhos: 
+    // Se Sim, força o próximo campo a ser "Não se aplica" e bloqueia
+    if (val === 'Sim') {
+      updateField('mora_companheiro', 'Não se aplica');
+    } else {
+      // Se mudar para Não ou vazio, reseta o próximo campo para escolha
+      updateField('mora_companheiro', '');
     }
   }}
 >
   <option value="">Escolha...</option>
   <option>Sim</option>
   <option>Não</option>
-</select>
-{requiredLabel('Quantidade de filhos')}
+</select>      
+{requiredLabel('Mora com companheiro(a)?')}
+<select 
+  className={`input-box ${form.mora_sozinho === 'Sim' ? 'bg-gray-100' : ''}`} 
+  value={form.mora_companheiro} 
+  onChange={e => updateField('mora_companheiro', e.target.value)}
+  disabled={form.mora_sozinho === 'Sim'}
+>
+  <option value="">Escolha...</option>
+  <option>Sim</option>
+  <option>Não</option>
+  <option>Não se aplica</option>
+</select>      {requiredLabel('Filhos')}
+      <select className="input-box" value={form.tem_filhos} onChange={e=>updateField('tem_filhos', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Quantidade de filhos')}
       <input
-        className="input-box"
-        type="number"
-        min="0"
-        max="20"
-        inputMode="numeric"
-        value={form.qtd_filhos}
-        onChange={e=>{
-          const raw = e.target.value.replace(/\D/g,'');
-          updateField('qtd_filhos', raw);
-          const total = parseInt(raw, 10) || 0;
-          const current = Array.isArray(form.__filhosState) ? [...form.__filhosState] : [];
-          const next = Array.from({length: total}).map((_, i) => current[i] || { nome:'', idade:'', vacinaStatus:'', vacinaData:'' });
-          setFilhosState(next);
-        }}
-        placeholder="Ex: 3"
-      />
+  className={`input-box ${form.tem_filhos !== 'Sim' ? 'bg-gray-100' : ''}`} // Adiciona um fundo cinza quando desabilitado
+  type="number"
+  min="0"
+  max="20"
+  inputMode="numeric"
+  value={form.qtd_filhos}
+  disabled={form.tem_filhos !== 'Sim'} // DESABILITA o campo se não for 'Sim'
+  onChange={e => {
+    const raw = e.target.value.replace(/\D/g, '');
+    updateField('qtd_filhos', raw);
+    const total = parseInt(raw, 10) || 0;
+    const current = Array.isArray(form.__filhosState) ? [...form.__filhosState] : [];
+    const next = Array.from({ length: total }).map((_, i) => current[i] || { nome: '', idade: '', vacinaStatus: '', vacinaData: '' });
+    setFilhosState(next);
+  }}
+  placeholder={form.tem_filhos === 'Sim' ? "Ex: 3" : "0"}
+/>
       {form.tem_filhos === 'Sim' && (Array.isArray(form.__filhosState) ? form.__filhosState.length : 0) > 0 && (
         <>
           <div className="section-title">Filhos (nome, idade e vacinação)</div>
@@ -400,90 +414,99 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       {requiredLabel('Região')}
       <select className="input-box" value={form.regiao} onChange={e=>updateField('regiao', e.target.value)}><option value="">Escolha...</option>{LISTA_REGIOES.map(r => <option key={r}>{r}</option>)}</select>
       {requiredLabel('Unidade de Referência')}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+      <div className="input-box">
+        <div className="flex gap-2">
           <input
-            className="input-box pl-10"
+            className="input-box flex-1"
+            placeholder="🔍 Pesquisar..."
             value={ubsSearch}
-            onChange={e => {
+            onChange={(e) => {
               const val = e.target.value;
               setUbsSearch(val);
-              const match = LISTA_UBS.find(o => o.toLowerCase().includes(val.toLowerCase()));
-              if (val === '') updateField('ubs_referencia', '');
-              else if (match) updateField('ubs_referencia', match);
+              const match = LISTA_UBS.find(u => u.toLowerCase() === val.toLowerCase());
+              if (match) updateField('ubs_referencia', match);
             }}
-            placeholder="Buscar UBS..."
           />
-          <datalist id="ubs_search_list">
-            {LISTA_UBS.map(u => <option key={u} value={u} />)}
-          </datalist>
+          <select
+            className="input-box flex-1"
+            value={form.ubs_referencia}
+            onChange={(e) => updateField('ubs_referencia', e.target.value)}
+          >
+            <option value="">Escolha...</option>
+            {LISTA_UBS.filter((u) =>
+              u.toLowerCase().includes(ubsSearch.toLowerCase()),
+            ).map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
         </div>
-        <select className="input-box flex-1" value={form.ubs_referencia} onChange={e=>{
-          updateField('ubs_referencia', e.target.value);
-          setUbsSearch(e.target.value);
-        }}>
-          <option value="">Escolha...</option>
-          {LISTA_UBS.map(u => <option key={u}>{u}</option>)}
-        </select>
+
       </div>
       {requiredLabel('Equipe UBS')}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+      <div className="input-box">
+        <div className="flex gap-2">
           <input
-            className="input-box pl-10"
+            className="input-box flex-1"
+            placeholder="🔍 Pesquisar..."
             value={equipeSearch}
-            onChange={e => {
+            onChange={(e) => {
               const val = e.target.value;
               setEquipeSearch(val);
-              const options = ['ESF','ESFR'];
-              const match = options.find(o => o.toLowerCase().includes(val.toLowerCase()));
-              if (val === '') updateField('equipe_ubs', '');
-              else if (match) updateField('equipe_ubs', match);
+              const match = ['ESF', 'ESFR'].find((team) => team.toLowerCase() === val.toLowerCase());
+              if (match) updateField('equipe_ubs', match);
             }}
-            placeholder="Buscar equipe..."
           />
-          <datalist id="equipe_search_list">
-            {['ESF','ESFR'].map(o => <option key={o} value={o} />)}
-          </datalist>
+          <select
+            className="input-box flex-1"
+            value={form.equipe_ubs}
+            onChange={(e) => updateField('equipe_ubs', e.target.value)}
+          >
+            <option value="">Escolha...</option>
+            {['ESF', 'ESFR']
+              .filter((team) =>
+                team.toLowerCase().includes(equipeSearch.toLowerCase()),
+              )
+              .map((team) => (
+                <option key={team} value={team}>
+                  {team}
+                </option>
+              ))}
+          </select>
         </div>
-        <select className="input-box flex-1" value={form.equipe_ubs} onChange={e=>{
-          updateField('equipe_ubs', e.target.value);
-          setEquipeSearch(e.target.value);
-        }}>
-          <option value="">Escolha...</option>
-          <option>ESF</option>
-          <option>ESFR</option>
-        </select>
+
       </div>
       {requiredLabel('Agente Comunitário de Saúde')}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+      <div className="input-box">
+        <div className="flex gap-2">
           <input
-            className="input-box pl-10"
+            className="input-box flex-1"
+            placeholder="🔍 Pesquisar..."
             value={acsSearch}
-            onChange={e => {
+            onChange={(e) => {
               const val = e.target.value;
               setAcsSearch(val);
-              const match = LISTA_ACS.find(o => o.toLowerCase().includes(val.toLowerCase()));
-              if (val === '') updateField('acs_responsavel', '');
-              else if (match) updateField('acs_responsavel', match);
+              const match = LISTA_ACS.find((a) => a.toLowerCase() === val.toLowerCase());
+              if (match) updateField('acs_responsavel', match);
             }}
-            placeholder="Buscar ACS..."
           />
-          <datalist id="acs_search_list">
-            {LISTA_ACS.map(a => <option key={a} value={a} />)}
-          </datalist>
+          <select
+            className="input-box flex-1"
+            value={form.acs_responsavel}
+            onChange={(e) => updateField('acs_responsavel', e.target.value)}
+          >
+            <option value="">Escolha algo</option>
+            {LISTA_ACS.filter((a) =>
+              a.toLowerCase().includes(acsSearch.toLowerCase()),
+            ).map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
         </div>
-        <select className="input-box flex-1" value={form.acs_responsavel} onChange={e=>{
-          updateField('acs_responsavel', e.target.value);
-          setAcsSearch(e.target.value);
-        }}>
-          <option value="">Escolha algo</option>
-          {LISTA_ACS.map(a => <option key={a}>{a}</option>)}
-        </select>
+
       </div>
       {requiredLabel('Tem hipertensão?')}
       <select className="input-box" value={form.hipertensao} onChange={e => {
@@ -531,7 +554,6 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
                   }
 
                   if (hasNone && !checked) {
-                    // If we just unchecked 'Nenhum relato', reset tempo_dependencia if it was forced
                     if (form.tempo_dependencia === 'Não se aplica') updateField('tempo_dependencia', '');
                   }
                 }}
@@ -702,7 +724,7 @@ const ProDash = ({user, onLogout}) => {
     try {
       const clean = f.cpf.replace(/\D/g,'');
       const profNome = user?.enfermeira || user?.nome || 'Profissional';
-      const payload = { ...f, patient_id: 'cpf-'+clean, cpf: clean, created_by_nome: profNome, created_by_ubs: user?.ubs || '', created_by_cpf: user?.cpf || '', updated_at: new Date().toISOString() };
+      const payload = { ...f, patient_id: 'cpf-' + clean, cpf: clean, created_by_nome: profNome, created_by_ubs: user?.ubs || '', created_by_cpf: user?.cpf || '', updated_at: new Date().toISOString() };
       const { error } = await supabase.from('perfis').upsert(payload, { onConflict: 'patient_id' });
       if(error && payload.condicoes){ const fallback = { ...payload }; delete fallback.condicoes; const { error: retryError } = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' }); if(retryError) throw retryError; }
       else if(error) { throw error; }

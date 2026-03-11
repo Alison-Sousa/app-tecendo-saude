@@ -84,12 +84,12 @@ const notifyUser = async (title, body, tag) => {
 const isCriticalHealth = (pa, glicemia) => (pa && pa >= 160) || (glicemia && glicemia >= 200) || (glicemia && glicemia < 70);
 
 // Sync registros do Supabase
-const syncRegistrosSupabase = async (patientId) => {
-  if (!navigator.onLine || !supabase || !patientId || String(patientId).startsWith('cpf-')) return;
+const syncRegistrosSupabase = async (patient_id) => {
+  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
   try {
-    const { data, error } = await supabase.from('registros').select('*').eq('patient_id', patientId);
+    const { data, error } = await supabase.from('registros').select('*').eq('patient_id', patient_id);
     if (error || !data) return;
-    const existing = await db.registros.where('patientId').equals(patientId).toArray();
+    const existing = await db.registros.where('patient_id').equals(patient_id).toArray();
     const idByRegistro = new Map();
     const seen = new Set();
     existing.forEach(reg => {
@@ -113,7 +113,7 @@ const syncRegistrosSupabase = async (patientId) => {
       }
       return ({
         registroId: r.registro_id,
-        patientId: r.patient_id,
+        patient_id: r.patient_id,
         deviceId: r.device_id || 'server',
         texto: r.texto || '',
         tipo: r.tipo || 'monitoramento',
@@ -136,20 +136,20 @@ const syncRegistrosSupabase = async (patientId) => {
   } catch {}
 };
 
-const fetchUltimoMonitoramentoSupabase = async (patientId) => {
-  if (!navigator.onLine || !supabase || !patientId || String(patientId).startsWith('cpf-')) return null;
+const fetchUltimoMonitoramentoSupabase = async (patient_id) => {
+  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return null;
   try {
-    const { data } = await supabase.from('registros').select('*').eq('patient_id', patientId).eq('tipo', 'monitoramento').order('created_at', { ascending: false }).limit(1);
+    const { data } = await supabase.from('registros').select('*').eq('patient_id', patient_id).eq('tipo', 'monitoramento').order('created_at', { ascending: false }).limit(1);
     return Array.isArray(data) && data.length ? data[0] : null;
   } catch { return null; }
 };
 
 const enviarRegistroSupabase = async (registro) => {
-  if (!navigator.onLine || !supabase || !registro?.patientId || String(registro.patientId).startsWith('cpf-')) return;
+  if (!navigator.onLine || !supabase || !registro?.patient_id || String(registro.patient_id).startsWith('cpf-')) return;
   try {
     await supabase.from('registros').insert({
       registro_id: registro.registroId,
-      patient_id: registro.patientId,
+      patient_id: registro.patient_id,
       device_id: registro.deviceId || 'web',
       texto: registro.texto || '',
       tipo: registro.tipo || 'monitoramento',
@@ -168,6 +168,7 @@ const enviarRegistroSupabase = async (registro) => {
 
 // Card de Status de Saúde
 const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpdate }) => {
+  const atividadeLabel = atividade ? String(atividade).split('|').filter(Boolean).join(', ') : 'nenhuma';
   const getStatusPA = (val) => {
     if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'Não informado' };
     if (val >= 180) return { color: 'text-red-600', bg: 'bg-red-100', label: 'Crítica' };
@@ -206,7 +207,7 @@ const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpd
         </div>
         <div className="metric-item">
           <div className="metric-label">Atividade</div>
-          <div className="metric-value text-base">{atividade || 'nenhuma'}</div>
+          <div className="metric-value text-base">{atividadeLabel}</div>
         </div>
       </div>
       {lastUpdate && <div className="mt-3 text-xs text-slate-500 text-center">Última atualização: {formatDateISO(lastUpdate)}</div>}
@@ -232,7 +233,7 @@ const PatientLogin = ({onLogin, onBack}) => {
         console.log(data)
         if(data){
           console.log(data)
-          await db.perfil.put({ ...local, ...data, patientId: data.patient_id || local.patientId, synced: 1 });
+          await db.perfil.put({ ...local, ...data, patient_id: data.patient_id || local.patient_id, synced: 1 });
           setTimeout(()=>onLogin(clean, { ...local, ...data }),300);
         } else { setTimeout(()=>onLogin(clean, local),300); }
       } catch { setTimeout(()=>onLogin(clean, local),300); }
@@ -243,9 +244,9 @@ const PatientLogin = ({onLogin, onBack}) => {
 
         const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
         
-        console.log({ ...data, patientId: data.patient_id, synced: 1 })
+        console.log({ ...data, patient_id: data.patient_id, synced: 1 })
 
-        if(data){ await db.perfil.add({ ...data, patientId: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
+        if(data){ await db.perfil.add({ ...data, patient_id: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
         else { setMsg('CPF não encontrado.'); }
       } catch { setMsg('Erro de conexão.'); }
     } else { setMsg('Offline: CPF não encontrado.'); }
@@ -324,13 +325,21 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
 
 // Acompanhamento Pressão e Glicemia
 const AcompanhamentoSaude = ({ user, onBack }) => {
-  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const ATIVIDADES_OPCOES = [
+    { value: 'caminhada', label: 'Caminhada' },
+    { value: 'corrida', label: 'Corrida' },
+    { value: 'natacao', label: 'Natação' },
+    { value: 'musculacao', label: 'Musculação' },
+    { value: 'yoga', label: 'Yoga' },
+    { value: 'outro', label: 'Outro' }
+  ];
+  const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const [lastData, setLastData] = useState(null);
   const [bpMax, setBpMax] = useState('');
   const [bpMin, setBpMin] = useState('');
   const [peso, setPeso] = useState('');
   const [glicemia, setGlicemia] = useState('');
-  const [atividade, setAtividade] = useState('');
+  const [atividade, setAtividade] = useState([]);
   const [lastAt, setLastAt] = useState(null);
   const [saving, setSaving] = useState(false);
   
@@ -347,7 +356,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
         return;
       }
       await syncRegistrosSupabase(patientKey);
-      const r = await db.registros.where('patientId').equals(patientKey).toArray();
+      const r = await db.registros.where('patient_id').equals(patientKey).toArray();
       const monitors = r.filter(i => i.tipo === 'monitoramento' || i.pa_sistolica);
       if(!monitors.length) return;
       const last = monitors.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
@@ -359,6 +368,12 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
     };
     load();
   }, [patientKey]);
+
+  const toggleAtividade = (valor) => {
+    setAtividade(prev => prev.includes(valor)
+      ? prev.filter(item => item !== valor)
+      : [...prev, valor]);
+  };
   
   const canSubmit = () => { if(!lastAt) return true; return (Date.now() - new Date(lastAt).getTime()) >= 24*60*60*1000; };
   const horasRestantes = () => { if(!lastAt) return 0; const diff = (24*60*60*1000) - (Date.now() - new Date(lastAt).getTime()); return diff > 0 ? Math.ceil(diff/(60*60*1000)) : 0; };
@@ -366,22 +381,26 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
   const handleSave = async () => {
     const toNum = v => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
     const sys = toNum(bpMax), dia = toNum(bpMin), w = toNum(peso), g = toNum(glicemia);
+    const atividadeConcatenada = atividade.join('|') || null;
     if(sys === null || w === null || g === null) return alert('Preencha PA Máxima, Peso e Glicemia.');
     if(!canSubmit()) return alert(`Aguarde ${horasRestantes()}h para atualizar.`);
     setSaving(true);
     try {
       const rid = uuidv4(), now = new Date().toISOString();
-      const localId = await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
-      await enviarRegistroSupabase({ id: localId, registroId: rid, patientId: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividade || null });
+      const localId = await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividadeConcatenada });
+      await enviarRegistroSupabase({ id: localId, registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, atividade_fisica: atividadeConcatenada });
       await syncRegistrosSupabase(patientKey);
-      setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade, updatedAt: now });
+      setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade: atividadeConcatenada || '', updatedAt: now });
       setLastAt(now);
-      if (isCriticalHealth(sys, g)) {
+      const isCriticoAtual = isCriticalHealth(sys, g);
+      if (isCriticoAtual) {
+        alert('Foi identificado registro crítico, procure atendimento médico mais próximo.');
         notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${now}`);
+      } else {
+        alert('✅ Monitoramento salvo!');
       }
-      setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade('');
+      setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade([]);
       syncManager();
-      alert('✅ Monitoramento salvo!');
     } finally { setSaving(false); }
   };
   
@@ -401,7 +420,21 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
           <div><label className="text-xs text-slate-500 font-semibold">Peso (kg)</label><input className="input-box" type="number" step="0.1" inputMode="decimal" value={peso} onChange={e=>setPeso(e.target.value)} placeholder="70" /></div>
           <div><label className="text-xs text-slate-500 font-semibold">Glicemia (mg/dL)</label><input className="input-box" type="number" inputMode="numeric" value={glicemia} onChange={e=>setGlicemia(e.target.value)} placeholder="100" /></div>
         </div>
-        <div className="mt-2"><label className="text-xs text-slate-500 font-semibold">Atividade Física</label><select className="input-box" value={atividade} onChange={e=>setAtividade(e.target.value)}><option value="">Nenhuma</option><option value="caminhada">Caminhada</option><option value="corrida">Corrida</option><option value="natacao">Natação</option><option value="musculacao">Musculação</option><option value="yoga">Yoga</option><option value="outro">Outro</option></select></div>
+        <div className="mt-2">
+          <label className="text-xs text-slate-500 font-semibold block mb-2">Atividade Física</label>
+          <div className="grid grid-cols-2 gap-2">
+            {ATIVIDADES_OPCOES.map(opcao => (
+              <label key={opcao.value} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={atividade.includes(opcao.value)}
+                  onChange={() => toggleAtividade(opcao.value)}
+                />
+                <span>{opcao.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
         {!canSubmit() && <div className="text-xs text-amber-700 font-semibold mt-2">Você poderá atualizar em {horasRestantes()}h.</div>}
         <button className="btn-primary mt-4" disabled={saving || !canSubmit()} onClick={handleSave}>{saving ? 'SALVANDO...' : 'ATUALIZAR MONITORAMENTO'}</button>
       </div>
@@ -462,7 +495,7 @@ const AcompanhamentoCrianca = ({ user, onBack }) => {
 // CHAT - LISTA DE CONVERSAS (Estilo WhatsApp)
 // ==========================================
 const ConverseConosco = ({ user, onBack }) => {
-  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const [conversas, setConversas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chatAberto, setChatAberto] = useState(null);
@@ -485,7 +518,7 @@ const ConverseConosco = ({ user, onBack }) => {
   const carregarConversas = useCallback(async () => {
     setLoading(true);
     await syncRegistrosSupabase(patientKey);
-    const regs = await db.registros.where('patientId').equals(patientKey).toArray();
+    const regs = await db.registros.where('patient_id').equals(patientKey).toArray();
     
     // Filtra apenas conversas (monitoramento só se tiver resposta do profissional)
     const seenRegistro = new Set();
@@ -736,7 +769,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
     try {
       const rid = uuidv4(), now = new Date().toISOString();
       const autoReply = { from: 'pro', text: AUTO_REPLY_TEXT, at: now, pro_name: 'Equipe de Saúde' };
-      await db.registros.add({ registroId: rid, patientId: patientKey, deviceId: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', createdAt: now, updatedAt: now, replies: [autoReply], synced: 0 });
+      await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', createdAt: now, updatedAt: now, replies: [autoReply], synced: 0 });
       for(const item of files) await db.midias.add({ registroId: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
       syncManager();
       setTxt('');
@@ -810,7 +843,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
 
 // Tela de Conversa Individual
 const ChatConversa = ({ user, registro, onBack }) => {
-  const patientKey = user.patient_id || user.patientId || 'cpf-' + user.cpf;
+  const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const [mensagens, setMensagens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [txt, setTxt] = useState('');
@@ -1192,22 +1225,22 @@ const App = () => {
   
   const pullAutomatico = useCallback(async () => {
     if (!user || IS_PROFISSIONAL) return;
-    const patientId = user.patient_id || user.patientId || '';
-    if (navigator.onLine && supabase && patientId && !String(patientId).startsWith('cpf-')) {
+    const patient_id = user.patient_id || user.patient_id || '';
+    if (navigator.onLine && supabase && patient_id && !String(patient_id).startsWith('cpf-')) {
       try {
-        const { data } = await supabase.from('perfis').select('*').eq('patient_id', patientId).maybeSingle();
+        const { data } = await supabase.from('perfis').select('*').eq('patient_id', patient_id).maybeSingle();
         if (data) {
-          await db.perfil.put({ ...user, ...data, patientId: data.patient_id, synced: 1 });
-          setUser(prev => ({ ...prev, ...data, patientId: data.patient_id }));
+          await db.perfil.put({ ...user, ...data, patient_id: data.patient_id, synced: 1 });
+          setUser(prev => ({ ...prev, ...data, patient_id: data.patient_id }));
         }
       } catch {}
     }
-    await syncRegistrosSupabase(patientId);
+    await syncRegistrosSupabase(patient_id);
   }, [user]);
   
   useEffect(() => {
     if (IS_PROFISSIONAL) { const raw = sessionStorage.getItem('profissional'); if (raw) { try { const prof = JSON.parse(raw); if (prof) { setUser(prof); setRoute('pro_dash'); return; } } catch {} } }
-    else { const pid = localStorage.getItem('currentProfileId'); if(pid) { db.perfil.where('patientId').equals(pid).first().then(p => { if(p) { setUser(p); setRoute('menu'); syncManager(); } }); } }
+    else { const pid = localStorage.getItem('currentProfileId'); if(pid) { db.perfil.where('patient_id').equals(pid).first().then(p => { if(p) { setUser(p); setRoute('menu'); syncManager(); } }); } }
   }, []);
   
   useEffect(() => { if (route === 'menu') pullAutomatico(); }, [route, pullAutomatico]);
@@ -1222,7 +1255,7 @@ const App = () => {
     return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('online', onOnline); };
   }, [pullAutomatico]);
   
-  const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patientId = p.patient_id || p.patientId || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patientId); setUser({ ...p, patientId }); setRoute('menu'); } };
+  const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patient_id = p.patient_id || p.patient_id || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patient_id); setUser({ ...p, patient_id }); setRoute('menu'); } };
   const logout = () => { localStorage.clear(); sessionStorage.clear(); setUser(null); setRoute(IS_PROFISSIONAL ? 'pro_login' : 'login'); };
   const proLogin = (data) => { setUser(data); setRoute('pro_dash'); };
   

@@ -744,29 +744,9 @@
     </div>
   </div>
 
-  <!-- Modal de Valores de Pânico -->
-  <div id="valoresPanicoModal">
-    <div class="modal-content">
-      <h2>Valores de Pânico</h2>
-
-      <div>
-        <label>PA Sistólica Máx: <input type="number" id="paSistolicaMax"></label>
-        <label>PA Sistólica Min: <input type="number" id="paSistolicaMin"></label>
-        <label>PA Diastólica Máx: <input type="number" id="paDiastolicaMax"></label>
-        <label>PA Diastólica Min: <input type="number" id="paDiastolicaMin"></label>
-        <label>Glicemia Máx: <input type="number" id="glicemiaMax"></label>
-        <label>Glicemia Min: <input type="number" id="glicemiaMin"></label>
-      </div>
-
-      <div class="modal-actions">
-        <button onclick="fecharValoresPanicoModal()">Fechar</button>
-        <button id="btnSalvarPanico">Salvar</button>      </div>
-    </div>
-  </div>
-  
   <script src="monitoramento.js"></script>
 
-  <div class="modal-overlay" id="modalValoresPanico" style="display:none;">
+  <div class="modal-overlay" id="modalValoresPanico" style="display:none; z-index:12001;">
   <div class="modal" style="max-width: 450px;">
     <div class="modal-header">
       <h3 class="modal-title">🚨 Limites de Pânico</h3>

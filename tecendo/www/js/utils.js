@@ -102,10 +102,10 @@ async function syncManager() {
     ];
     const perfis = await db.perfil.where('synced').equals(0).toArray();
     for (const p of perfis) {
-      const { id, synced, patientId, ...rest } = p;
-      const base = { patient_id: patientId || ('local-'+id) };
+      const { id, synced, patient_id, ...rest } = p;
+      const base = { patient_id: patient_id || ('local-'+id) };
       PERFIL_SYNC_COLUMNS.forEach(k => {
-        const keyLocal = k === 'patient_id' ? 'patientId' : k;
+        const keyLocal = k === 'patient_id' ? 'patient_id' : k;
         if (keyLocal in rest && rest[keyLocal] !== '' && rest[keyLocal] != null) {
           base[k] = rest[keyLocal];
         }
@@ -121,7 +121,7 @@ async function syncManager() {
     for (const r of regs) {
       await supabase.from('registros').upsert({
         registro_id: r.registroId,
-        patient_id: r.patientId,
+        patient_id: r.patient_id,
         device_id: r.deviceId,
         texto: r.texto,
         tipo: r.tipo,
