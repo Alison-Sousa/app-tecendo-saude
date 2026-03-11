@@ -367,6 +367,24 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
   // Função para buscar os limites globais de "valores de pânico"
 const fetchValoresPanicoGlobais = async () => {
   if (!supabase) return null;
+
+  const fallback = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('registros')
+        .select('*')
+        .eq('tipo', 'valores_panico')
+        .eq('patient_id', 'global')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error || !data || !data.length) return null;
+      return data[0];
+    } catch {
+      return null;
+    }
+  };
+
   try {
     const { data, error } = await supabase
       .from('valores_panico')
@@ -375,12 +393,20 @@ const fetchValoresPanicoGlobais = async () => {
       .maybeSingle();
 
     if (error) {
+      // Some environments may not have this table; fall back silently
+      if (error.code === 'PGRST205' || (error.message || '').includes('Could not find the table')) {
+        return await fallback();
+      }
       console.error('Erro ao buscar valores de pânico globais', error);
       return null;
     }
 
-    return data || null;
+    if (!data) return await fallback();
+    return data;
   } catch (e) {
+    if (e?.code === 'PGRST205' || (e?.message || '').includes('Could not find the table')) {
+      return await fallback();
+    }
     console.error('Erro ao buscar valores de pânico globais', e);
     return null;
   }
@@ -459,8 +485,8 @@ const fetchValoresPanicoGlobais = async () => {
 
   const handleSave = async () => {
   // 1. Validação de dados numéricos
-  const sys = parseInt(paSistolica);
-  const dia = parseInt(paDiastolica);
+  const sys = parseInt(bpMax);
+  const dia = parseInt(bpMin);
   const g = parseInt(glicemia);
   const p = parseFloat(peso);
 
@@ -469,7 +495,7 @@ const fetchValoresPanicoGlobais = async () => {
     return;
   }
 
-  setSending(true);
+  setSaving(true);
   try {
     const rid = uuidv4();
     const now = new Date().toISOString();
@@ -536,8 +562,8 @@ const fetchValoresPanicoGlobais = async () => {
     // 6. Sincronização e Reset
     if (typeof syncManager === 'function') syncManager();
     
-    setPaSistolica('');
-    setPaDiastolica('');
+    setBpMax('');
+    setBpMin('');
     setGlicemia('');
     setPeso('');
     
@@ -547,7 +573,7 @@ const fetchValoresPanicoGlobais = async () => {
     console.error('Erro ao salvar monitoramento:', error);
     alert('Erro ao salvar os dados localmente.');
   } finally {
-    setSending(false);
+    setSaving(false);
   }
 };
   return (
