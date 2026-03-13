@@ -83,6 +83,23 @@ const notifyUser = async (title, body, tag) => {
 
 const isCriticalHealth = (pa, glicemia) => (pa && pa >= 160) || (glicemia && glicemia >= 200) || (glicemia && glicemia < 70);
 
+const tocarAlertaMedicacao = () => {
+  try {
+    const audio = new Audio('../audios/Alerta.mp3');
+    audio.play().catch(() => {});
+  } catch {}
+};
+
+const extrairHorariosMedicacao = (raw) => {
+  const txt = String(raw || '');
+  if (!txt) return [];
+  const matches = txt.match(/(?:^|\D)([01]\d|2[0-3]):([0-5]\d)(?=\D|$)/g) || [];
+  const horarios = matches
+    .map(m => m.replace(/[^0-9:]/g, ''))
+    .filter(Boolean);
+  return Array.from(new Set(horarios));
+};
+
 // Sync registros do Supabase
 const syncRegistrosSupabase = async (patient_id) => {
   if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
@@ -1254,6 +1271,43 @@ const App = () => {
     window.addEventListener('online', onOnline);
     return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('online', onOnline); };
   }, [pullAutomatico]);
+
+  useEffect(() => {
+    if (!user || IS_PROFISSIONAL) return;
+    if (!patientUsesMedication(user.uso_medicacoes)) return;
+
+    const patientId = user.patient_id || user.patient_id || user.cpf || 'anon';
+    const checkReminder = async () => {
+      const horarios = extrairHorariosMedicacao(user.posologia_horario);
+      if (!horarios.length) return;
+
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const hhmm = `${hh}:${mm}`;
+      if (!horarios.includes(hhmm)) return;
+
+      const dia = now.toISOString().slice(0, 10);
+      const firedKey = `med_alert_fired_${patientId}_${dia}_${hhmm}`;
+      if (localStorage.getItem(firedKey) === '1') return;
+      localStorage.setItem(firedKey, '1');
+
+      const nomes = String(user.nomes_medicacoes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
+      const body = nomes
+        ? `Está na hora da medicação (${hhmm}): ${nomes}.`
+        : `Está na hora da medicação (${hhmm}).`;
+      const popupBody = `Lembrete de medicação: ${body}`;
+
+      tocarAlertaMedicacao();
+      if (typeof nativeAlert === 'function') nativeAlert(popupBody);
+      else alert(popupBody);
+      await notifyUser('Alerta de medicação', body, `med_${patientId}_${dia}_${hhmm}`);
+    };
+
+    checkReminder();
+    const timerId = setInterval(checkReminder, 30000);
+    return () => clearInterval(timerId);
+  }, [user]);
   
   const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patient_id = p.patient_id || p.patient_id || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patient_id); setUser({ ...p, patient_id }); setRoute('menu'); } };
   const logout = () => { localStorage.clear(); sessionStorage.clear(); setUser(null); setRoute(IS_PROFISSIONAL ? 'pro_login' : 'login'); };

@@ -156,6 +156,14 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   const [acsSearch, setAcsSearch] = useState('');
   const [medicacoes, setMedicacoes] = useState([{ nome:'', dosagem:'', horario:'' }]);
   const [saving, setSaving] = useState(false);
+
+  const mascaraHorarioMedicacao = (value) => {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  };
+
+  const horarioValido = (value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '').trim());
   
   useEffect(() => {
     const normalized = { ...defaultFicha, ...(initialData || {}) };
@@ -249,6 +257,13 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     try {
       const cleaned = { ...form };
       const medsClean = medicacoes.filter(m => m.nome || m.dosagem || m.horario);
+      if (cleaned.uso_medicacoes === 'Sim') {
+        const invalida = medsClean.find(m => !horarioValido(m.horario));
+        if (invalida) {
+          alert('Use o formato de horário HH:MM nas medicações (ex.: 08:00).');
+          return;
+        }
+      }
       cleaned.nomes_medicacoes = medsClean.map(m => m.nome || '').join('|');
       cleaned.posologia_dosagem = medsClean.map(m => m.dosagem || '').join('|');
       cleaned.posologia_horario = medsClean.map(m => m.horario || '').join('|');
@@ -257,8 +272,9 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
         cleaned.filhos_json = '[]';
       }
       if (cleaned.tem_filhos === 'Sim') {
-        const total = parseInt(String(cleaned.qtd_filhos || '0').replace(/\D/g,''), 10) || 0;
-        if (total <= 0) { alert('Informe a quantidade de filhos.'); return; }
+        const qtdFilhosRaw = String(cleaned.qtd_filhos ?? '').trim();
+        if (!qtdFilhosRaw) { alert('Informe a quantidade de filhos.'); return; }
+        const total = parseInt(qtdFilhosRaw.replace(/\D/g,''), 10) || 0;
         const filhosArray = (cleaned.__filhosState || []).slice(0, total);
         if (filhosArray.length !== total) { alert('Preencha todos os filhos informados.'); return; }
         for (let i = 0; i < filhosArray.length; i += 1) {
@@ -637,9 +653,9 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
             }} placeholder="Dosagem" disabled={form.uso_medicacoes === 'Não'} />
             <input className="input-box" style={{flex:1, minWidth:120}} value={med.horario} onChange={e => {
               const next = [...medicacoes];
-              next[idx] = { ...next[idx], horario: e.target.value };
+              next[idx] = { ...next[idx], horario: mascaraHorarioMedicacao(e.target.value) };
               setMedicacoes(next);
-            }} placeholder="Horário" disabled={form.uso_medicacoes === 'Não'} />
+            }} placeholder="HH:MM" inputMode="numeric" maxLength={5} disabled={form.uso_medicacoes === 'Não'} />
             <button type="button" className="btn-sec" style={{width:40, padding:'0 8px'}} onClick={() => setMedicacoes(prev => [...prev, { nome:'', dosagem:'', horario:'' }])} disabled={form.uso_medicacoes === 'Não'}>+</button>
             {idx > 0 && (
               <button type="button" className="btn-sec" style={{width:40, padding:'0 8px'}} onClick={() => setMedicacoes(prev => prev.filter((_, i) => i !== idx))} disabled={form.uso_medicacoes === 'Não'}>-</button>
@@ -728,6 +744,50 @@ const ProDash = ({user, onLogout}) => {
       const { error } = await supabase.from('perfis').upsert(payload, { onConflict: 'patient_id' });
       if(error && payload.condicoes){ const fallback = { ...payload }; delete fallback.condicoes; const { error: retryError } = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' }); if(retryError) throw retryError; }
       else if(error) { throw error; }
+
+      const splitPipe = (value) => String(value || '').split('|').map(v => v.trim());
+      const toDateISO = (value) => {
+        const raw = String(value || '').trim();
+        const m = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!m) return null;
+        return `${m[3]}-${m[2]}-${m[1]}`;
+      };
+      const usoMedicacoes = ['sim', 's', 'true', '1'].includes(String(payload.uso_medicacoes || '').trim().toLowerCase());
+      const nomes = splitPipe(payload.nomes_medicacoes);
+      const dosagens = splitPipe(payload.posologia_dosagem);
+      const horarios = splitPipe(payload.posologia_horario);
+      const maxLen = Math.max(nomes.length, dosagens.length, horarios.length, 0);
+      const medicamentos = [];
+      for (let i = 0; i < maxLen; i += 1) {
+        const nome = nomes[i] || '';
+        const dosagem = dosagens[i] || '';
+        const horario = horarios[i] || '';
+        if (!nome && !dosagem && !horario) continue;
+        medicamentos.push({
+          medication_id: uuidv4(),
+          patient_id: payload.patient_id,
+          nome_paciente: payload.nome || null,
+          cpf_paciente: payload.cpf || null,
+          tipo_medicamento: null,
+          nome_medicamento: nome || null,
+          dosagem: dosagem || null,
+          horarios: horario || null,
+          data_prescricao: toDateISO(payload.data_ultima_prescricao),
+          data_dispensacao: toDateISO(payload.data_ultima_dispensacao),
+          data_inicio: null,
+          data_termino: null,
+          ativo: usoMedicacoes ? 'sim' : 'nao',
+          synced: 1
+        });
+      }
+
+      const { error: delMedsError } = await supabase.from('medicamentos').delete().eq('patient_id', payload.patient_id);
+      if (delMedsError) throw delMedsError;
+      if (usoMedicacoes && medicamentos.length > 0) {
+        const { error: insMedsError } = await supabase.from('medicamentos').insert(medicamentos);
+        if (insMedsError) throw insMedsError;
+      }
+
       if (extraFiles && extraFiles.length > 0) {
         const registroId = uuidv4();
         const now = new Date().toISOString();
