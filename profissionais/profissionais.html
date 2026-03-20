@@ -101,9 +101,7 @@ const ProAuth = ({onAuth, onBack}) => {
         const municipio = e.target.value;
         const ubsOptions = municipio ? getUbsByMunicipio(municipio) : [];
         const nextUbs = ubsOptions.length === 1 ? ubsOptions[0] : '';
-        const names = nextUbs ? getEnfermeirasByMunicipioUbs(municipio, nextUbs) : [];
-        const nextNome = names.length === 1 ? names[0] : '';
-        setReg(prev => ({ ...prev, municipio, ubs: nextUbs, nome: nextNome }));
+        setReg(prev => ({ ...prev, municipio, ubs: nextUbs }));
       }}>
         <option value="">Selecione o município...</option>
         {PROFISSIONAL_MUNICIPIOS.map(m => <option key={m} value={m}>{m}</option>)}
@@ -111,9 +109,7 @@ const ProAuth = ({onAuth, onBack}) => {
       <div className="section-title">UBS de Atuação</div>
       <select className="input-box" value={reg.ubs} onChange={e=>{
         const ubs = e.target.value;
-        const names = reg.municipio && ubs ? getEnfermeirasByMunicipioUbs(reg.municipio, ubs) : [];
-        const nextNome = names.length === 1 ? names[0] : '';
-        setReg(prev => ({ ...prev, ubs, nome: nextNome }));
+        setReg(prev => ({ ...prev, ubs }));
       }} disabled={!reg.municipio}>
         <option value="">Selecione...</option>
         {getUbsByMunicipio(reg.municipio).map(u => <option key={u} value={u}>{u}</option>)}
