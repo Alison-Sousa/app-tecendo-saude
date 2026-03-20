@@ -131,13 +131,19 @@ const LIMITES = {
 };
 
 function obterLimitesPaciente(p) {
+  const asNum = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+
   return {
-    pa_sis_max: (p?.meta_pa_sis_max ?? p?.meta_pa_max) ?? LIMITES.PA_SISTOLICA.MUITO_ALTA,
-    pa_sis_min: (p?.meta_pa_sis_min ?? p?.meta_pa_min) ?? LIMITES.PA_SISTOLICA.OTIMA,
-    pa_dia_max: (p?.meta_pa_dia_max ?? p?.meta_pa_min) ?? LIMITES.PA_DIASTOLICA.MUITO_ALTA,
-    pa_dia_min: (p?.meta_pa_dia_min ?? p?.meta_pa_min) ?? LIMITES.PA_DIASTOLICA.OTIMA,
-    glicemia_max: (p?.meta_glicemia_max ?? p?.meta_glicemia) ?? LIMITES.GLICEMIA_JEJUM.ALTA,
-    glicemia_min: (p?.meta_glicemia_min ?? p?.meta_glicemia) ?? LIMITES.GLICEMIA_JEJUM.BAIXA
+    // Prioridade: meta individual > fallback global padrão
+    pa_sis_max: asNum(p?.meta_pa_sis_max ?? p?.meta_pa_max) ?? 120,
+    pa_sis_min: asNum(p?.meta_pa_sis_min),
+    pa_dia_max: asNum(p?.meta_pa_dia_max) ?? 80,
+    pa_dia_min: asNum(p?.meta_pa_dia_min),
+    glicemia_max: asNum(p?.meta_glicemia_max ?? p?.meta_glicemia) ?? 99,
+    glicemia_min: asNum(p?.meta_glicemia_min)
   };
 }
 
@@ -181,7 +187,7 @@ let filtroUbsAtual = '';
 let filtroEquipeAtual = '';
 let chartInstance = null;
 let activityChartInstance = null;
-let atividadeVizMode = 'donut'; // 'donut' | 'calendario'
+
 let replyAudioBlob = null;
 let replyAudioUrl = null;
 let replyAudioRecorder = null;
@@ -657,8 +663,15 @@ function renderizarListaPacientes() {
     const badgeMsg = hasNovas ? `<span class="msg-badge">✉ Nova mensagem</span>` : '';
 
     const isGest = normalizarSim(p.dadosVitais?.gestante) || normalizarSim(p.gestante) || (parseInt(p.gestacao_semanas) || 0) > 0;
-    const semanas = p.dadosVitais?.gestacao_semanas || p.gestacao_semanas;
-    const gestText = isGest ? `🤰 Gestação ${semanas ? semanas + ' semanas' : ''}` : '';
+    const semanasBase = parseInt(p.dadosVitais?.gestacao_semanas || p.gestacao_semanas) || 0;
+    const dataBaseGest = p.dadosVitais?.data ? new Date(p.dadosVitais.data).getTime() : null;
+    const diasPassados = (semanasBase > 0 && Number.isFinite(dataBaseGest) && dataBaseGest > 0)
+      ? Math.max(0, Math.floor((Date.now() - dataBaseGest) / 86400000))
+      : 0;
+    const semanasDinamicas = semanasBase > 0
+      ? Math.min(42, semanasBase + Math.floor(diasPassados / 7))
+      : 0;
+    const gestText = isGest ? `🤰 Gestação ${semanasDinamicas ? semanasDinamicas + ' semanas' : ''}` : '';
     const subtitulo = [gestText, p.ubs_referencia || '', dataUlt].filter(Boolean).join(' • ');
 
     let filhos = [];
@@ -999,8 +1012,17 @@ function ativarEdicaoFicha() {
       ${inputCampo('edit_ubs_referencia', 'UBS de referência', p.ubs_referencia)}
       ${inputCampo('edit_equipe_ubs', 'Equipe UBS', p.equipe_ubs)}
       ${inputCampo('edit_acs_responsavel', 'ACS responsável', p.acs_responsavel)}
-      ${inputCampo('edit_mora_sozinho', 'Mora sozinho?', p.mora_sozinho)}
-      ${inputCampo('edit_mora_companheiro', 'Mora com companheiro(a)?', p.mora_companheiro)}
+      <div class="card" style="padding:12px;">
+        <label class="text-xs text-muted" for="edit_mora_sozinho">Mora sozinho?</label>
+        <select id="edit_mora_sozinho" class="input-box" style="margin-top:4px;">
+          <option value="">Escolha...</option>
+          <option value="Não, com familiares (pais)" ${p.mora_sozinho === 'Não, com familiares (pais)' ? 'selected' : ''}>Não, com familiares (pais)</option>
+          <option value="Não, com companheiro(a)" ${p.mora_sozinho === 'Não, com companheiro(a)' ? 'selected' : ''}>Não, com companheiro(a)</option>
+          <option value="Não, com companheiro(a) e filho(s)" ${p.mora_sozinho === 'Não, com companheiro(a) e filho(s)' ? 'selected' : ''}>Não, com companheiro(a) e filho(s)</option>
+          <option value="Não, com amigos" ${p.mora_sozinho === 'Não, com amigos' ? 'selected' : ''}>Não, com amigos</option>
+          <option value="Sim, moro sozinho(a)" ${p.mora_sozinho === 'Sim, moro sozinho(a)' ? 'selected' : ''}>Sim, moro sozinho(a)</option>
+        </select>
+      </div>
     </div>
     <div class="section-title">Condições e Diagnósticos</div>
     <div class="grid grid-2">
@@ -1091,7 +1113,7 @@ async function salvarEdicaoFicha() {
     equipe_ubs: get('edit_equipe_ubs'),
     acs_responsavel: get('edit_acs_responsavel'),
     mora_sozinho: get('edit_mora_sozinho'),
-    mora_companheiro: get('edit_mora_companheiro'),
+    mora_companheiro: 'Não se aplica',
     hipertensao: get('edit_hipertensao'),
     tempo_diag_has: get('edit_tempo_diag_has'),
     diabetes: get('edit_diabetes'),
@@ -1263,7 +1285,6 @@ async function abrirFichaCadastral() {
       ${renderCampo('Equipe UBS', p.equipe_ubs)}
       ${renderCampo('ACS responsável', p.acs_responsavel)}
       ${renderCampo('Mora sozinho?', p.mora_sozinho)}
-      ${renderCampo('Mora com companheiro(a)?', p.mora_companheiro)}
     </div>
 
     <div class="section-title">Filhos</div>
@@ -1375,8 +1396,12 @@ function renderizarGraficos(container) {
   const p = pacienteSelecionado;
   const hist = (p.historico || []).slice(0, 30).reverse();
   const histFull = (p.historico || []).slice().reverse();
-  const isGestante = normalizarSim(p.dadosVitais?.gestante) || normalizarSim(p.gestante);
   const histGest = histFull.filter(r => r.gestacao_semanas && r.peso_kg);
+  const isGestante = normalizarSim(p.dadosVitais?.gestante)
+    || normalizarSim(p.gestante)
+    || (parseInt(p.dadosVitais?.gestacao_semanas) || 0) > 0
+    || (parseInt(p.gestacao_semanas) || 0) > 0
+    || histGest.length > 0;
 
   if (!window.Chart) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>Chart.js não carregado</p></div>`;
@@ -1397,10 +1422,7 @@ function renderizarGraficos(container) {
     <div style="height:320px; margin-bottom: 24px; width:100%;">
       <canvas id="healthChart"></canvas>
     </div>
-    <div class="section-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-      <span>Atividade Física</span>
-      <button id="btnToggleAtividadeViz" class="btn btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="toggleAtividadeViz()">📅 Calendário</button>
-    </div>
+    <div class="section-title">Atividade Física (Calendário)</div>
     <div id="activityChartContainer" style="min-height:260px; width:100%;"></div>
     ${isGestante && histGest.length >= 2 ? `
       <div class="section-title mt-4">Curva de Ganho de Peso Gestacional</div>
@@ -1464,9 +1486,8 @@ function renderizarGraficos(container) {
     }
   });
 
-  // Atividade física — iniciar no modo pizza
-  atividadeVizMode = 'donut';
-  renderizarAtividadeVizAtual();
+  // Atividade física — calendário
+  renderizarAtividadeCalendario();
 
   if (isGestante && histGest.length >= 2) {
     const imcInfo = calcularClasseIMC(p) || { classIMC: 'EUTROFIA', imc: 0 };
@@ -1523,50 +1544,6 @@ function renderizarGraficos(container) {
   }
 
   prepararModalGraficoExpandido(histFull);
-}
-
-function toggleAtividadeViz() {
-  atividadeVizMode = atividadeVizMode === 'donut' ? 'calendario' : 'donut';
-  const btn = document.getElementById('btnToggleAtividadeViz');
-  if (btn) btn.textContent = atividadeVizMode === 'donut' ? '📅 Calendário' : '� Pizza';
-  renderizarAtividadeVizAtual();
-}
-
-function renderizarAtividadeVizAtual() {
-  if (atividadeVizMode === 'donut') {
-    renderizarAtividadeDonut();
-  } else {
-    renderizarAtividadeCalendario();
-  }
-}
-
-function renderizarAtividadeDonut() {
-  const p = pacienteSelecionado;
-  const hist = (p.historico || []).slice(0, 30).reverse();
-  const container = document.getElementById('activityChartContainer');
-  if (!container) return;
-  container.style.height = '260px';
-  container.innerHTML = '<canvas id="activityChart" style="width:100%;height:100%;"></canvas>';
-  if (activityChartInstance) { activityChartInstance.destroy(); activityChartInstance = null; }
-  const atividadeSim = hist.filter(r => r.atividade_fisica && r.atividade_fisica !== 'nenhuma').length;
-  const atividadeNao = hist.length - atividadeSim;
-  const ctxDonut = document.getElementById('activityChart').getContext('2d');
-  activityChartInstance = new Chart(ctxDonut, {
-    type: 'doughnut',
-    data: {
-      labels: ['Com atividade', 'Sem atividade'],
-      datasets: [{
-        data: [atividadeSim, atividadeNao],
-        backgroundColor: ['#22c55e', '#ef4444'],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: true, position: 'bottom' } }
-    }
-  });
 }
 
 function renderizarAtividadeCalendario() {
@@ -2323,10 +2300,10 @@ function verificarAlerta(p, registro) {
   const diastolica = registro.pa_diastolica;
   const glicemia = registro.glicemia_mg;
 
-  // Usa o limite do paciente (campos meta_*) ou, se nulo, um fallback global
-  const maxSist = p.meta_pa_sis_max ?? p.meta_pa_max ?? LIMITES.PA_SISTOLICA.MUITO_ALTA;
-  const maxDia = p.meta_pa_dia_max ?? p.meta_pa_min ?? LIMITES.PA_DIASTOLICA.MUITO_ALTA;
-  const maxGlic = p.meta_glicemia_max ?? p.meta_glicemia ?? LIMITES.GLICEMIA_JEJUM.ALTA;
+  // Usa limites do paciente; se ausentes, fallback global padrão
+  const maxSist = Number.isFinite(Number(p.meta_pa_sis_max ?? p.meta_pa_max)) ? Number(p.meta_pa_sis_max ?? p.meta_pa_max) : 120;
+  const maxDia = Number.isFinite(Number(p.meta_pa_dia_max)) ? Number(p.meta_pa_dia_max) : 80;
+  const maxGlic = Number.isFinite(Number(p.meta_glicemia_max ?? p.meta_glicemia)) ? Number(p.meta_glicemia_max ?? p.meta_glicemia) : 99;
 
   const isCritico = (sistolica != null && sistolica >= maxSist)
     || (diastolica != null && diastolica >= maxDia)
@@ -2392,7 +2369,18 @@ async function carregarMetasPanico(patient_id) {
       .eq('patient_id', patient_id)
       .single();
 
-    if (perfil && (perfil.meta_pa_sis_max || perfil.meta_glicemia_max)) {
+    if (error) throw error;
+
+    const temAlgumaMeta = !!perfil && [
+      perfil.meta_pa_sis_max,
+      perfil.meta_pa_sis_min,
+      perfil.meta_pa_dia_max,
+      perfil.meta_pa_dia_min,
+      perfil.meta_glicemia_max,
+      perfil.meta_glicemia_min
+    ].some(v => v !== null && v !== undefined && String(v).trim() !== '');
+
+    if (temAlgumaMeta) {
       // Se o perfil tem metas definidas, usamos elas
       preencherInputsPanico({
         pa_sistolica_max: perfil.meta_pa_sis_max,
@@ -2403,21 +2391,12 @@ async function carregarMetasPanico(patient_id) {
         glicemia_min: perfil.meta_glicemia_min
       }, true);
     } else {
-      // 2. Fallback para os valores globais definidos em perfis (patient_id = 'global')
-      const { data: global } = await supabase
-        .from('perfis')
-        .select('meta_pa_sis_max, meta_pa_sis_min, meta_pa_dia_max, meta_pa_dia_min, meta_glicemia_max, meta_glicemia_min')
-        .eq('patient_id', 'global')
-        .maybeSingle();
-
-      preencherInputsPanico(global || {
-        pa_sistolica_max: 160, pa_sistolica_min: 90,
-        pa_diastolica_max: 100, pa_diastolica_min: 60,
-        glicemia_max: 200, glicemia_min: 70
-      }, false);
+      // Sem meta individual: deixa os campos em branco para preenchimento
+      preencherInputsPanico({}, null);
     }
   } catch (e) {
     console.error("Erro ao carregar metas:", e);
+    preencherInputsPanico({}, null);
   }
 }
 
@@ -2446,8 +2425,13 @@ function preencherInputsPanico(dados, isCustom) {
   // Atualiza a legenda para o médico saber a origem do dado
   const infoTipo = document.getElementById('infoTipoMeta');
   if (infoTipo) {
-    infoTipo.innerText = isCustom ? "✨ Meta Individual" : "🌍 Meta Global";
-    infoTipo.className = isCustom ? "text-primary font-bold" : "text-muted";
+    if (isCustom === true) {
+      infoTipo.innerText = "✨ Meta Individual";
+      infoTipo.className = "text-primary font-bold";
+    } else {
+      infoTipo.innerText = "Sem limite individual definido para este paciente.";
+      infoTipo.className = "text-muted";
+    }
   }
 }
 
@@ -2579,4 +2563,5 @@ async function salvarValoresPanicoSupabase(patientKey) {
     }
   }
 }
+
 

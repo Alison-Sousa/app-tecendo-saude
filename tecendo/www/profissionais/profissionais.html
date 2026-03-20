@@ -119,10 +119,7 @@ const ProAuth = ({onAuth, onBack}) => {
         {getUbsByMunicipio(reg.municipio).map(u => <option key={u} value={u}>{u}</option>)}
       </select>
       <div className="section-title">Seu Nome</div>
-      <select className="input-box" value={reg.nome} onChange={e=>setReg(prev => ({ ...prev, nome: e.target.value }))} disabled={!reg.municipio || !reg.ubs}>
-        <option value="">Selecione seu nome...</option>
-        {getEnfermeirasByMunicipioUbs(reg.municipio, reg.ubs).map(n => <option key={n} value={n}>{n}</option>)}
-      </select>
+      <input className="input-box" value={reg.nome} onChange={e=>setReg(prev => ({ ...prev, nome: e.target.value }))} placeholder="Digite seu nome completo" />
       <div className="section-title">Telefone</div>
       <input className="input-box" value={reg.telefone} onChange={e=>setReg({...reg,telefone:mascaraTelefone(e.target.value)})} placeholder="(91) 98765-4321" inputMode="tel" />
       <button className="btn-primary mt-4" onClick={register}>CONCLUIR CADASTRO</button>
@@ -252,7 +249,6 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   const REQUIRED_KEYS = ['nome','cpf','nascimento','genero','raca','endereco','telefone','escolaridade','profissao','mora_sozinho','regiao','ubs_referencia','acs_responsavel','hipertensao','diabetes','dependencias','tempo_dependencia','peso_inicial','enxerga_bem','consulta_oftalmo','uso_medicacoes','atividade_fisica','freq_atividade','tipo_atividade','meta_peso','meta_glicemia','meta_pa_min','meta_pa_max','tem_filhos'];
   
   const handleSubmit = async () => {
-    if(!fotoPreview && !fotoFile && !form.foto_url){ alert('Envie a foto de perfil.'); return; }
     setSaving(true);
     try {
       const cleaned = { ...form };
@@ -299,7 +295,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     <div className="fade-in pb-20">
       {hasBasicDataOnly && (<div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-xl p-4 mb-6"><div className="text-sm font-bold mb-1">✓ Usuário do SUS já cadastrado</div><div className="text-xs">Complete o prontuário com as informações de saúde detalhadas.</div></div>)}
       {isNewPatient && (<div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 mb-6"><div className="text-sm font-bold mb-1">⚠ Novo Prontuário</div><div className="text-xs">Cadastro iniciado pelo profissional. Preencha todas as informações do usuário do SUS.</div></div>)}
-      {requiredLabel('Foto de Perfil')}
+      <div className="section-title">Foto de Perfil (opcional)</div>
       <div className="flex items-center gap-4 mb-6">
         <label className="thumb" style={{background:'#fff', overflow:'hidden', position:'relative', zIndex:1, flexShrink:0}}>
           {fotoPreview ? <img src={fotoPreview} alt="foto" style={{width:'100%',height:'100%',objectFit:'cover'}}/> : '📷'}
@@ -345,34 +341,16 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   value={form.mora_sozinho} 
   onChange={e => {
     const val = e.target.value;
-    // Atualiza o campo atual
     updateField('mora_sozinho', val);
-    
-    // Comportamento idêntico ao dos filhos: 
-    // Se Sim, força o próximo campo a ser "Não se aplica" e bloqueia
-    if (val === 'Sim') {
-      updateField('mora_companheiro', 'Não se aplica');
-    } else {
-      // Se mudar para Não ou vazio, reseta o próximo campo para escolha
-      updateField('mora_companheiro', '');
-    }
+    updateField('mora_companheiro', 'Não se aplica');
   }}
 >
   <option value="">Escolha...</option>
-  <option>Sim</option>
-  <option>Não</option>
-</select>      
-{requiredLabel('Mora com companheiro(a)?')}
-<select 
-  className={`input-box ${form.mora_sozinho === 'Sim' ? 'bg-gray-100' : ''}`} 
-  value={form.mora_companheiro} 
-  onChange={e => updateField('mora_companheiro', e.target.value)}
-  disabled={form.mora_sozinho === 'Sim'}
->
-  <option value="">Escolha...</option>
-  <option>Sim</option>
-  <option>Não</option>
-  <option>Não se aplica</option>
+  <option>Não, com familiares (pais)</option>
+  <option>Não, com companheiro(a)</option>
+  <option>Não, com companheiro(a) e filho(s)</option>
+  <option>Não, com amigos</option>
+  <option>Sim, moro sozinho(a)</option>
 </select>      {requiredLabel('Filhos')}
       <select className="input-box" value={form.tem_filhos} onChange={e=>updateField('tem_filhos', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Quantidade de filhos')}
