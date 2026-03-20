@@ -175,8 +175,13 @@ let pacientes = [];
 let registros = [];
 let pacienteSelecionado = null;
 let filtroAtual = 'all';
+let profissionalAtual = null;
+let filtroRegiaoAtual = '';
+let filtroUbsAtual = '';
+let filtroEquipeAtual = '';
 let chartInstance = null;
 let activityChartInstance = null;
+let atividadeVizMode = 'donut'; // 'donut' | 'calendario'
 let replyAudioBlob = null;
 let replyAudioUrl = null;
 let replyAudioRecorder = null;
@@ -235,6 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const prof = JSON.parse(profData);
+  profissionalAtual = prof;
   document.getElementById('profName').textContent = prof.enfermeira || prof.nome || 'Profissional';
 
   await carregarDados();
@@ -332,6 +338,7 @@ async function carregarDados() {
     localStorage.setItem('pro_last_crit_count', String(criticos));
 
     atualizarEstatisticas();
+    popularFiltrosContexto();
     renderizarListaPacientes();
 
   } catch (error) {
@@ -526,6 +533,45 @@ function atualizarEstatisticas() {
   document.getElementById('statTotal').textContent = pacientes.length;
 }
 
+function normalizarTextoFiltro(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function popularFiltrosContexto() {
+  const regiaoSelect = document.getElementById('filtroRegiao');
+  const ubsSelect = document.getElementById('filtroUbs');
+  const equipeSelect = document.getElementById('filtroEquipe');
+
+  const toSorted = values => Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const regioes = toSorted(pacientes.map(p => String(p.regiao || '').trim()));
+  const ubsList = toSorted(pacientes.map(p => String(p.ubs_referencia || '').trim()));
+  const equipes = toSorted(pacientes.map(p => String(p.equipe_ubs || '').trim()));
+
+  if (regiaoSelect) {
+    regiaoSelect.innerHTML = '<option value="">Região: todas</option>' + regioes.map(r => `<option value="${r}">${r}</option>`).join('');
+    regiaoSelect.value = filtroRegiaoAtual;
+  }
+  if (ubsSelect) {
+    ubsSelect.innerHTML = '<option value="">UBS: todas</option>' + ubsList.map(u => `<option value="${u}">${u}</option>`).join('');
+    ubsSelect.value = filtroUbsAtual;
+  }
+  if (equipeSelect) {
+    equipeSelect.innerHTML = '<option value="">Equipe: todas</option>' + equipes.map(e => `<option value="${e}">${e}</option>`).join('');
+    equipeSelect.value = filtroEquipeAtual;
+  }
+}
+
+function filtrarPacientesContexto() {
+  const regiaoSelect = document.getElementById('filtroRegiao');
+  const ubsSelect = document.getElementById('filtroUbs');
+  const equipeSelect = document.getElementById('filtroEquipe');
+
+  filtroRegiaoAtual = regiaoSelect ? regiaoSelect.value : '';
+  filtroUbsAtual = ubsSelect ? ubsSelect.value : '';
+  filtroEquipeAtual = equipeSelect ? equipeSelect.value : '';
+  renderizarListaPacientes();
+}
+
 // ============================================
 // RENDERIZAR LISTA DE PACIENTES
 // ============================================
@@ -541,6 +587,17 @@ function renderizarListaPacientes() {
       (p.nome || '').toLowerCase().includes(busca) ||
       (p.cpf || '').includes(busca)
     );
+  }
+
+  // Filtrar por região, UBS e equipe
+  if (filtroRegiaoAtual) {
+    lista = lista.filter(p => normalizarTextoFiltro(p.regiao) === normalizarTextoFiltro(filtroRegiaoAtual));
+  }
+  if (filtroUbsAtual) {
+    lista = lista.filter(p => normalizarTextoFiltro(p.ubs_referencia) === normalizarTextoFiltro(filtroUbsAtual));
+  }
+  if (filtroEquipeAtual) {
+    lista = lista.filter(p => normalizarTextoFiltro(p.equipe_ubs) === normalizarTextoFiltro(filtroEquipeAtual));
   }
 
   // Filtrar por status e condições
@@ -561,6 +618,12 @@ function renderizarListaPacientes() {
       lista = lista.filter(p => {
         const idadeNum = parseInt(calcularIdade(p.nascimento)) || 0;
         return idadeNum >= 60;
+      });
+    } else if (filtroAtual === 'ubs') {
+      const minhaUbs = (profissionalAtual?.ubs || '').trim().toLowerCase();
+      lista = lista.filter(p => {
+        const ubsPaciente = (p.ubs_referencia || '').trim().toLowerCase();
+        return minhaUbs && ubsPaciente === minhaUbs;
       });
     }
   }
@@ -900,6 +963,187 @@ function fecharFichaCadastral() {
   if (modal) modal.style.display = 'none';
 }
 
+function ativarEdicaoFicha() {
+  if (!pacienteSelecionado) return;
+  const p = pacienteSelecionado;
+  const body = document.getElementById('fichaModalBody');
+  if (!body) return;
+  const fotoPerfil = p.foto_url || '';
+  const iniciais = (p.nome || 'U').trim().charAt(0).toUpperCase();
+  const idade = calcularIdade(p.nascimento);
+  body.innerHTML = `
+    <div class="flex items-center gap-4 mb-4">
+      ${fotoPerfil
+        ? `<img src="${escapeHtml(fotoPerfil)}" alt="foto" style="width:72px;height:72px;border-radius:16px;object-fit:cover;border:2px solid #e2e8f0;" />`
+        : `<div style="width:72px;height:72px;border-radius:16px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;color:#475569;">${iniciais}</div>`}
+      <div>
+        <div class="text-lg font-bold">${escapeHtml(p.nome || '')}</div>
+        <div class="text-xs text-muted">${escapeHtml(p.cpf || '')} • ${idade || 'Idade não informada'}</div>
+      </div>
+    </div>
+    <div class="section-title">Identificação</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_nome', 'Nome completo', p.nome)}
+      ${renderCampo('CPF', p.cpf)}
+      ${inputCampo('edit_nascimento', 'Nascimento', p.nascimento)}
+      ${inputCampo('edit_genero', 'Gênero', p.genero)}
+      ${inputCampo('edit_raca', 'Raça/Cor', p.raca)}
+      ${inputCampo('edit_escolaridade', 'Escolaridade', p.escolaridade)}
+      ${inputCampo('edit_profissao', 'Profissão', p.profissao)}
+    </div>
+    <div class="section-title">Contato e Território</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_telefone', 'Telefone', p.telefone)}
+      ${inputCampo('edit_endereco', 'Endereço', p.endereco)}
+      ${inputCampo('edit_regiao', 'Região', p.regiao)}
+      ${inputCampo('edit_ubs_referencia', 'UBS de referência', p.ubs_referencia)}
+      ${inputCampo('edit_equipe_ubs', 'Equipe UBS', p.equipe_ubs)}
+      ${inputCampo('edit_acs_responsavel', 'ACS responsável', p.acs_responsavel)}
+      ${inputCampo('edit_mora_sozinho', 'Mora sozinho?', p.mora_sozinho)}
+      ${inputCampo('edit_mora_companheiro', 'Mora com companheiro(a)?', p.mora_companheiro)}
+    </div>
+    <div class="section-title">Condições e Diagnósticos</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_hipertensao', 'Hipertensão', p.hipertensao)}
+      ${inputCampo('edit_tempo_diag_has', 'Tempo diagnóstico - HAS', p.tempo_diag_has)}
+      ${inputCampo('edit_diabetes', 'Diabetes', p.diabetes)}
+      ${inputCampo('edit_tempo_diag_dm', 'Tempo diagnóstico - DM', p.tempo_diag_dm)}
+      ${inputCampo('edit_dependencias', 'Dependências', p.dependencias)}
+      ${inputCampo('edit_tempo_dependencia', 'Tempo de vício', p.tempo_dependencia || p.tempo_vicio)}
+    </div>
+    <div class="section-title">Antropometria</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_altura', 'Altura', p.altura)}
+      ${inputCampo('edit_peso_inicial', 'Peso inicial', p.peso_inicial)}
+      ${inputCampo('edit_peso_atual', 'Peso atual', p.peso_atual)}
+      ${inputCampo('edit_peso_primeira_consulta', 'Peso 1ª consulta pré-natal', p.peso_primeira_consulta)}
+    </div>
+    <div class="section-title">Gestação</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_dum', 'DUM', p.dum)}
+      ${inputCampo('edit_faz_pre_natal', 'Faz pré-natal?', p.faz_pre_natal)}
+      ${inputCampo('edit_inicio_pre_natal', 'Início do pré-natal', p.inicio_pre_natal)}
+    </div>
+    <div class="section-title">Visão e Saúde Bucal</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_enxerga_bem', 'Enxerga bem?', p.enxerga_bem)}
+      ${inputCampo('edit_consulta_oftalmo', 'Consulta com oftalmologista', p.consulta_oftalmo)}
+      ${inputCampo('edit_dificuldade_mastigar_falar_engolir', 'Dificuldade mastigar/falar/engolir', p.dificuldade_mastigar_falar_engolir)}
+    </div>
+    <div class="section-title">Medicações</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_uso_medicacoes', 'Faz uso de medicações?', p.uso_medicacoes)}
+      ${inputCampo('edit_nomes_medicacoes', 'Nomes', p.nomes_medicacoes)}
+      ${inputCampo('edit_posologia_dosagem', 'Posologia - Dosagem', p.posologia_dosagem)}
+      ${inputCampo('edit_posologia_horario', 'Posologia - Horário', p.posologia_horario)}
+    </div>
+    <div class="section-title">Atividade Física</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_freq_atividade', 'Frequência', p.freq_atividade)}
+      ${inputCampo('edit_tipo_atividade', 'Tipo de atividade', p.tipo_atividade)}
+    </div>
+    <div class="section-title">Metas de Saúde</div>
+    <div class="grid grid-2">
+      ${inputCampo('edit_meta_peso', 'Meta de peso', p.meta_peso, 'number')}
+      ${inputCampo('edit_meta_glicemia', 'Meta de glicemia', p.meta_glicemia, 'number')}
+      ${inputCampo('edit_meta_pa_min', 'Meta PA mínima', p.meta_pa_min, 'number')}
+      ${inputCampo('edit_meta_pa_max', 'Meta PA máxima', p.meta_pa_max, 'number')}
+    </div>
+    <div class="flex gap-3 mt-4" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="cancelarEdicaoFicha()">Cancelar</button>
+      <button class="btn btn-primary" id="btnSalvarEdicaoFicha" onclick="salvarEdicaoFicha()">💾 Salvar</button>
+    </div>
+  `;
+  const btnEditar = document.getElementById('btnEditarFicha');
+  if (btnEditar) btnEditar.style.display = 'none';
+}
+
+async function cancelarEdicaoFicha() {
+  const btnEditar = document.getElementById('btnEditarFicha');
+  if (btnEditar) btnEditar.style.display = '';
+  await abrirFichaCadastral();
+}
+
+async function salvarEdicaoFicha() {
+  const p = pacienteSelecionado;
+  if (!p || !p.patient_id) return;
+  const get = id => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : undefined;
+  };
+  const getNum = id => {
+    const el = document.getElementById(id);
+    if (!el) return undefined;
+    const v = el.value.trim();
+    return v === '' ? null : parseFloat(v);
+  };
+  const campos = {
+    nome: get('edit_nome'),
+    nascimento: get('edit_nascimento'),
+    genero: get('edit_genero'),
+    raca: get('edit_raca'),
+    escolaridade: get('edit_escolaridade'),
+    profissao: get('edit_profissao'),
+    telefone: get('edit_telefone'),
+    endereco: get('edit_endereco'),
+    regiao: get('edit_regiao'),
+    ubs_referencia: get('edit_ubs_referencia'),
+    equipe_ubs: get('edit_equipe_ubs'),
+    acs_responsavel: get('edit_acs_responsavel'),
+    mora_sozinho: get('edit_mora_sozinho'),
+    mora_companheiro: get('edit_mora_companheiro'),
+    hipertensao: get('edit_hipertensao'),
+    tempo_diag_has: get('edit_tempo_diag_has'),
+    diabetes: get('edit_diabetes'),
+    tempo_diag_dm: get('edit_tempo_diag_dm'),
+    dependencias: get('edit_dependencias'),
+    tempo_dependencia: get('edit_tempo_dependencia'),
+    altura: get('edit_altura'),
+    peso_inicial: get('edit_peso_inicial'),
+    peso_atual: get('edit_peso_atual'),
+    peso_primeira_consulta: get('edit_peso_primeira_consulta'),
+    dum: get('edit_dum'),
+    faz_pre_natal: get('edit_faz_pre_natal'),
+    inicio_pre_natal: get('edit_inicio_pre_natal'),
+    enxerga_bem: get('edit_enxerga_bem'),
+    consulta_oftalmo: get('edit_consulta_oftalmo'),
+    dificuldade_mastigar_falar_engolir: get('edit_dificuldade_mastigar_falar_engolir'),
+    uso_medicacoes: get('edit_uso_medicacoes'),
+    nomes_medicacoes: get('edit_nomes_medicacoes'),
+    posologia_dosagem: get('edit_posologia_dosagem'),
+    posologia_horario: get('edit_posologia_horario'),
+    freq_atividade: get('edit_freq_atividade'),
+    tipo_atividade: get('edit_tipo_atividade'),
+    meta_peso: getNum('edit_meta_peso'),
+    meta_glicemia: getNum('edit_meta_glicemia'),
+    meta_pa_min: getNum('edit_meta_pa_min'),
+    meta_pa_max: getNum('edit_meta_pa_max'),
+  };
+  // Remove keys where the DOM element was not found
+  Object.keys(campos).forEach(k => { if (campos[k] === undefined) delete campos[k]; });
+  const btn = document.getElementById('btnSalvarEdicaoFicha');
+  if (btn) { btn.disabled = true; btn.textContent = 'A guardar...'; }
+  try {
+    const { error } = await supabase
+      .from('perfis')
+      .update(campos)
+      .eq('patient_id', p.patient_id);
+    if (error) throw error;
+    // Reflect changes in memory
+    Object.assign(pacienteSelecionado, campos);
+    const idx = pacientes.findIndex(x => x.patient_id === p.patient_id);
+    if (idx !== -1) Object.assign(pacientes[idx], campos);
+    alert('✅ Ficha atualizada com sucesso!');
+    // Garante estado consistente com dados recém-salvos no banco.
+    window.location.reload();
+    return;
+  } catch (e) {
+    console.error('Erro ao salvar ficha:', e);
+    alert('❌ Erro ao salvar: ' + e.message);
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Salvar'; }
+  }
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replace(/&/g, '&amp;')
@@ -920,6 +1164,16 @@ function renderCampo(label, value) {
     <div class="card" style="padding:12px;">
       <div class="text-xs text-muted">${escapeHtml(label)}</div>
       <div class="font-semibold">${formatarCampo(value)}</div>
+    </div>
+  `;
+}
+
+function inputCampo(fieldId, label, value, type = 'text') {
+  const safeVal = escapeHtml(value != null ? String(value) : '');
+  return `
+    <div class="card" style="padding:12px;">
+      <label class="text-xs text-muted" for="${fieldId}">${escapeHtml(label)}</label>
+      <input type="${type}" id="${fieldId}" class="input-box" style="margin-top:4px;" value="${safeVal}" placeholder="${escapeHtml(label)}">
     </div>
   `;
 }
@@ -1051,7 +1305,7 @@ async function abrirFichaCadastral() {
       ${renderCampo('Tempo diagnóstico - DM', p.tempo_diag_dm)}
       ${renderCampo('Infecção urinária na gestação', p.infeccao_urinaria_gestacao)}
       ${renderCampo('Dependências', p.dependencias)}
-      ${renderCampo('Tempo de vício', p.tempo_vicio)}
+      ${renderCampo('Tempo de vício', p.tempo_dependencia || p.tempo_vicio)}
       ${renderCampo('Condições (marcadas)', p.condicoes)}
     </div>
 
@@ -1143,8 +1397,11 @@ function renderizarGraficos(container) {
     <div style="height:320px; margin-bottom: 24px; width:100%;">
       <canvas id="healthChart"></canvas>
     </div>
-    <div class="section-title">Atividade Física (Sim/Não)</div>
-    <div style="height:260px; width:100%;"><canvas id="activityChart"></canvas></div>
+    <div class="section-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <span>Atividade Física</span>
+      <button id="btnToggleAtividadeViz" class="btn btn-ghost" style="padding:4px 10px; font-size:12px;" onclick="toggleAtividadeViz()">📅 Calendário</button>
+    </div>
+    <div id="activityChartContainer" style="min-height:260px; width:100%;"></div>
     ${isGestante && histGest.length >= 2 ? `
       <div class="section-title mt-4">Curva de Ganho de Peso Gestacional</div>
       <div style="height:300px; width:100%;"><canvas id="gestChart"></canvas></div>
@@ -1207,28 +1464,9 @@ function renderizarGraficos(container) {
     }
   });
 
-  // Rosca de atividade física (Sim/Não)
-  const atividadeSim = hist.filter(r => r.atividade_fisica && r.atividade_fisica !== 'nenhuma').length;
-  const atividadeNao = hist.length - atividadeSim;
-  const ctxDonut = document.getElementById('activityChart').getContext('2d');
-  activityChartInstance = new Chart(ctxDonut, {
-    type: 'doughnut',
-    data: {
-      labels: ['Sim', 'Não'],
-      datasets: [
-        {
-          data: [atividadeSim, atividadeNao],
-          backgroundColor: ['#22c55e', '#ef4444'],
-          borderWidth: 0
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: true, position: 'bottom' } }
-    }
-  });
+  // Atividade física — iniciar no modo pizza
+  atividadeVizMode = 'donut';
+  renderizarAtividadeVizAtual();
 
   if (isGestante && histGest.length >= 2) {
     const imcInfo = calcularClasseIMC(p) || { classIMC: 'EUTROFIA', imc: 0 };
@@ -1285,6 +1523,147 @@ function renderizarGraficos(container) {
   }
 
   prepararModalGraficoExpandido(histFull);
+}
+
+function toggleAtividadeViz() {
+  atividadeVizMode = atividadeVizMode === 'donut' ? 'calendario' : 'donut';
+  const btn = document.getElementById('btnToggleAtividadeViz');
+  if (btn) btn.textContent = atividadeVizMode === 'donut' ? '📅 Calendário' : '� Pizza';
+  renderizarAtividadeVizAtual();
+}
+
+function renderizarAtividadeVizAtual() {
+  if (atividadeVizMode === 'donut') {
+    renderizarAtividadeDonut();
+  } else {
+    renderizarAtividadeCalendario();
+  }
+}
+
+function renderizarAtividadeDonut() {
+  const p = pacienteSelecionado;
+  const hist = (p.historico || []).slice(0, 30).reverse();
+  const container = document.getElementById('activityChartContainer');
+  if (!container) return;
+  container.style.height = '260px';
+  container.innerHTML = '<canvas id="activityChart" style="width:100%;height:100%;"></canvas>';
+  if (activityChartInstance) { activityChartInstance.destroy(); activityChartInstance = null; }
+  const atividadeSim = hist.filter(r => r.atividade_fisica && r.atividade_fisica !== 'nenhuma').length;
+  const atividadeNao = hist.length - atividadeSim;
+  const ctxDonut = document.getElementById('activityChart').getContext('2d');
+  activityChartInstance = new Chart(ctxDonut, {
+    type: 'doughnut',
+    data: {
+      labels: ['Com atividade', 'Sem atividade'],
+      datasets: [{
+        data: [atividadeSim, atividadeNao],
+        backgroundColor: ['#22c55e', '#ef4444'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'bottom' } }
+    }
+  });
+}
+
+function renderizarAtividadeCalendario() {
+  const p = pacienteSelecionado;
+  const histFull = (p.historico || []).slice().reverse();
+  const container = document.getElementById('activityChartContainer');
+  if (!container) return;
+  container.style.height = '';
+  if (activityChartInstance) { activityChartInstance.destroy(); activityChartInstance = null; }
+
+  // Mapa de data -> ativo (bool)
+  const dataMap = {};
+  histFull.forEach(r => {
+    if (!r.created_at) return;
+    const d = r.created_at.substring(0, 10);
+    dataMap[d] = !!(r.atividade_fisica && r.atividade_fisica !== 'nenhuma');
+  });
+
+  if (Object.keys(dataMap).length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>Sem registros de atividade</p></div>';
+    return;
+  }
+
+  const dates = Object.keys(dataMap).sort();
+  const firstDate = new Date(dates[0] + 'T00:00:00');
+  const lastDate = new Date(dates[dates.length - 1] + 'T00:00:00');
+
+  // Alinhar ao início da semana (Segunda-feira)
+  const start = new Date(firstDate);
+  const dow0 = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - dow0);
+
+  // Alinhar ao fim da semana (Domingo)
+  const end = new Date(lastDate);
+  const dow1 = (end.getDay() + 6) % 7;
+  if (dow1 < 6) end.setDate(end.getDate() + (6 - dow1));
+
+  // Montar colunas de semana
+  const weeks = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      const key = cur.toISOString().substring(0, 10);
+      const inRange = cur >= firstDate && cur <= lastDate;
+      const hasRecord = Object.prototype.hasOwnProperty.call(dataMap, key);
+      week.push({ date: new Date(cur), key, inRange, hasRecord, ativo: hasRecord ? dataMap[key] : null });
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  const dayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cellSize = 18;
+  const gap = 3;
+
+  const monthLabels = weeks.map((week, i) => {
+    const d = week[0].date;
+    if (i === 0 || d.getDate() <= 7) return monthNames[d.getMonth()];
+    return '';
+  });
+
+  const totalActive   = Object.values(dataMap).filter(Boolean).length;
+  const totalInactive = Object.values(dataMap).filter(v => v === false).length;
+
+  container.innerHTML = `
+    <div style="overflow-x:auto; padding-bottom:4px;">
+      <div style="display:flex; gap:${gap}px; margin-bottom:4px; margin-left:32px;">
+        ${monthLabels.map(m => `<div style="width:${cellSize}px;font-size:9px;color:#64748b;text-align:center;white-space:nowrap;overflow:hidden;">${m}</div>`).join('')}
+      </div>
+      <div style="display:flex; gap:${gap}px;">
+        <div style="display:flex; flex-direction:column; gap:${gap}px; margin-right:4px;">
+          ${dayLabels.map(l => `<div style="height:${cellSize}px;font-size:9px;color:#64748b;width:28px;display:flex;align-items:center;">${l}</div>`).join('')}
+        </div>
+        ${weeks.map(week => `
+          <div style="display:flex; flex-direction:column; gap:${gap}px;">
+            ${week.map(day => {
+              let bg = '#f1f5f9', title = '';
+              if (day.inRange && day.hasRecord) {
+                bg = day.ativo ? '#22c55e' : '#ef4444';
+                title = day.ativo ? '✓ Com atividade' : '✗ Sem atividade';
+              } else if (day.inRange) {
+                bg = '#e2e8f0'; title = 'Sem registro';
+              }
+              const lbl = `${day.date.getDate()}/${day.date.getMonth()+1}`;
+              return `<div title="${lbl}${title ? ' — ' + title : ''}" style="width:${cellSize}px;height:${cellSize}px;background:${bg};border-radius:3px;"></div>`;
+            }).join('')}
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:10px;flex-wrap:wrap;font-size:11px;color:#475569;">
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:12px;height:12px;background:#22c55e;border-radius:2px;"></div> Com atividade (${totalActive})</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:12px;height:12px;background:#ef4444;border-radius:2px;"></div> Sem atividade (${totalInactive})</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:12px;height:12px;background:#e2e8f0;border-radius:2px;"></div> Sem registro</div>
+      </div>
+    </div>
+  `;
 }
 
 function prepararModalGraficoExpandido(histFull) {

@@ -39,12 +39,18 @@
     }
     
     .search-input {
-      flex: 1;
+      flex: 1.6 1 390px;
+      min-width: 330px;
       padding: 12px 16px 12px 44px;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: 12px center;
       background-size: 20px;
+    }
+
+    .filter-select {
+      min-width: 180px;
+      margin-bottom: 0;
     }
     
     .filter-btn {
@@ -180,6 +186,10 @@
       }
 
       .filter-btn {
+        width: 100%;
+      }
+
+      .filter-select {
         width: 100%;
       }
 
@@ -650,9 +660,16 @@
           <button class="filter-btn danger" data-filter="critical" onclick="setFilter('critical')">🚨 Críticos</button>
           <button class="filter-btn" data-filter="warning" onclick="setFilter('warning')">⚠️ Atenção</button>
           <button class="filter-btn" data-filter="stable" onclick="setFilter('stable')">✅ Estáveis</button>
+          <button class="filter-btn" data-filter="ubs" onclick="setFilter('ubs')">🏥 UBS</button>
           <button class="filter-btn" data-filter="gestante" onclick="setFilter('gestante')">🤰 Gestantes</button>
           <button class="filter-btn" data-filter="filhos" onclick="setFilter('filhos')">👶 Com Filhos</button>
           <button class="filter-btn" data-filter="idoso" onclick="setFilter('idoso')">👴 Idosos 60+</button>
+          <select id="filtroRegiao" class="input-box filter-select" onchange="filtrarPacientesContexto()">
+            <option value="">Região: todas</option>
+          </select>
+          <select id="filtroEquipe" class="input-box filter-select" onchange="filtrarPacientesContexto()">
+            <option value="">Equipe: todas</option>
+          </select>
         </div>
         
         <div class="patient-list" id="patientList">
@@ -675,7 +692,7 @@
           <button class="detail-tab active" data-tab="resumo" onclick="showTab('resumo')">📋 Resumo</button>
           <button class="detail-tab" data-tab="graficos" onclick="showTab('graficos')">📈 Gráficos</button>
           <button class="detail-tab" data-tab="mensagens" onclick="showTab('mensagens')">💬 Mensagens</button>
-          <button id="btnValoresPanico" class="detail-tab" title="Configurar limites de pânico para profissionais"onclick="abrirValoresPanicoModal()"> Valores de Pânico</button>
+          <button id="btnValoresPanico" class="detail-tab" title="Configurar limites de atenção para profissionais"onclick="abrirValoresPanicoModal()"> Valores de Atenção</button>
         </div>
         
         <div class="detail-content" id="detailContent">
@@ -690,7 +707,10 @@
     <div class="modal modal-lg" style="display:flex;flex-direction:column;">
       <div class="modal-header">
         <h3 class="modal-title">📋 Ficha Cadastral</h3>
-        <button class="modal-close" onclick="fecharFichaCadastral()">&times;</button>
+        <div class="flex items-center gap-2">
+          <button class="btn btn-ghost btn-sm" id="btnEditarFicha" onclick="ativarEdicaoFicha()">✏️ Editar</button>
+          <button class="modal-close" onclick="fecharFichaCadastral()">&times;</button>
+        </div>
       </div>
       <div class="modal-body" id="fichaModalBody">
         <!-- Conteúdo dinâmico -->
@@ -749,7 +769,7 @@
   <div class="modal-overlay" id="modalValoresPanico" style="display:none; z-index:12001;">
   <div class="modal" style="max-width: 450px;">
     <div class="modal-header">
-      <h3 class="modal-title">🚨 Limites de Pânico</h3>
+      <h3 class="modal-title">🚨 Limites de Atenção</h3>
       <button class="modal-close" onclick="document.getElementById('modalValoresPanico').style.display='none'">&times;</button>
     </div>
     <div class="modal-body">

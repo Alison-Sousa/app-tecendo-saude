@@ -336,7 +336,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       {requiredLabel('Telefone')}
       <input className="input-box" value={form.telefone} onChange={e=>updateField('telefone', mascaraTelefone(e.target.value))} placeholder="(91) 98765-4321" inputMode="tel" />
       {requiredLabel('Grau de Instrução')}
-      <select className="input-box" value={form.escolaridade} onChange={e=>updateField('escolaridade', e.target.value)}><option value="">Escolha...</option><option>Sem instrução e fundamental incompleto</option><option>Fundamental completo e médio incompleto</option><option>Médio completo e superior incompleto</option><option>Superior completo</option></select>
+      <select className="input-box" value={form.escolaridade} onChange={e=>updateField('escolaridade', e.target.value)}><option value="">Escolha...</option><option>Sem instrução</option><option>Fundamental incompleto</option><option>Fundamental completo</option><option>Médio incompleto</option><option>Médio completo</option><option>Superior incompleto</option><option>Superior completo</option></select>
       {requiredLabel('Profissão')}
       <input className="input-box" value={form.profissao} onChange={e=>updateField('profissao', e.target.value)} placeholder="Profissão" />
       {requiredLabel('Mora sozinho?')}
