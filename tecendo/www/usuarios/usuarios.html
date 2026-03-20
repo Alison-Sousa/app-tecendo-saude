@@ -106,6 +106,33 @@ const extrairHorariosMedicacao = (raw) => {
     .filter(Boolean);
   return Array.from(new Set(horarios));
 };
+
+// Requisita permissão em runtime (fluxo que funciona no app)
+const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
+  try {
+    if (window.cordova && window.cordova.plugins && window.cordova.plugins.permissions) {
+      const permissions = window.cordova.plugins.permissions;
+      const permissionMap = {
+        RECORD_AUDIO: permissions.RECORD_AUDIO,
+        CAMERA: permissions.CAMERA,
+        MODIFY_AUDIO_SETTINGS: permissions.MODIFY_AUDIO_SETTINGS
+      };
+      const perm = permissionMap[permissionType] || permissions[permissionType] || permissionType;
+
+      await new Promise((resolve, reject) => {
+        permissions.requestPermission(
+          perm,
+          (status) => status && status.hasPermission ? resolve(true) : reject(new Error(`Permissão ${permissionType} negada`)),
+          () => reject(new Error(`Erro ao solicitar permissão ${permissionType}`))
+        );
+      });
+    }
+  } catch (e) {
+    throw e;
+  }
+  return true;
+};
+
 function isCriticalWithPanico(userData, panico) {
   if (!panico) return false; // sem limites globais, volta falso
   const { pa_sistolica, pa_diastolica, glicemia } = userData;
@@ -837,6 +864,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
 
   const startRecording = async () => {
     try {
+      await requestMediaPermission('RECORD_AUDIO');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
@@ -850,7 +878,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopRecording(); return 60; } return p + 1; }), 1000);
-    } catch { alert('Microfone indisponível'); }
+    } catch (error) { alert(`Erro ao acessar microfone: ${error.message || 'indisponível'}`); }
   };
 
   const stopRecording = () => {
@@ -1093,6 +1121,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
   // Funções de mídia
   const startRecording = async () => {
     try {
+      await requestMediaPermission('RECORD_AUDIO');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];

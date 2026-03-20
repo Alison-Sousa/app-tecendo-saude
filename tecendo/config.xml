@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<widget id="br.com.tecendosaude" version="1.0.0" xmlns="http://www.w3.org/ns/widgets">
+<widget id="br.com.tecendosaude" version="1.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Tecendo Saude</name>
     <description>Aplicativo de Saúde</description>
     <author email="seu-email@dominio.com">Tecendo Saude</author>
@@ -11,7 +11,14 @@
 
     <platform name="android">
         <icon src="www/img/logo.png" />
-        
-<preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/img/logo.png" />
-    <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />    </platform>
+
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
+            <uses-permission android:name="android.permission.CAMERA" />
+            <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+        </config-file>
+
+        <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/img/logo.png" />
+        <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
+    </platform>
 </widget>

@@ -1937,6 +1937,17 @@ async function listarMidiasRegistro(registro_id) {
 async function iniciarGravacaoAudio() {
   if (replyAudioRecorder) return;
   try {
+    if (window.cordova && window.cordova.plugins && window.cordova.plugins.permissions) {
+      const permissions = window.cordova.plugins.permissions;
+      await new Promise((resolve, reject) => {
+        permissions.requestPermission(
+          permissions.RECORD_AUDIO,
+          (status) => status && status.hasPermission ? resolve(true) : reject(new Error('Permissão RECORD_AUDIO negada')),
+          () => reject(new Error('Erro ao solicitar permissão RECORD_AUDIO'))
+        );
+      });
+    }
+
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const recorder = new MediaRecorder(stream);
     const chunks = [];
@@ -1971,7 +1982,8 @@ async function iniciarGravacaoAudio() {
       if (s >= 60) pararGravacaoAudio();
     }, 200);
   } catch (e) {
-    alert('Não foi possível acessar o microfone.');
+    console.error('Erro ao acessar microfone:', e.message);
+    alert(`Não foi possível acessar o microfone: ${e.message || 'Verifique se concedeu permissão'}`);
   }
 }
 

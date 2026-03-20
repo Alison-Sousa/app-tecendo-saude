@@ -28,7 +28,47 @@
   .section-title { font-size: 13px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin: 24px 0 8px 0; letter-spacing: 1px; }
   .loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; font-weight: 700; color: var(--primary); }
 </style>
-<script src='cordova.js'></script></head>
+<script src='cordova.js'></script>
+<script>
+
+// Solicitar permissões de mídia quando o app inicia (primeira página)
+function requestInitialPermissions() {
+  if (!window.cordova || !window.cordova.plugins || !window.cordova.plugins.permissions) {
+    console.log('Permissões do Cordova não disponível (navegador web)');
+    return;
+  }
+
+  const permissions = window.cordova.plugins.permissions;
+  const permsToRequest = [
+    permissions.RECORD_AUDIO,
+    permissions.CAMERA,
+    permissions.MODIFY_AUDIO_SETTINGS
+  ];
+
+  console.log('Solicitando permissões de mídia...');
+
+  permsToRequest.forEach((perm) => {
+    permissions.checkPermission(
+      perm,
+      (status) => {
+        if (!status.hasPermission) {
+          console.log('Solicitando:', perm);
+          permissions.requestPermission(perm,
+            (s) => console.log(`Permissão ${perm} concedida:`, s.hasPermission),
+            (e) => console.warn(`Erro ao solicitar ${perm}:`, e)
+          );
+        } else {
+          console.log(`Permissão ${perm} já concedida`);
+        }
+      },
+      (e) => console.warn(`Erro ao verificar ${perm}:`, e)
+    );
+  });
+}
+
+// AddEventListener para deviceready
+document.addEventListener('deviceready', requestInitialPermissions, false);
+</script></head>
 <body>
 <div id="root"></div>
 <script type="text/babel" src="./js/components.js"></script>

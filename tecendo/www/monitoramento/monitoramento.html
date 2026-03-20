@@ -33,19 +33,25 @@
     
     .search-bar {
       display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
+      gap: 8px;
+      margin-bottom: 12px;
       flex-wrap: wrap;
     }
     
     .search-input {
-      flex: 1.6 1 390px;
-      min-width: 330px;
-      padding: 12px 16px 12px 44px;
+      flex: 0 1 240px;
+      min-width: 190px;
+      max-width: 260px;
+      height: 44px;
+      margin-bottom: 0;
+      border: 2px solid #e2e8f0;
+      border-radius: var(--radius-md);
+      padding: 0 12px 0 36px;
+      font-size: 14px;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
-      background-position: 12px center;
-      background-size: 20px;
+      background-position: 10px center;
+      background-size: 17px;
     }
 
     .filter-select {
@@ -183,6 +189,27 @@
       .search-bar {
         flex-direction: column;
         align-items: stretch;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+
+      .search-input {
+        min-width: 100%;
+        max-width: 100%;
+        width: 100%;
+        height: 44px;
+        padding: 0 10px 0 32px;
+        font-size: 13px;
+        background-position: 9px center;
+        background-size: 16px;
+      }
+
+      /* No app (Cordova), permite busca compacta sem ocupar linha inteira */
+      body.is-cordova-app .search-input {
+        width: auto;
+        min-width: 180px;
+        max-width: 240px;
+        align-self: flex-start;
       }
 
       .filter-btn {
@@ -655,7 +682,7 @@
       <!-- Left: Patient List -->
       <div>
         <div class="search-bar">
-          <input type="text" class="input-box search-input" placeholder="Buscar usuário do SUS por nome ou CPF..." id="searchInput" onkeyup="filtrarPacientes()">
+          <input type="text" class="input-box search-input" placeholder="Buscar paciente ou CPF" id="searchInput" onkeyup="filtrarPacientes()">
           <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Todos</button>
           <button class="filter-btn danger" data-filter="critical" onclick="setFilter('critical')">🚨 Críticos</button>
           <button class="filter-btn" data-filter="warning" onclick="setFilter('warning')">⚠️ Atenção</button>
@@ -763,6 +790,13 @@
       </div>
     </div>
   </div>
+
+  <script>
+    (function() {
+      const isCordovaApp = window.location.protocol === 'file:' || window.location.href.includes('/android_asset/');
+      if (isCordovaApp) document.body.classList.add('is-cordova-app');
+    })();
+  </script>
 
   <script src="monitoramento.js"></script>
 

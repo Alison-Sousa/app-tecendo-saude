@@ -100,6 +100,22 @@ const extrairHorariosMedicacao = (raw) => {
   return Array.from(new Set(horarios));
 };
 
+// Função helper para requisitar permissões de mídia (já solicitadas no app start)
+const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
+  // Permissões já foram solicitadas no deviceready
+  // Apenas verificar se podem acessar getUserMedia
+  try {
+    // Se for navegador web, permissions.query pode verificar status
+    if (navigator.permissions && navigator.permissions.query) {
+      const result = await navigator.permissions.query({ name: 'microphone' });
+      console.log(`Status de permissão de microfone: ${result.state}`);
+    }
+  } catch (e) {
+    console.warn('Permissões não suportadas neste navegador');
+  }
+  return true;
+};
+
 // Sync registros do Supabase
 const syncRegistrosSupabase = async (patient_id) => {
   if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
@@ -717,7 +733,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopRecording(); return 60; } return p + 1; }), 1000);
-    } catch { alert('Microfone indisponível'); }
+    } catch (error) { alert(`Erro ao acessar microfone: ${error.message || 'indisponível'}`); }
   };
 
   const stopRecording = () => {
@@ -973,7 +989,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopRecording(); return 60; } return p + 1; }), 1000);
-    } catch { alert('Microfone indisponível'); }
+    } catch (error) { alert(`Erro ao acessar microfone: ${error.message || 'indisponível'}`); }
   };
 
   const stopRecording = () => {
