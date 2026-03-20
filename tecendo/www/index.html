@@ -30,8 +30,6 @@
 </style>
 <script src='cordova.js'></script>
 <script>
-
-// Solicitar permissões de mídia quando o app inicia (primeira página)
 function requestInitialPermissions() {
   if (!window.cordova || !window.cordova.plugins || !window.cordova.plugins.permissions) {
     console.log('Permissões do Cordova não disponível (navegador web)');
@@ -66,7 +64,6 @@ function requestInitialPermissions() {
   });
 }
 
-// AddEventListener para deviceready
 document.addEventListener('deviceready', requestInitialPermissions, false);
 </script></head>
 <body>

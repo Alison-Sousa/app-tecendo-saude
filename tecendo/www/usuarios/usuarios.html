@@ -107,7 +107,6 @@ const extrairHorariosMedicacao = (raw) => {
   return Array.from(new Set(horarios));
 };
 
-// Requisita permissão em runtime (fluxo que funciona no app)
 const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
   try {
     if (window.cordova && window.cordova.plugins && window.cordova.plugins.permissions) {
@@ -134,7 +133,7 @@ const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
 };
 
 function isCriticalWithPanico(userData, panico) {
-  if (!panico) return false; // sem limites globais, volta falso
+  if (!panico) return false;
   const { pa_sistolica, pa_diastolica, glicemia } = userData;
   return (
     (pa_sistolica != null && (pa_sistolica > panico.pa_sistolica_max || pa_sistolica < panico.pa_sistolica_min)) ||
@@ -142,7 +141,6 @@ function isCriticalWithPanico(userData, panico) {
     (glicemia != null && (glicemia > panico.glicemia_max || glicemia < panico.glicemia_min))
   );
 }
-// Sync registros do Supabase
 const syncRegistrosSupabase = async (patient_id) => {
   if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
   try {

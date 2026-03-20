@@ -100,12 +100,8 @@ const extrairHorariosMedicacao = (raw) => {
   return Array.from(new Set(horarios));
 };
 
-// Função helper para requisitar permissões de mídia (já solicitadas no app start)
 const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
-  // Permissões já foram solicitadas no deviceready
-  // Apenas verificar se podem acessar getUserMedia
   try {
-    // Se for navegador web, permissions.query pode verificar status
     if (navigator.permissions && navigator.permissions.query) {
       const result = await navigator.permissions.query({ name: 'microphone' });
       console.log(`Status de permissão de microfone: ${result.state}`);
@@ -116,7 +112,6 @@ const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
   return true;
 };
 
-// Sync registros do Supabase
 const syncRegistrosSupabase = async (patient_id) => {
   if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
   try {

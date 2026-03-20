@@ -122,7 +122,6 @@ const App = () => {
     window.addEventListener('online', updateOnline);
     window.addEventListener('offline', updateOnline);
     
-    // CORREÇÃO DA POLÍTICA: Configura os eventos após o React montar o rodapé
     const timer = setTimeout(() => {
       const btnPol = document.getElementById('btnPolitica');
       const btnFech = document.getElementById('btnFecharPolitica');
@@ -149,7 +148,6 @@ const App = () => {
     <>
       <OfflineBanner online={online} />
       
-      {/* BOTÃO DE DOWNLOAD INTEGRADO NO REACT PARA NÃO SUMIR */}
       <div className="fixed top-4 right-4 z-[60]">
         <button onClick={() => window.handleDownload()} 
            className="bg-[#2f6b3f] text-white px-4 py-2 text-sm font-bold rounded-md shadow-lg hover:opacity-90 transition-all flex items-center gap-2">
@@ -173,7 +171,6 @@ const App = () => {
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 
-// FUNÇÃO GLOBAL DE DOWNLOAD
 window.handleDownload = function() {
   const loading = document.getElementById('downloadLoading');
   if (loading) loading.classList.replace('hidden', 'flex');
