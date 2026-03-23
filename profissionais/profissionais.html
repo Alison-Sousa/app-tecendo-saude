@@ -147,6 +147,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   const [ubsSearch, setUbsSearch] = useState('');
   const [equipeSearch, setEquipeSearch] = useState('');
   const [acsSearch, setAcsSearch] = useState('');
+  const [acsOptions, setAcsOptions] = useState(Array.from(new Set((LISTA_ACS || []).filter(Boolean))).sort((a,b)=>a.localeCompare(b, 'pt-BR')));
   const [medicacoes, setMedicacoes] = useState([{ nome:'', dosagem:'', horario:'' }]);
   const [saving, setSaving] = useState(false);
 
@@ -220,6 +221,35 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     const imc = calcularImcPreGestacional();
     setForm(prev => (prev.imc_pre_gestacional === imc ? prev : { ...prev, imc_pre_gestacional: imc }));
   }, [form.altura, form.peso_inicial]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const mergeAcsLists = async () => {
+      const base = Array.isArray(LISTA_ACS) ? LISTA_ACS : [];
+      const fromProfissionais = [];
+
+      if (navigator.onLine) {
+        try {
+          const { data } = await supabase
+            .from('profissionais')
+            .select('nome')
+            .not('nome', 'is', null)
+            .limit(2000);
+          (data || []).forEach((row) => {
+            const name = String(row?.nome || '').trim();
+            if (name) fromProfissionais.push(name);
+          });
+        } catch {}
+      }
+
+      const merged = Array.from(new Set([...base, ...fromProfissionais].filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b, 'pt-BR'));
+      if (!cancelled) setAcsOptions(merged);
+    };
+
+    mergeAcsLists();
+    return () => { cancelled = true; };
+  }, []);
   
   const handleFoto = e => {
     const file = e.target.files[0];
@@ -477,7 +507,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
             onChange={(e) => {
               const val = e.target.value;
               setAcsSearch(val);
-              const match = LISTA_ACS.find((a) => a.toLowerCase() === val.toLowerCase());
+              const match = acsOptions.find((a) => a.toLowerCase() === val.toLowerCase());
               if (match) updateField('acs_responsavel', match);
             }}
           />
@@ -487,7 +517,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
             onChange={(e) => updateField('acs_responsavel', e.target.value)}
           >
             <option value="">Escolha algo</option>
-            {LISTA_ACS.filter((a) =>
+            {acsOptions.filter((a) =>
               a.toLowerCase().includes(acsSearch.toLowerCase()),
             ).map((a) => (
               <option key={a} value={a}>
