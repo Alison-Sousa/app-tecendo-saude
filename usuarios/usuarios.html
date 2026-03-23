@@ -61,9 +61,9 @@
 const IS_PROFISSIONAL = window.location.hash === '#profissional';
 const AUTO_REPLY_TEXT = 'Olá! 😊 Recebemos sua solicitação e estamos acompanhando suas informações. Em breve, um profissional da UBS entrará em contato para prestar o atendimento necessário 🩺';
 
-const getReadKey = (registroId, ultimaData) => `read_${registroId || 'sem'}_${ultimaData || 'sem'}`;
-const isRead = (registroId, ultimaData) => {
-  try { return localStorage.getItem(getReadKey(registroId, ultimaData)) === '1'; } catch { return false; }
+const getReadKey = (registro_id, ultimaData) => `read_${registro_id || 'sem'}_${ultimaData || 'sem'}`;
+const isRead = (registro_id, ultimaData) => {
+  try { return localStorage.getItem(getReadKey(registro_id, ultimaData)) === '1'; } catch { return false; }
 };
 
 const notifyUser = async (title, body, tag) => {
@@ -113,7 +113,7 @@ const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
 };
 
 const syncRegistrosSupabase = async (patient_id) => {
-  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
+  if (!navigator.onLine || !supabase || !patient_id) return;
   try {
     const { data, error } = await supabase.from('registros').select('*').eq('patient_id', patient_id);
     if (error || !data) return;
@@ -121,11 +121,11 @@ const syncRegistrosSupabase = async (patient_id) => {
     const idByRegistro = new Map();
     const seen = new Set();
     existing.forEach(reg => {
-      if (!reg?.registroId) return;
-      if (!idByRegistro.has(reg.registroId)) idByRegistro.set(reg.registroId, reg.id);
+      if (!reg?.registro_id) return;
+      if (!idByRegistro.has(reg.registro_id)) idByRegistro.set(reg.registro_id, reg.id);
     });
     const dupIds = existing
-      .filter(reg => reg?.registroId && seen.has(reg.registroId) ? true : (seen.add(reg.registroId), false))
+      .filter(reg => reg?.registro_id && seen.has(reg.registro_id) ? true : (seen.add(reg.registro_id), false))
       .map(reg => reg.id)
       .filter(Boolean);
     if (dupIds.length) await db.registros.bulkDelete(dupIds);
@@ -140,14 +140,14 @@ const syncRegistrosSupabase = async (patient_id) => {
         } catch {}
       }
       return ({
-        registroId: r.registro_id,
+        registro_id: r.registro_id,
         patient_id: r.patient_id,
-        deviceId: r.device_id || 'server',
+        device_id: r.device_id || 'server',
         texto: r.texto || '',
         tipo: r.tipo || 'monitoramento',
         status: r.status || 'pendente',
-        createdAt: r.created_at || r.updated_at || new Date().toISOString(),
-        updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
+        created_at: r.created_at || r.updated_at || new Date().toISOString(),
+        updated_at: r.updated_at || r.created_at || new Date().toISOString(),
         replies,
         resposta: r.resposta || '',
         resposta_data: r.resposta_data || null,
@@ -167,7 +167,7 @@ const syncRegistrosSupabase = async (patient_id) => {
 };
 
 const fetchUltimoMonitoramentoSupabase = async (patient_id) => {
-  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return null;
+  if (!navigator.onLine || !supabase || !patient_id) return null;
   try {
     const { data } = await supabase.from('registros').select('*').eq('patient_id', patient_id).eq('tipo', 'monitoramento').order('created_at', { ascending: false }).limit(1);
     return Array.isArray(data) && data.length ? data[0] : null;
@@ -175,12 +175,12 @@ const fetchUltimoMonitoramentoSupabase = async (patient_id) => {
 };
 
 const enviarRegistroSupabase = async (registro) => {
-  if (!navigator.onLine || !supabase || !registro?.patient_id || String(registro.patient_id).startsWith('cpf-')) return;
+  if (!navigator.onLine || !supabase || !registro?.patient_id) return;
   try {
     await supabase.from('registros').insert({
-      registro_id: registro.registroId,
+      registro_id: registro.registro_id,
       patient_id: registro.patient_id,
-      device_id: registro.deviceId || 'web',
+      device_id: registro.device_id || 'web',
       texto: registro.texto || '',
       tipo: registro.tipo || 'monitoramento',
       status: registro.status || 'pendente',
@@ -191,8 +191,8 @@ const enviarRegistroSupabase = async (registro) => {
       gestante: registro.gestante || null,
       gestacao_semanas: registro.gestacao_semanas ?? null,
       atividade_fisica: registro.atividade_fisica || null,
-      created_at: registro.createdAt,
-      updated_at: registro.updatedAt
+      created_at: registro.created_at,
+      updated_at: registro.updated_at
     });
     await db.registros.update(registro.id, { synced: 1 });
   } catch {}
@@ -380,7 +380,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
       const remoteLast = await fetchUltimoMonitoramentoSupabase(patientKey);
       if (remoteLast) {
         await syncRegistrosSupabase(patientKey);
-        setLastData({ pa: remoteLast.pa_sistolica, paDiastolica: remoteLast.pa_diastolica, peso: remoteLast.peso_kg, glicemia: remoteLast.glicemia_mg, atividade: remoteLast.atividade_fisica || '', updatedAt: remoteLast.created_at || remoteLast.updated_at });
+        setLastData({ pa: remoteLast.pa_sistolica, paDiastolica: remoteLast.pa_diastolica, peso: remoteLast.peso_kg, glicemia: remoteLast.glicemia_mg, atividade: remoteLast.atividade_fisica || '', updated_at: remoteLast.created_at || remoteLast.updated_at });
         setLastAt(remoteLast.created_at || remoteLast.updated_at);
         if (isCriticalHealth(remoteLast.pa_sistolica, remoteLast.glicemia_mg)) {
           notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${remoteLast.created_at || remoteLast.updated_at || ''}`);
@@ -391,11 +391,11 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
       const r = await db.registros.where('patient_id').equals(patientKey).toArray();
       const monitors = r.filter(i => i.tipo === 'monitoramento' || i.pa_sistolica);
       if(!monitors.length) return;
-      const last = monitors.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
-      setLastData({ pa: last.pa_sistolica, paDiastolica: last.pa_diastolica, peso: last.peso_kg, glicemia: last.glicemia_mg, atividade: last.atividade_fisica || '', updatedAt: last.createdAt });
-      setLastAt(last.createdAt);
+      const last = monitors.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+      setLastData({ pa: last.pa_sistolica, paDiastolica: last.pa_diastolica, peso: last.peso_kg, glicemia: last.glicemia_mg, atividade: last.atividade_fisica || '', updated_at: last.created_at });
+      setLastAt(last.created_at);
       if (isCriticalHealth(last.pa_sistolica, last.glicemia_mg)) {
-        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${last.createdAt || ''}`);
+        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${last.created_at || ''}`);
       }
     };
     load();
@@ -429,14 +429,14 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
     const registrosPaciente = await db.registros.where('patient_id').equals(patientId).toArray();
     const ultRegComSemana = registrosPaciente
       .filter(r => (r?.tipo || 'monitoramento') === 'monitoramento' && parseSemana(r?.gestacao_semanas))
-      .sort((a, b) => new Date(b.createdAt || b.created_at || b.updatedAt || b.updated_at || 0) - new Date(a.createdAt || a.created_at || a.updatedAt || a.updated_at || 0))[0];
+      .sort((a, b) => new Date(b.created_at || b.created_at || b.updated_at || b.updated_at || 0) - new Date(a.created_at || a.created_at || a.updated_at || a.updated_at || 0))[0];
 
     const semanaBase = parseSemana(ultRegComSemana?.gestacao_semanas) || parseSemana(user?.gestacao_semanas);
     if (!semanaBase) {
       return { gestante: 'Sim', gestacao_semanas: null };
     }
 
-    const baseMs = parseDateMs(ultRegComSemana?.createdAt || ultRegComSemana?.created_at || ultRegComSemana?.updatedAt || ultRegComSemana?.updated_at) || parseDateMs(nowIso);
+    const baseMs = parseDateMs(ultRegComSemana?.created_at || ultRegComSemana?.created_at || ultRegComSemana?.updated_at || ultRegComSemana?.updated_at) || parseDateMs(nowIso);
     const nowMs = parseDateMs(nowIso) || Date.now();
     const diffDias = Math.max(0, Math.floor((nowMs - baseMs) / 86400000));
     const semanasIncremento = Math.floor(diffDias / 7);
@@ -456,10 +456,10 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
     try {
       const rid = uuidv4(), now = new Date().toISOString();
       const gestacaoInfo = await calcularGestacaoDinamicaRegistro(patientKey, now);
-      const localId = await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
-      await enviarRegistroSupabase({ id: localId, registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', createdAt: now, updatedAt: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
+      const localId = await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
+      await enviarRegistroSupabase({ id: localId, registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
       await syncRegistrosSupabase(patientKey);
-      setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade: atividadeConcatenada || '', updatedAt: now });
+      setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade: atividadeConcatenada || '', updated_at: now });
       setLastAt(now);
       const isCriticoAtual = isCriticalHealth(sys, g);
       if (isCriticoAtual) {
@@ -479,7 +479,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
         <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
         <h2 className="text-xl font-bold">Pressão e Glicemia</h2>
       </div>
-      <HealthStatusCard pa={lastData?.pa} paDiastolica={lastData?.paDiastolica} glicemia={lastData?.glicemia} peso={lastData?.peso} atividade={lastData?.atividade} lastUpdate={lastData?.updatedAt} />
+      <HealthStatusCard pa={lastData?.pa} paDiastolica={lastData?.paDiastolica} glicemia={lastData?.glicemia} peso={lastData?.peso} atividade={lastData?.atividade} lastUpdate={lastData?.updated_at} />
       <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm mb-6">
         <h3 className="text-lg font-extrabold text-emerald-900 mb-1">Monitoramento diário</h3>
         <p className="text-sm text-emerald-700 mb-4">Preencha os novos valores</p>
@@ -538,8 +538,8 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
         const monitors = regs.filter(r => (r?.tipo || 'monitoramento') === 'monitoramento');
 
         const ordenados = monitors.sort((a, b) => {
-          const ta = parseDataMs(a.createdAt || a.created_at || a.updatedAt || a.updated_at);
-          const tb = parseDataMs(b.createdAt || b.created_at || b.updatedAt || b.updated_at);
+          const ta = parseDataMs(a.created_at || a.created_at || a.updated_at || a.updated_at);
+          const tb = parseDataMs(b.created_at || b.created_at || b.updated_at || b.updated_at);
           return tb - ta;
         });
 
@@ -547,7 +547,7 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
         const ultSemanaReg = ordenados.find(r => parseSemana(r?.gestacao_semanas) > 0);
 
         const baseSemana = parseSemana(ultSemanaReg?.gestacao_semanas) || parseSemana(user.gestacao_semanas);
-        const baseDataMs = parseDataMs(ultSemanaReg?.createdAt || ultSemanaReg?.created_at || ultSemanaReg?.updatedAt || ultSemanaReg?.updated_at);
+        const baseDataMs = parseDataMs(ultSemanaReg?.created_at || ultSemanaReg?.created_at || ultSemanaReg?.updated_at || ultSemanaReg?.updated_at);
         const nowMs = Date.now();
         const diffDias = baseDataMs > 0 ? Math.max(0, Math.floor((nowMs - baseDataMs) / 86400000)) : 0;
         const semanasDinamicas = baseSemana > 0 ? Math.min(42, baseSemana + Math.floor(diffDias / 7)) : 0;
@@ -637,21 +637,20 @@ const ConverseConosco = ({ user, onBack }) => {
     return [];
   };
 
-  const getReadKey = (registroId, ultimaData) => `chat_read_${patientKey}_${registroId || ''}_${ultimaData || ''}`;
-  const isRead = (registroId, ultimaData) => localStorage.getItem(getReadKey(registroId, ultimaData)) === '1';
+  const getReadKey = (registro_id, ultimaData) => `chat_read_${patientKey}_${registro_id || ''}_${ultimaData || ''}`;
+  const isRead = (registro_id, ultimaData) => localStorage.getItem(getReadKey(registro_id, ultimaData)) === '1';
   
   const carregarConversas = useCallback(async () => {
     setLoading(true);
     await syncRegistrosSupabase(patientKey);
     const regs = await db.registros.where('patient_id').equals(patientKey).toArray();
-    
     // Filtra apenas conversas (monitoramento só se tiver resposta do profissional)
     const seenRegistro = new Set();
     const msgs = regs.filter(r => {
-      const registroId = r.registroId || r.registro_id;
-      if (!registroId) return false;
-      if (seenRegistro.has(registroId)) return false;
-      seenRegistro.add(registroId);
+      const registro_id = r.registro_id || r.registro_id;
+      if (!registro_id) return false;
+      if (seenRegistro.has(registro_id)) return false;
+      seenRegistro.add(registro_id);
 
       const replies = normalizeReplies(r);
       const hasProMsg = !!r.resposta || replies.length > 0;
@@ -660,7 +659,7 @@ const ConverseConosco = ({ user, onBack }) => {
       if (!isMonitoramento && (r.texto || r.tipo === 'midia' || r.tipo === 'texto')) return true;
       return hasProMsg;
     });
-    msgs.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
+    msgs.sort((a, b) => new Date(b.created_at || b.created_at || 0) - new Date(a.created_at || a.created_at || 0));
     
     const lista = msgs.map(r => {
       const replies = normalizeReplies(r);
@@ -668,9 +667,9 @@ const ConverseConosco = ({ user, onBack }) => {
       // Pega último profissional real (não genérico)
       const realProReply = proReplies.slice().reverse().find(rep => rep.pro_name && rep.pro_name !== 'Equipe de Saúde');
       const ultimaResposta = proReplies.slice(-1)[0];
-      const ultimaData = ultimaResposta?.at || r.resposta_data || r.updatedAt || r.updated_at || r.createdAt || r.created_at;
-      const registroId = r.registroId || r.registro_id;
-      const lidoLocal = isRead(registroId, ultimaData);
+      const ultimaData = ultimaResposta?.at || r.resposta_data || r.updated_at || r.updated_at || r.created_at || r.created_at;
+      const registro_id = r.registro_id || r.registro_id;
+      const lidoLocal = isRead(registro_id, ultimaData);
       const temNovaMensagem = (ultimaResposta || r.resposta) && !lidoLocal;
       const proNome = realProReply?.pro_name || ultimaResposta?.pro_name || r.pro_name || 'Equipe de Saúde';
       
@@ -690,7 +689,7 @@ const ConverseConosco = ({ user, onBack }) => {
 
     lista.forEach(conv => {
       if (conv.temNovaMensagem) {
-        notifyUser(`Nova mensagem de ${conv.proNome}`, conv.resumo || 'Você recebeu uma nova mensagem.', `chat_${conv.registroId || conv.registro_id}_${conv.ultimaData || ''}`);
+        notifyUser(`Nova mensagem de ${conv.proNome}`, conv.resumo || 'Você recebeu uma nova mensagem.', `chat_${conv.registro_id || conv.registro_id}_${conv.ultimaData || ''}`);
       }
     });
 
@@ -699,19 +698,19 @@ const ConverseConosco = ({ user, onBack }) => {
   }, [patientKey]);
 
   const marcarComoLida = async (conv) => {
-    const regId = conv.registroId || conv.registro_id;
+    const regId = conv.registro_id || conv.registro_id;
     if (!regId) return;
     try {
       localStorage.setItem(getReadKey(regId, conv.ultimaData), '1');
     } catch {}
     // IMEDIATAMENTE atualiza o estado para remover o badge
-    setConversas(prev => prev.map(c => (c.registroId || c.registro_id) === regId ? { ...c, status: 'lido', temNovaMensagem: false } : c));
+    setConversas(prev => prev.map(c => (c.registro_id || c.registro_id) === regId ? { ...c, status: 'lido', temNovaMensagem: false } : c));
     // Depois atualiza o banco de dados em background
     setTimeout(async () => {
       try {
-        const payload = { status: 'lido', updatedAt: new Date().toISOString() };
+        const payload = { status: 'lido', updated_at: new Date().toISOString() };
         const all = await db.registros.toArray();
-        const matches = all.filter(r => (r.registroId || r.registro_id) === regId);
+        const matches = all.filter(r => (r.registro_id || r.registro_id) === regId);
         for (const m of matches) {
           if (m.id) await db.registros.update(m.id, payload);
         }
@@ -763,7 +762,7 @@ const ConverseConosco = ({ user, onBack }) => {
       <div className="space-y-3">
         {conversas.map((conv, idx) => (
           <div
-            key={conv.registroId || conv.registro_id || idx}
+            key={conv.registro_id || conv.registro_id || idx}
             onClick={() => { marcarComoLida(conv); setChatAberto({ ...conv, status: 'lido', temNovaMensagem: false }); }}
             className={`conv-card ${conv.temNovaMensagem ? 'has-new' : ''}`}
           >
@@ -894,8 +893,8 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
     try {
       const rid = uuidv4(), now = new Date().toISOString();
       const autoReply = { from: 'pro', text: AUTO_REPLY_TEXT, at: now, pro_name: 'Equipe de Saúde' };
-      await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', createdAt: now, updatedAt: now, replies: [autoReply], synced: 0 });
-      for(const item of files) await db.midias.add({ registroId: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
+      await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', created_at: now, updated_at: now, replies: [autoReply], synced: 0 });
+      for(const item of files) await db.midias.add({ registro_id: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
       syncManager();
       setTxt('');
       files.forEach(f => f.preview && URL.revokeObjectURL(f.preview));
@@ -988,7 +987,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
   const videoRecorderRef = useRef(null);
   const mediaUrlsRef = useRef([]);
 
-  const regId = registro.registroId || registro.registro_id;
+  const regId = registro.registro_id || registro.registro_id;
   const normalizeReplies = (r) => {
     if (Array.isArray(r?.replies)) return r.replies;
     if (Array.isArray(r?.replies_json)) return r.replies_json;
@@ -1013,11 +1012,11 @@ const ChatConversa = ({ user, registro, onBack }) => {
     mediaUrlsRef.current = [];
     
     await syncRegistrosSupabase(patientKey);
-    const reg = await db.registros.where('registroId').equals(regId).first() || registro;
+    const reg = await db.registros.where('registro_id').equals(regId).first() || registro;
     if (reg?.resposta || normalizeReplies(reg).some(r => r.from === 'pro')) {
       try {
-        const payload = { status: 'lido', updatedAt: new Date().toISOString() };
-        const matches = await db.registros.where('registroId').equals(regId).toArray();
+        const payload = { status: 'lido', updated_at: new Date().toISOString() };
+        const matches = await db.registros.where('registro_id').equals(regId).toArray();
         for (const m of matches) {
           if (m.id) await db.registros.update(m.id, payload);
         }
@@ -1025,7 +1024,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
     }
     
     const msgs = [];
-    const midias = await db.midias.where('registroId').equals(regId).toArray();
+    const midias = await db.midias.where('registro_id').equals(regId).toArray();
     const mediaItems = midias.map(m => {
       const url = m.blob ? URL.createObjectURL(m.blob) : '';
       if (url) mediaUrlsRef.current.push(url);
@@ -1034,11 +1033,11 @@ const ChatConversa = ({ user, registro, onBack }) => {
     
     const textoUsuario = reg.texto || (reg.pa_sistolica ? `PA: ${reg.pa_sistolica}/${reg.pa_diastolica || '-'} | Peso: ${reg.peso_kg || '-'}kg | Glicemia: ${reg.glicemia_mg || '-'}` : '');
     if (textoUsuario || mediaItems.length) {
-      msgs.push({ from: 'user', text: textoUsuario, at: reg.createdAt || reg.created_at, media: mediaItems });
+      msgs.push({ from: 'user', text: textoUsuario, at: reg.created_at || reg.created_at, media: mediaItems });
     }
     
     if (reg.resposta) {
-      msgs.push({ from: 'pro', text: reg.resposta, at: reg.resposta_data || reg.updatedAt, media: [], proName: proNome });
+      msgs.push({ from: 'pro', text: reg.resposta, at: reg.resposta_data || reg.updated_at, media: [], proName: proNome });
     }
     
     const reps = normalizeReplies(reg);
@@ -1149,19 +1148,21 @@ const ChatConversa = ({ user, registro, onBack }) => {
     setSending(true);
     try {
       const now = new Date().toISOString();
-      const reg = await db.registros.where('registroId').equals(regId).first();
+      // Sincronizar com Supabase antes para não perder respostas do profissional
+      await syncRegistrosSupabase(patientKey);
+      const reg = await db.registros.where('registro_id').equals(regId).first();
       if (!reg) { alert('Registro não encontrado'); return; }
       
-      const reps = Array.isArray(reg.replies) ? reg.replies : [];
+      const reps = Array.isArray(reg.replies) ? [...reg.replies] : [];
       const newReply = { from: 'user', text: txt.trim(), at: now, media: [] };
       
       for(const item of files) {
-        await db.midias.add({ registroId: regId, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
+        await db.midias.add({ registro_id: regId, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
         newReply.media.push({ type: item.file.type, name: item.file.name });
       }
       
       reps.push(newReply);
-      await db.registros.update(reg.id, { replies: reps, updatedAt: now, synced: 0 });
+      await db.registros.update(reg.id, { replies: reps, updated_at: now, synced: 0 });
       
       syncManager();
       setTxt('');
@@ -1351,7 +1352,7 @@ const App = () => {
   const pullAutomatico = useCallback(async () => {
     if (!user || IS_PROFISSIONAL) return;
     const patient_id = user.patient_id || user.patient_id || '';
-    if (navigator.onLine && supabase && patient_id && !String(patient_id).startsWith('cpf-')) {
+    if (navigator.onLine && supabase && patient_id) {
       try {
         const { data } = await supabase.from('perfis').select('*').eq('patient_id', patient_id).maybeSingle();
         if (data) {
@@ -1362,14 +1363,14 @@ const App = () => {
     }
     await syncRegistrosSupabase(patient_id);
   }, [user]);
-  
+
   useEffect(() => {
     if (IS_PROFISSIONAL) { const raw = sessionStorage.getItem('profissional'); if (raw) { try { const prof = JSON.parse(raw); if (prof) { setUser(prof); setRoute('pro_dash'); return; } } catch {} } }
     else { const pid = localStorage.getItem('currentProfileId'); if(pid) { db.perfil.where('patient_id').equals(pid).first().then(p => { if(p) { setUser(p); setRoute('menu'); syncManager(); } }); } }
   }, []);
-  
+
   useEffect(() => { if (route === 'menu') pullAutomatico(); }, [route, pullAutomatico]);
-  
+
   useEffect(() => {
     const onFocus = () => pullAutomatico();
     const onVisibility = () => { if (document.visibilityState === 'visible') pullAutomatico(); };
@@ -1416,7 +1417,7 @@ const App = () => {
     const timerId = setInterval(checkReminder, 30000);
     return () => clearInterval(timerId);
   }, [user]);
-  
+
   const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patient_id = p.patient_id || p.patient_id || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patient_id); setUser({ ...p, patient_id }); setRoute('menu'); } };
   const logout = () => { localStorage.clear(); sessionStorage.clear(); setUser(null); setRoute(IS_PROFISSIONAL ? 'pro_login' : 'login'); };
   const proLogin = (data) => { setUser(data); setRoute('pro_dash'); };

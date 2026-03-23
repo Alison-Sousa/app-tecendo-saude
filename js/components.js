@@ -56,7 +56,7 @@ const MediaModal = ({url, type, onClose}) => {
 };
 
 // Thumbnail de registro
-const RegistroThumb = ({registroId}) => {
+const RegistroThumb = ({registro_id}) => {
   const [url, setUrl] = useState('');
   const urlRef = useRef('');
   useEffect(() => {
@@ -64,7 +64,7 @@ const RegistroThumb = ({registroId}) => {
     if(urlRef.current){ URL.revokeObjectURL(urlRef.current); urlRef.current=''; }
     setUrl('');
     (async () => {
-      const media = await db.midias.where('registroId').equals(registroId).toArray();
+      const media = await db.midias.where('registro_id').equals(registro_id).toArray();
       const first = media.find(m => m.type?.startsWith('image')) || media[0];
       if(first && active){
         const objectUrl = URL.createObjectURL(first.blob || first.blob);
@@ -76,7 +76,7 @@ const RegistroThumb = ({registroId}) => {
       active = false;
       if(urlRef.current){ URL.revokeObjectURL(urlRef.current); urlRef.current=''; }
     };
-  }, [registroId]);
+  }, [registro_id]);
   if(!url) return <div className="thumb">📄</div>;
   return <img src={url} className="thumb" alt="registro" />;
 };

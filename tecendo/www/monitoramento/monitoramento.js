@@ -296,24 +296,26 @@ async function carregarDados() {
     console.log('Perfis recebidos:', perfisData?.length || 0);
 
     // 2. Carregar registros (PA, glicemia, peso)
+
+    console.log('[LOG] Buscando conversas/mensagens do usuário no Supabase...');
     const { data: registrosData, error: registrosError } = await supabase
       .from('registros')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (registrosError) {
-      console.error('Erro ao carregar registros:', registrosError);
+      console.error('[LOG] Erro ao carregar registros:', registrosError);
       throw registrosError;
     }
 
-    console.log('Registros recebidos:', registrosData?.length || 0);
-
+    console.log('[LOG] Registros recebidos do Supabase:', registrosData);
     pacientes = perfisData || [];
     registros = (registrosData || []).map(r => {
       const replies = normalizarRepliesJson(r);
       const texto = (r.texto && String(r.texto).trim()) ? r.texto : montarTextoPadrao(r);
       return { ...r, replies_json: replies, texto };
     });
+    console.log('[LOG] Registros processados para exibição:', registros);
 
     console.log('Perfis carregados:', pacientes.length);
     console.log('Registros carregados:', registros.length);

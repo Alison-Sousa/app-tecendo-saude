@@ -67,6 +67,27 @@ const isRead = (registroId, ultimaData) => {
 };
 
 const notifyUser = async (title, body, tag) => {
+  // Cordova local notification plugin (Android)
+  if (window.cordova && cordova.plugins && cordova.plugins.notification && cordova.plugins.notification.local) {
+    const key = `notify_${tag}`;
+    const last = Number(localStorage.getItem(key) || 0);
+    if (last && (Date.now() - last) < 60000) return;
+    try {
+      cordova.plugins.notification.local.schedule({
+        id: Math.abs(tag.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 2147483647,
+        title: title,
+        text: body,
+        sound: 'default',
+        foreground: true,
+        launch: true,
+        androidAllowWhileIdle: true,
+        androidChannelImportance: 4
+      });
+      localStorage.setItem(key, String(Date.now()));
+    } catch {}
+    return;
+  }
+  // Fallback: Web Notification API (browser)
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch { return; }
@@ -74,7 +95,6 @@ const notifyUser = async (title, body, tag) => {
   const key = `notify_${tag}`;
   const last = Number(localStorage.getItem(key) || 0);
   if (last && (Date.now() - last) < 60000) return;
-  tocarAlertaMedicacao();
   if (Notification.permission !== 'granted') return;
   try {
     new Notification(title, { body, icon: '../img/logo.png', tag });
@@ -89,6 +109,64 @@ const tocarAlertaMedicacao = () => {
     const audio = new Audio('../audios/Alerta.mp3');
     audio.play().catch(() => {});
   } catch {}
+};
+
+// Solicitar permissão de notificação no Android 13+ (API 33)
+const solicitarPermissaoNotificacao = () => {
+  if (!window.cordova) return;
+  const perms = cordova.plugins && cordova.plugins.permissions;
+  if (!perms) return;
+  const POST_NOTIF = perms.POST_NOTIFICATIONS || 'android.permission.POST_NOTIFICATIONS';
+  perms.checkPermission(POST_NOTIF, (status) => {
+    if (!status.hasPermission) {
+      perms.requestPermission(POST_NOTIF, () => {}, () => {});
+    }
+  }, () => {});
+};
+
+// Agendar notificações locais REPETITIVAS do Cordova — repetem todo dia nos horários de medicação
+const agendarNotificacoesMedicacao = (user) => {
+  if (!window.cordova || !cordova.plugins || !cordova.plugins.notification || !cordova.plugins.notification.local) return;
+  if (!patientUsesMedication(user.uso_medicacoes)) return;
+  const horarios = extrairHorariosMedicacao(user.posologia_horario);
+
+  // Cancelar notificações anteriores de medicação (IDs 90000-90099)
+  const idsToCancel = [];
+  for (let i = 0; i < 100; i++) idsToCancel.push(90000 + i);
+  try { cordova.plugins.notification.local.cancel(idsToCancel); } catch {}
+
+  if (!horarios.length) return;
+  const nomes = String(user.nomes_medicacoes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
+
+  const now = new Date();
+  const notifications = [];
+  horarios.forEach((hhmm, idx) => {
+    const [hh, mm] = hhmm.split(':').map(Number);
+    // Primeira disparo: hoje se ainda não passou, senão amanhã
+    const firstAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0);
+    if (firstAt.getTime() <= now.getTime()) firstAt.setDate(firstAt.getDate() + 1);
+
+    const body = nomes
+      ? `Está na hora da medicação (${hhmm}): ${nomes}.`
+      : `Está na hora da medicação (${hhmm}).`;
+    notifications.push({
+      id: 90000 + idx,
+      title: 'Você tem um lembrete',
+      text: body,
+      trigger: { at: firstAt, every: 'day' },
+      sound: 'default',
+      foreground: true,
+      launch: true,
+      wakeup: true,
+      androidAllowWhileIdle: true,
+      androidChannelImportance: 4,
+      smallIcon: 'res://ic_notification',
+      icon: 'res://ic_notification'
+    });
+  });
+  if (notifications.length) {
+    cordova.plugins.notification.local.schedule(notifications);
+  }
 };
 
 const nativeAlert = window.alert.bind(window);
@@ -142,7 +220,7 @@ function isCriticalWithPanico(userData, panico) {
   );
 }
 const syncRegistrosSupabase = async (patient_id) => {
-  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return;
+  if (!navigator.onLine || !supabase || !patient_id) return;
   try {
     const { data, error } = await supabase.from('registros').select('*').eq('patient_id', patient_id);
     if (error || !data) return;
@@ -150,11 +228,11 @@ const syncRegistrosSupabase = async (patient_id) => {
     const idByRegistro = new Map();
     const seen = new Set();
     existing.forEach(reg => {
-      if (!reg?.registroId) return;
-      if (!idByRegistro.has(reg.registroId)) idByRegistro.set(reg.registroId, reg.id);
+      if (!reg?.registro_id) return;
+      if (!idByRegistro.has(reg.registro_id)) idByRegistro.set(reg.registro_id, reg.id);
     });
     const dupIds = existing
-      .filter(reg => reg?.registroId && seen.has(reg.registroId) ? true : (seen.add(reg.registroId), false))
+      .filter(reg => reg?.registro_id && seen.has(reg.registro_id) ? true : (seen.add(reg.registro_id), false))
       .map(reg => reg.id)
       .filter(Boolean);
     if (dupIds.length) await db.registros.bulkDelete(dupIds);
@@ -169,14 +247,14 @@ const syncRegistrosSupabase = async (patient_id) => {
         } catch {}
       }
       return ({
-        registroId: r.registro_id,
+        registro_id: r.registro_id,
         patient_id: r.patient_id,
-        deviceId: r.device_id || 'server',
+        device_id: r.device_id || 'server',
         texto: r.texto || '',
         tipo: r.tipo || 'monitoramento',
         status: r.status || 'pendente',
-        createdAt: r.created_at || r.updated_at || new Date().toISOString(),
-        updatedAt: r.updated_at || r.created_at || new Date().toISOString(),
+        created_at: r.created_at || r.updated_at || new Date().toISOString(),
+        updated_at: r.updated_at || r.created_at || new Date().toISOString(),
         replies,
         resposta: r.resposta || '',
         resposta_data: r.resposta_data || null,
@@ -196,7 +274,7 @@ const syncRegistrosSupabase = async (patient_id) => {
 };
 
 const fetchUltimoMonitoramentoSupabase = async (patient_id) => {
-  if (!navigator.onLine || !supabase || !patient_id || String(patient_id).startsWith('cpf-')) return null;
+  if (!navigator.onLine || !supabase || !patient_id) return null;
   try {
     const { data } = await supabase.from('registros').select('*').eq('patient_id', patient_id).eq('tipo', 'monitoramento').order('created_at', { ascending: false }).limit(1);
     return Array.isArray(data) && data.length ? data[0] : null;
@@ -204,12 +282,12 @@ const fetchUltimoMonitoramentoSupabase = async (patient_id) => {
 };
 
 const enviarRegistroSupabase = async (registro) => {
-  if (!navigator.onLine || !supabase || !registro?.patient_id || String(registro.patient_id).startsWith('cpf-')) return;
+  if (!navigator.onLine || !supabase || !registro?.patient_id) return;
   try {
     await supabase.from('registros').insert({
-      registro_id: registro.registroId,
+      registro_id: registro.registro_id,
       patient_id: registro.patient_id,
-      device_id: registro.deviceId || 'web',
+      device_id: registro.device_id || 'web',
       texto: registro.texto || '',
       tipo: registro.tipo || 'monitoramento',
       status: registro.status || 'pendente',
@@ -220,8 +298,8 @@ const enviarRegistroSupabase = async (registro) => {
       gestante: registro.gestante || null,
       gestacao_semanas: registro.gestacao_semanas ?? null,
       atividade_fisica: registro.atividade_fisica || null,
-      created_at: registro.createdAt,
-      updated_at: registro.updatedAt
+      created_at: registro.created_at,
+      updated_at: registro.updated_at
     });
     await db.registros.update(registro.id, { synced: 1 });
   } catch {}
@@ -420,11 +498,11 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
       const r = await db.registros.where('patient_id').equals(patientKey).toArray();
       const monitors = r.filter(i => i.tipo === 'monitoramento' || i.pa_sistolica);
       if(!monitors.length) return;
-      const last = monitors.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))[0];
-      setLastData({ pa: last.pa_sistolica, paDiastolica: last.pa_diastolica, peso: last.peso_kg, glicemia: last.glicemia_mg, atividade: last.atividade_fisica || '', updatedAt: last.createdAt });
-      setLastAt(last.createdAt);
+      const last = monitors.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+      setLastData({ pa: last.pa_sistolica, paDiastolica: last.pa_diastolica, peso: last.peso_kg, glicemia: last.glicemia_mg, atividade: last.atividade_fisica || '', updatedAt: last.created_at });
+      setLastAt(last.created_at);
       if (isCriticalHealth(last.pa_sistolica, last.glicemia_mg)) {
-        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${last.createdAt || ''}`);
+        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${last.created_at || ''}`);
       }
     };
     load();
@@ -578,9 +656,9 @@ const fetchValoresPanicoGlobais = async () => {
 
     // 4. Salva no Dexie (Banco Local)
     await db.registros.add({
-      registroId: rid,
+      registro_id: rid,
       patient_id: patientKey,
-      deviceId: 'web',
+      device_id: 'web',
       tipo: 'monitoramento',
       pa_sistolica: sys || null,
       pa_diastolica: dia || null,
@@ -590,8 +668,8 @@ const fetchValoresPanicoGlobais = async () => {
       gestacao_semanas: gestacaoInfo.gestacao_semanas,
       status: statusRegistro,
       atividade_fisica: atividadeConcatenada,
-      createdAt: now,
-      updatedAt: now,
+      created_at: now,
+      updated_at: now,
       synced: 0,
       // Metadados para facilitar a filtragem no Supabase
       municipio: user.municipio,
@@ -695,9 +773,8 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
       try {
         await syncRegistrosSupabase(patientKey);
         const regs = await db.registros.where('patient_id').equals(patientKey).toArray();
-        const monitors = regs.filter(r => (r?.tipo || 'monitoramento') === 'monitoramento');
-
-        const ordenados = monitors.sort((a, b) => {
+        
+        const ordenados = regs.sort((a, b) => {
           const ta = parseDataMs(a.createdAt || a.created_at || a.updatedAt || a.updated_at);
           const tb = parseDataMs(b.createdAt || b.created_at || b.updatedAt || b.updated_at);
           return tb - ta;
@@ -808,10 +885,10 @@ const ConverseConosco = ({ user, onBack }) => {
     // Filtra apenas conversas (monitoramento só se tiver resposta do profissional)
     const seenRegistro = new Set();
     const msgs = regs.filter(r => {
-      const registroId = r.registroId || r.registro_id;
-      if (!registroId) return false;
-      if (seenRegistro.has(registroId)) return false;
-      seenRegistro.add(registroId);
+      const registro_id = r.registro_id;
+      if (!registro_id) return false;
+      if (seenRegistro.has(registro_id)) return false;
+      seenRegistro.add(registro_id);
 
       const replies = normalizeReplies(r);
       const hasProMsg = !!r.resposta || replies.length > 0;
@@ -820,7 +897,7 @@ const ConverseConosco = ({ user, onBack }) => {
       if (!isMonitoramento && (r.texto || r.tipo === 'midia' || r.tipo === 'texto')) return true;
       return hasProMsg;
     });
-    msgs.sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
+    msgs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     
     const lista = msgs.map(r => {
       const replies = normalizeReplies(r);
@@ -828,9 +905,9 @@ const ConverseConosco = ({ user, onBack }) => {
       // Pega último profissional real (não genérico)
       const realProReply = proReplies.slice().reverse().find(rep => rep.pro_name && rep.pro_name !== 'Equipe de Saúde');
       const ultimaResposta = proReplies.slice(-1)[0];
-      const ultimaData = ultimaResposta?.at || r.resposta_data || r.updatedAt || r.updated_at || r.createdAt || r.created_at;
-      const registroId = r.registroId || r.registro_id;
-      const lidoLocal = isRead(registroId, ultimaData);
+      const ultimaData = ultimaResposta?.at || r.resposta_data || r.updated_at || r.created_at;
+      const registro_id = r.registro_id;
+      const lidoLocal = isRead(registro_id, ultimaData);
       const temNovaMensagem = (ultimaResposta || r.resposta) && !lidoLocal;
       const proNome = realProReply?.pro_name || ultimaResposta?.pro_name || r.pro_name || 'Equipe de Saúde';
       
@@ -850,7 +927,7 @@ const ConverseConosco = ({ user, onBack }) => {
 
     lista.forEach(conv => {
       if (conv.temNovaMensagem) {
-        notifyUser(`Nova mensagem de ${conv.proNome}`, conv.resumo || 'Você recebeu uma nova mensagem.', `chat_${conv.registroId || conv.registro_id}_${conv.ultimaData || ''}`);
+        notifyUser(`Nova mensagem de ${conv.proNome}`, conv.resumo || 'Você recebeu uma nova mensagem.', `chat_${conv.registro_id}_${conv.ultimaData || ''}`);
       }
     });
 
@@ -859,19 +936,18 @@ const ConverseConosco = ({ user, onBack }) => {
   }, [patientKey]);
 
   const marcarComoLida = async (conv) => {
-    const regId = conv.registroId || conv.registro_id;
+    const regId = conv.registro_id;
     if (!regId) return;
     try {
       localStorage.setItem(getReadKey(regId, conv.ultimaData), '1');
     } catch {}
     // IMEDIATAMENTE atualiza o estado para remover o badge
-    setConversas(prev => prev.map(c => (c.registroId || c.registro_id) === regId ? { ...c, status: 'lido', temNovaMensagem: false } : c));
+    setConversas(prev => prev.map(c => c.registro_id === regId ? { ...c, status: 'lido', temNovaMensagem: false } : c));
     // Depois atualiza o banco de dados em background
     setTimeout(async () => {
       try {
-        const payload = { status: 'lido', updatedAt: new Date().toISOString() };
-        const all = await db.registros.toArray();
-        const matches = all.filter(r => (r.registroId || r.registro_id) === regId);
+        const payload = { status: 'lido', updated_at: new Date().toISOString() };
+        const matches = await db.registros.where('registro_id').equals(regId).toArray();
         for (const m of matches) {
           if (m.id) await db.registros.update(m.id, payload);
         }
@@ -923,7 +999,7 @@ const ConverseConosco = ({ user, onBack }) => {
       <div className="space-y-3">
         {conversas.map((conv, idx) => (
           <div
-            key={conv.registroId || conv.registro_id || idx}
+            key={conv.registro_id || idx}
             onClick={() => { marcarComoLida(conv); setChatAberto({ ...conv, status: 'lido', temNovaMensagem: false }); }}
             className={`conv-card ${conv.temNovaMensagem ? 'has-new' : ''}`}
           >
@@ -1055,8 +1131,8 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
     try {
       const rid = uuidv4(), now = new Date().toISOString();
       const autoReply = { from: 'pro', text: AUTO_REPLY_TEXT, at: now, pro_name: 'Equipe de Saúde' };
-      await db.registros.add({ registroId: rid, patient_id: patientKey, deviceId: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', createdAt: now, updatedAt: now, replies: [autoReply], synced: 0 });
-      for(const item of files) await db.midias.add({ registroId: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
+      await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', created_at: now, updated_at: now, replies: [autoReply], synced: 0 });
+      for(const item of files) await db.midias.add({ registro_id: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
       syncManager();
       setTxt('');
       files.forEach(f => f.preview && URL.revokeObjectURL(f.preview));
@@ -1078,7 +1154,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
           <video ref={videoRef} autoPlay playsInline muted style={{width:'100%',maxWidth:'400px',borderRadius:'16px',background:'#000'}} />
           <div className="flex gap-4 items-center">
             {cameraMode === 'photo' ? (
-              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-lg">📸</button>
+              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full text-3xl shadow-lg">📸</button>
             ) : !isRecordingVideo ? (
               <button onClick={startVideoRecording} className="w-16 h-16 bg-red-500 rounded-full text-white text-2xl shadow-lg">⏺️</button>
             ) : (
@@ -1149,7 +1225,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
   const videoRecorderRef = useRef(null);
   const mediaUrlsRef = useRef([]);
 
-  const regId = registro.registroId || registro.registro_id;
+  const regId = registro.registro_id || registro.registroId;
   const normalizeReplies = (r) => {
     if (Array.isArray(r?.replies)) return r.replies;
     if (Array.isArray(r?.replies_json)) return r.replies_json;
@@ -1174,11 +1250,11 @@ const ChatConversa = ({ user, registro, onBack }) => {
     mediaUrlsRef.current = [];
     
     await syncRegistrosSupabase(patientKey);
-    const reg = await db.registros.where('registroId').equals(regId).first() || registro;
+    const reg = await db.registros.where('registro_id').equals(regId).first() || registro;
     if (reg?.resposta || normalizeReplies(reg).some(r => r.from === 'pro')) {
       try {
-        const payload = { status: 'lido', updatedAt: new Date().toISOString() };
-        const matches = await db.registros.where('registroId').equals(regId).toArray();
+        const payload = { status: 'lido', updated_at: new Date().toISOString() };
+        const matches = await db.registros.where('registro_id').equals(regId).toArray();
         for (const m of matches) {
           if (m.id) await db.registros.update(m.id, payload);
         }
@@ -1186,7 +1262,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
     }
     
     const msgs = [];
-    const midias = await db.midias.where('registroId').equals(regId).toArray();
+    const midias = await db.midias.where('registro_id').equals(regId).toArray();
     const mediaItems = midias.map(m => {
       const url = m.blob ? URL.createObjectURL(m.blob) : '';
       if (url) mediaUrlsRef.current.push(url);
@@ -1195,11 +1271,11 @@ const ChatConversa = ({ user, registro, onBack }) => {
     
     const textoUsuario = reg.texto || (reg.pa_sistolica ? `PA: ${reg.pa_sistolica}/${reg.pa_diastolica || '-'} | Peso: ${reg.peso_kg || '-'}kg | Glicemia: ${reg.glicemia_mg || '-'}` : '');
     if (textoUsuario || mediaItems.length) {
-      msgs.push({ from: 'user', text: textoUsuario, at: reg.createdAt || reg.created_at, media: mediaItems });
+      msgs.push({ from: 'user', text: textoUsuario, at: reg.created_at || reg.createdAt, media: mediaItems });
     }
     
     if (reg.resposta) {
-      msgs.push({ from: 'pro', text: reg.resposta, at: reg.resposta_data || reg.updatedAt, media: [], proName: proNome });
+      msgs.push({ from: 'pro', text: reg.resposta, at: reg.resposta_data || reg.updated_at, media: [], proName: proNome });
     }
     
     const reps = normalizeReplies(reg);
@@ -1311,19 +1387,19 @@ const ChatConversa = ({ user, registro, onBack }) => {
     setSending(true);
     try {
       const now = new Date().toISOString();
-      const reg = await db.registros.where('registroId').equals(regId).first();
+      const reg = await db.registros.where('registro_id').equals(regId).first();
       if (!reg) { alert('Registro não encontrado'); return; }
       
       const reps = Array.isArray(reg.replies) ? reg.replies : [];
       const newReply = { from: 'user', text: txt.trim(), at: now, media: [] };
       
       for(const item of files) {
-        await db.midias.add({ registroId: regId, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
+        await db.midias.add({ registro_id: regId, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
         newReply.media.push({ type: item.file.type, name: item.file.name });
       }
       
       reps.push(newReply);
-      await db.registros.update(reg.id, { replies: reps, updatedAt: now, synced: 0 });
+      await db.registros.update(reg.id, { replies: reps, updated_at: now, synced: 0 });
       
       syncManager();
       setTxt('');
@@ -1534,7 +1610,7 @@ const App = () => {
   const pullAutomatico = useCallback(async () => {
     if (!user || IS_PROFISSIONAL) return;
     const patient_id = user.patient_id || user.patient_id || '';
-    if (navigator.onLine && supabase && patient_id && !String(patient_id).startsWith('cpf-')) {
+    if (navigator.onLine && supabase && patient_id) {
       try {
         const { data } = await supabase.from('perfis').select('*').eq('patient_id', patient_id).maybeSingle();
         if (data) {
@@ -1567,7 +1643,20 @@ const App = () => {
     if (!user || IS_PROFISSIONAL) return;
     if (!patientUsesMedication(user.uso_medicacoes)) return;
 
-    const patientId = user.patient_id || user.patient_id || user.cpf || 'anon';
+    // Solicitar permissão de notificação (necessário no Android 13+)
+    solicitarPermissaoNotificacao();
+
+    // Agendar notificações nativas recorrentes (repetem todo dia)
+    agendarNotificacoesMedicacao(user);
+
+    // Ao clicar na notificação, abrir o app
+    if (window.cordova && cordova.plugins && cordova.plugins.notification && cordova.plugins.notification.local) {
+      cordova.plugins.notification.local.on('click', () => {
+        // launch: true já reabre o app; aqui podemos navegar se quiser
+      });
+    }
+
+    const patientId = user.patient_id || user.cpf || 'anon';
     const checkReminder = async () => {
       const horarios = extrairHorariosMedicacao(user.posologia_horario);
       if (!horarios.length) return;
@@ -1590,8 +1679,14 @@ const App = () => {
       const popupBody = `Lembrete de medicação: ${body}`;
 
       tocarAlertaMedicacao();
-      if (typeof nativeAlert === 'function') nativeAlert(popupBody);
-      else alert(popupBody);
+      // No Cordova, a notificação nativa já foi agendada; apenas mostrar popup se app estiver em primeiro plano
+      if (navigator.notification && navigator.notification.alert) {
+        navigator.notification.alert(popupBody, null, 'Você tem um lembrete', 'OK');
+      } else if (typeof nativeAlert === 'function') {
+        nativeAlert(popupBody);
+      } else {
+        alert(popupBody);
+      }
       await notifyUser('Alerta de medicação', body, `med_${patientId}_${dia}_${hhmm}`);
     };
 

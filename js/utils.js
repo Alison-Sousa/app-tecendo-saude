@@ -119,10 +119,28 @@ async function syncManager() {
     }
     const regs = await db.registros.where('synced').equals(0).toArray();
     for (const r of regs) {
+      // Mesclar replies locais com remotos para não perder respostas do profissional
+      let localReplies = r.replies_json || r.replies || [];
+      if (!Array.isArray(localReplies)) { try { localReplies = JSON.parse(localReplies); } catch { localReplies = []; } }
+      try {
+        const { data: remote } = await supabase.from('registros').select('replies_json').eq('registro_id', r.registro_id).maybeSingle();
+        if (remote?.replies_json) {
+          let remoteReplies = remote.replies_json;
+          if (!Array.isArray(remoteReplies)) { try { remoteReplies = JSON.parse(remoteReplies); } catch { remoteReplies = []; } }
+          // Mesclar: manter todos remotos e adicionar locais que não existem no remoto
+          const remoteKeys = new Set(remoteReplies.map(rr => `${rr.from}_${rr.at}_${(rr.text || '').substring(0,30)}`));
+          const merged = [...remoteReplies];
+          for (const lr of localReplies) {
+            const key = `${lr.from}_${lr.at}_${(lr.text || '').substring(0,30)}`;
+            if (!remoteKeys.has(key)) merged.push(lr);
+          }
+          localReplies = merged;
+        }
+      } catch {}
       await supabase.from('registros').upsert({
-        registro_id: r.registroId,
+        registro_id: r.registro_id,
         patient_id: r.patient_id,
-        device_id: r.deviceId,
+        device_id: r.device_id || r.deviceId || 'web',
         texto: r.texto,
         tipo: r.tipo,
         status: r.status,
@@ -132,16 +150,16 @@ async function syncManager() {
         glicemia_mg: r.glicemia_mg ?? null,
         gestante: r.gestante ?? null,
         gestacao_semanas: r.gestacao_semanas ?? null,
-        replies_json: r.replies || [],
-        created_at: r.createdAt,
-        updated_at: r.updatedAt
+        replies_json: localReplies,
+        created_at: r.created_at || r.createdAt,
+        updated_at: r.updated_at || r.updatedAt || new Date().toISOString()
       }, { onConflict: 'registro_id' });
       await db.registros.update(r.id, { synced: 1 });
     }
     const mids = await db.midias.where('synced').equals(0).toArray();
     for (const m of mids) {
       try {
-        const fileName = `${m.registroId}/${m.name.replace(/[^a-zA-Z0-9.]/g,'_')}`;
+        const fileName = `${m.registro_id}/${m.name.replace(/[^a-zA-Z0-9.]/g,'_')}`;
         const { error: upErr } = await supabase.storage.from('midias').upload(fileName, m.blob, { upsert: true, contentType: m.type || 'application/octet-stream' });
         if (!upErr) {
           await db.midias.update(m.id, { synced: 1 });
