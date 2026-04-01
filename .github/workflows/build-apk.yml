@@ -52,7 +52,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          node build-env.js
+          node env/build-env.js
           cp env/env.js cordova-build/app/www/env/env.js
 
       - name: Configure Cordova for Android
