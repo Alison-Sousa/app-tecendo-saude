@@ -30,32 +30,70 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Create Cordova project structure
+        run: |
+          npm install -g cordova
+          mkdir -p cordova-build
+          cd cordova-build
+          cordova create app br.com.tecendosaude "Tecendo Saude"
+          cd app
+          cordova plugin add cordova-plugin-local-notification --variable ANDROIDX_CORE_VERSION=1.12.0
+          cordova plugin add cordova-plugin-android-permissions
+          cordova plugin add cordova-plugin-dialogs
+
+      - name: Copy web files into Cordova www
+        run: |
+          rm -rf cordova-build/app/www/*
+          cp -r index.html audios/ database/ img/ js/ monitoramento/ profissionais/ styles/ textos/ usuarios/ cordova-build/app/www/
+          mkdir -p cordova-build/app/www/env
+
       - name: Generate env.js from secrets
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           node build-env.js
-          cp env/env.js tecendo/www/env/env.js
+          cp env/env.js cordova-build/app/www/env/env.js
 
-      - name: Install Cordova CLI
-        run: npm install -g cordova
-
-      - name: Install project dependencies
-        working-directory: tecendo
-        run: npm install
-
-      - name: Add Android platform
-        working-directory: tecendo
-        run: cordova platform add android
+      - name: Configure Cordova for Android
+        run: |
+          cd cordova-build/app
+          # Replace config.xml with project config
+          cat > config.xml << 'XMLEOF'
+          <?xml version='1.0' encoding='utf-8'?>
+          <widget id="br.com.tecendosaude" version="1.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:android="http://schemas.android.com/apk/res/android">
+              <name>Tecendo Saude</name>
+              <description>Aplicativo de Saúde</description>
+              <author email="seu-email@dominio.com">Tecendo Saude</author>
+              <content src="index.html" />
+              <access origin="*" />
+              <allow-intent href="http://*/*" />
+              <allow-intent href="https://*/*" />
+              <platform name="android">
+                  <icon src="www/img/logo.png" />
+                  <config-file target="AndroidManifest.xml" parent="/*">
+                      <uses-permission android:name="android.permission.RECORD_AUDIO" />
+                      <uses-permission android:name="android.permission.CAMERA" />
+                      <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+                      <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+                      <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+                      <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+                      <uses-permission android:name="android.permission.WAKE_LOCK" />
+                  </config-file>
+                  <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/img/logo.png" />
+                  <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
+              </platform>
+          </widget>
+          XMLEOF
+          cordova platform add android
 
       - name: Build APK
-        working-directory: tecendo
+        working-directory: cordova-build/app
         run: cordova build android
 
       - name: Prepare APK for release
         run: |
-          APK=$(find tecendo/platforms/android -name "*.apk" | head -1)
+          APK=$(find cordova-build/app/platforms/android -name "*.apk" | head -1)
           cp "$APK" tecendo-saude.apk
           echo "APK_SIZE=$(du -h tecendo-saude.apk | cut -f1)" >> $GITHUB_ENV
 
