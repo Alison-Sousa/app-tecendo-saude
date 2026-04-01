@@ -1,0 +1,454 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\usepackage{float}
+\usepackage{parskip}
+
+\definecolor{verde}{HTML}{2F6B3F}
+\definecolor{verdeE}{HTML}{1F4A2C}
+\definecolor{verdeC}{HTML}{F0FDF4}
+\definecolor{dourado}{HTML}{D8A43A}
+\definecolor{azul}{HTML}{007AFF}
+\definecolor{cinza}{HTML}{475569}
+\definecolor{cinzaC}{HTML}{F8FAFC}
+\definecolor{vermelho}{HTML}{DC2626}
+\definecolor{roxo}{HTML}{764BA2}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=2.8cm, right=2.8cm}
+\setlength{\headheight}{14pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{cinza}\textit{Tecendo Sa\'ude --- Distribui\c{c}\~ao Mobile}}
+\fancyhead[R]{\small\color{cinza}\textit{Mar\c{c}o/2026}}
+\fancyfoot[C]{\small\color{cinza}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}
+  {\Large\bfseries\color{verdeE}}
+  {\thesection.}{0.5em}{}
+  [\vspace{-0.5em}{\color{verde}\rule{\textwidth}{1.5pt}}]
+
+\titleformat{\subsection}
+  {\large\bfseries\color{verde}}
+  {\thesubsection}{0.5em}{}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries\color{cinza}}
+  {\thesubsubsection}{0.5em}{}
+
+\newtcolorbox{caixainfo}{
+  colback=verdeC, colframe=verde,
+  boxrule=0.8pt, leftrule=4pt, arc=3pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\newtcolorbox{caixaalerta}{
+  colback=red!5, colframe=vermelho,
+  boxrule=0.8pt, leftrule=4pt, arc=3pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\newtcolorbox{caixanota}{
+  colback=blue!3, colframe=azul,
+  boxrule=0.8pt, leftrule=4pt, arc=3pt,
+  left=10pt, right=10pt, top=8pt, bottom=8pt
+}
+
+\newtcolorbox{caixadestaque}[1][]{
+  colback=verdeC, colframe=verde,
+  boxrule=1.2pt, arc=6pt,
+  left=12pt, right=12pt, top=10pt, bottom=10pt,
+  fonttitle=\bfseries\color{white},
+  colbacktitle=verde,
+  title={#1}
+}
+
+\hypersetup{
+  colorlinks=true, linkcolor=verde, urlcolor=azul, citecolor=verde,
+  pdftitle={Guia de Distribuicao Mobile --- Tecendo Saude}
+}
+
+\begin{document}
+
+% ════════════════════════════════════
+% CABEÇALHO
+% ════════════════════════════════════
+
+\begin{tcolorbox}[
+  colback=verdeE, colframe=verdeE,
+  arc=8pt, boxrule=0pt,
+  left=15pt, right=15pt, top=20pt, bottom=20pt
+]
+\begin{center}
+  {\color{white}\fontsize{24}{28}\selectfont\textbf{TECENDO SA\'UDE}}\\[8pt]
+  {\color{dourado}\large\textit{Guia de Distribui\c{c}\~ao Mobile --- Android \& iOS}}\\[8pt]
+  {\color{white!70}\small Documento t\'ecnico para BNDES --- Mar\c{c}o de 2026}
+\end{center}
+\end{tcolorbox}
+
+\vspace{0.8cm}
+
+
+% ════════════════════════════════════
+% 1. CONTEXTO
+% ════════════════════════════════════
+\section{Contexto}
+
+O \textbf{Tecendo Sa\'ude} \'e um aplicativo de sa\'ude para regi\~oes remotas da Amaz\^onia, distribu\'ido como app nativo para \textbf{Android} (APK) e \textbf{iOS} (IPA). A compila\c{c}\~ao \'e 100\% automatizada via GitHub Actions --- o desenvolvedor faz \texttt{git push} no VS Code e o app \'e gerado na nuvem, sem instalar Android Studio ou Xcode.
+
+\begin{caixainfo}
+  \textbf{Fluxo de compila\c{c}\~ao automatizada:}\\[6pt]
+  \texttt{VS Code (c\'odigo)} $\longrightarrow$ \texttt{GitHub (reposit\'orio)} $\longrightarrow$ \texttt{GitHub Actions (build na nuvem)} $\longrightarrow$ \texttt{APK + IPA}
+\end{caixainfo}
+
+
+% ════════════════════════════════════
+% 2. APPLE FEE WAIVER
+% ════════════════════════════════════
+\section{Distribui\c{c}\~ao iOS --- Apple Developer Program Fee Waiver}
+
+A Apple cobra \textbf{US\$ 99/ano} ($\approx$ R\$ 500) para distribuir apps iOS. Por\'em, oferece \textbf{isen\c{c}\~ao total (fee waiver)} para tr\^es categorias de organiza\c{c}\~oes:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.8}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|>{\centering\arraybackslash}X|}
+\hline
+\rowcolor{verdeC}
+\textbf{\color{verde}\large ONGs} & \textbf{\color{azul}\large Educa\c{c}\~ao} & \textbf{\color{dourado}\large Governo} \\
+\hline
+Organiza\c{c}\~oes sem fins lucrativos & Universidades, IFs, institui\c{c}\~oes credenciadas & Prefeituras, secretarias, governo federal \\
+\hline
+\end{tabularx}
+\caption{Categorias eleg\'iveis para isen\c{c}\~ao da Apple}
+\end{table}
+
+O Tecendo Sa\'ude se enquadra em pelo menos uma dessas categorias por ser vinculado a uma institui\c{c}\~ao p\'ublica de sa\'ude/educa\c{c}\~ao na Amaz\^onia.
+
+\begin{caixanota}
+  \textbf{Refer\^encia oficial da Apple:} \url{https://developer.apple.com/support/membership-fee-waiver/}
+\end{caixanota}
+
+\subsection{Requisitos para a isen\c{c}\~ao}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\textwidth}{|c|X|c|}
+\hline
+\rowcolor{verdeE}
+\textbf{\color{white}\#} & \textbf{\color{white}Requisito} & \textbf{\color{white}Atende?} \\
+\hline
+1 & Ser entidade jur\'idica (ONG, instituto educacional credenciado ou entidade governamental) & \color{verde}\textbf{Sim} \\
+\hline
+\rowcolor{cinzaC}
+2 & \textbf{N\~ao} ser pessoa f\'isica, MEI ou empresa individual & \color{verde}\textbf{Sim} \\
+\hline
+3 & \textbf{N\~ao} ter assinado contrato de apps pagos (app deve ser gratuito) & \color{verde}\textbf{Sim} \\
+\hline
+\rowcolor{cinzaC}
+4 & \textbf{N\~ao} vender bens ou servi\c{c}os digitais pelo app & \color{verde}\textbf{Sim} \\
+\hline
+\end{tabularx}
+\caption{An\'alise de conformidade do Tecendo Sa\'ude}
+\end{table}
+
+\subsection{Documenta\c{c}\~ao necess\'aria}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|}
+\hline
+\rowcolor{verdeE}
+\textbf{\color{white}Documento} & \textbf{\color{white}Exemplo} \\
+\hline
+CNPJ da institui\c{c}\~ao & CNPJ da universidade, secretaria de sa\'ude ou ONG \\
+\hline
+\rowcolor{cinzaC}
+Comprovante de status & Ato constitutivo, estatuto social ou decreto de cria\c{c}\~ao \\
+\hline
+Reconhecimento oficial & Registro no MEC (educa\c{c}\~ao) ou \'org\~ao competente \\
+\hline
+\rowcolor{cinzaC}
+D-U-N-S Number & N\'umero gratuito --- ver Se\c{c}\~ao \ref{sec:duns} \\
+\hline
+\end{tabularx}
+\caption{Documenta\c{c}\~ao para solicita\c{c}\~ao do fee waiver}
+\end{table}
+
+\subsection{Passo a passo para solicitar o Fee Waiver}
+
+\begin{caixadestaque}[Fluxo em 5 etapas]
+\begin{enumerate}[label=\textbf{\color{verde}Etapa \arabic*:}, leftmargin=2.5cm]
+  \item Criar Apple ID institucional
+  \item Obter D-U-N-S Number (gratuito)
+  \item Inscrever-se no Apple Developer como organiza\c{c}\~ao
+  \item Solicitar fee waiver na tela de pagamento
+  \item Aprova\c{c}\~ao --- acesso total gratuito
+\end{enumerate}
+\end{caixadestaque}
+
+\subsubsection{Etapa 1 --- Criar Apple ID institucional}
+
+\begin{enumerate}
+  \item Acesse \url{https://account.apple.com/}
+  \item Crie uma conta com o \textbf{e-mail institucional} (ex: \texttt{tecendosaude@universidade.edu.br})
+  \item Complete a verifica\c{c}\~ao de e-mail e telefone
+\end{enumerate}
+
+\subsubsection{Etapa 2 --- Obter o D-U-N-S Number}
+\label{sec:duns}
+
+\begin{caixanota}
+  \textbf{O que \'e D-U-N-S Number?} Identificador universal de empresas/organiza\c{c}\~oes emitido pela Dun \& Bradstreet. A Apple exige para inscri\c{c}\~ao de organiza\c{c}\~oes. A obten\c{c}\~ao \'e \textbf{gratuita} e leva de 1 a 5 dias \'uteis.
+\end{caixanota}
+
+\begin{enumerate}
+  \item Acesse \url{https://developer.apple.com/enroll/duns-lookup/}
+  \item Pesquise pelo nome legal da organiza\c{c}\~ao (como consta no CNPJ)
+  \item Se n\~ao existir, solicite gratuitamente no mesmo formul\'ario
+  \item Anote o n\'umero de 9 d\'igitos recebido
+\end{enumerate}
+
+\subsubsection{Etapa 3 --- Inscri\c{c}\~ao no Apple Developer Program}
+
+\begin{enumerate}
+  \item Acesse \url{https://developer.apple.com/programs/enroll/}
+  \item Fa\c{c}a login com o Apple ID institucional (Etapa 1)
+  \item Selecione \textbf{``Organization''} (n\~ao ``Individual'')
+  \item Preencha os campos:
+\end{enumerate}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{0.85\textwidth}{|l|X|}
+\hline
+\rowcolor{verdeE}
+\textbf{\color{white}Campo} & \textbf{\color{white}O que informar} \\
+\hline
+Legal Entity Name & Nome da organiza\c{c}\~ao como consta no CNPJ \\
+\hline
+\rowcolor{cinzaC}
+D-U-N-S Number & N\'umero obtido na Etapa 2 \\
+\hline
+Headquarters Address & Endere\c{c}o da sede \\
+\hline
+\rowcolor{cinzaC}
+Phone Number & Telefone institucional \\
+\hline
+Website & Site oficial da organiza\c{c}\~ao \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsubsection{Etapa 4 --- Solicitar a isen\c{c}\~ao (Fee Waiver)}
+
+\begin{enumerate}
+  \item Na tela de pagamento, selecione \textbf{``Request a fee waiver''}
+  \item Indique o tipo de organiza\c{c}\~ao:
+    \begin{itemize}
+      \item \texttt{Nonprofit organization} --- para ONGs
+      \item \texttt{Accredited educational institution} --- para universidades/IFs
+      \item \texttt{Government entity} --- para prefeituras/secretarias
+    \end{itemize}
+  \item Envie a documenta\c{c}\~ao comprobat\'oria
+  \item Aguarde an\'alise da Apple (1 a 4 semanas)
+\end{enumerate}
+
+\subsubsection{Etapa 5 --- Ap\'os aprova\c{c}\~ao}
+
+Com o fee waiver aprovado, a organiza\c{c}\~ao ter\'a acesso completo:
+
+\begin{itemize}
+  \item Certificados de assinatura de c\'odigo
+  \item Provisioning Profiles para distribui\c{c}\~ao
+  \item Distribui\c{c}\~ao via \textbf{TestFlight} (beta para at\'e 10.000 pessoas)
+  \item Publica\c{c}\~ao na \textbf{App Store}
+  \item \textbf{Tudo sem custo algum} --- renova\c{c}\~ao anual apenas confirma elegibilidade
+\end{itemize}
+
+
+% ════════════════════════════════════
+% 3. CONFIGURAÇÃO TÉCNICA
+% ════════════════════════════════════
+\newpage
+\section{Configura\c{c}\~ao T\'ecnica --- GitHub + VS Code}
+
+Todo o processo de build roda direto do \textbf{VS Code}: o desenvolvedor edita o c\'odigo, faz \texttt{git push}, e o GitHub Actions compila automaticamente. N\~ao \'e necess\'ario instalar Android Studio, Xcode, Java ou qualquer SDK.
+
+\subsection{GitHub Secrets --- O que s\~ao}
+
+GitHub Secrets s\~ao \textbf{vari\'aveis criptografadas} armazenadas no reposit\'orio. Nunca aparecem nos logs e guardam credenciais sens\'iveis.
+
+\begin{caixainfo}
+  \textbf{Onde configurar:} GitHub $\rightarrow$ Reposit\'orio $\rightarrow$ Settings $\rightarrow$ Secrets and variables $\rightarrow$ Actions $\rightarrow$ New repository secret
+\end{caixainfo}
+
+\subsection{Secrets para Android (j\'a configurados)}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\rowcolor{verdeE}
+\textbf{\color{white}Secret} & \textbf{\color{white}Descri\c{c}\~ao} & \textbf{\color{white}Onde obter} \\
+\hline
+\texttt{SUPABASE\_URL} & URL do projeto & Supabase Dashboard $\rightarrow$ Settings $\rightarrow$ API \\
+\hline
+\rowcolor{cinzaC}
+\texttt{SUPABASE\_KEY} & Chave an\^onima & Supabase Dashboard $\rightarrow$ Settings $\rightarrow$ API \\
+\hline
+\end{tabularx}
+\caption{Secrets Android --- j\'a operacionais}
+\end{table}
+
+\subsection{Secrets para iOS (ap\'os aprova\c{c}\~ao Apple)}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|X|X|}
+\hline
+\rowcolor{roxo}
+\textbf{\color{white}Secret} & \textbf{\color{white}Descri\c{c}\~ao} & \textbf{\color{white}Onde obter} \\
+\hline
+\texttt{BUILD\_CERTIFICATE\_BASE64} & Certificado .p12 em Base64 & Apple Developer $\rightarrow$ Certificates \\
+\hline
+\rowcolor{cinzaC}
+\texttt{P12\_PASSWORD} & Senha do certificado & Definida ao exportar o .p12 \\
+\hline
+\texttt{BUILD\_PROVISION\_PROFILE\_BASE64} & Provisioning Profile em Base64 & Apple Developer $\rightarrow$ Profiles \\
+\hline
+\rowcolor{cinzaC}
+\texttt{KEYCHAIN\_PASSWORD} & Senha tempor\'aria & Qualquer string aleat\'oria \\
+\hline
+\end{tabularx}
+\caption{Secrets iOS --- configurar ap\'os fee waiver}
+\end{table}
+
+\subsection{Como gerar certificado e provisioning profile}
+
+Etapas realizadas \textbf{uma \'unica vez} ap\'os aprova\c{c}\~ao do fee waiver:
+
+\textbf{Certificado:}
+\begin{enumerate}
+  \item Acesse \url{https://developer.apple.com/account/resources/certificates/list}
+  \item Clique em ``+'' $\rightarrow$ selecione ``Apple Distribution''
+  \item Exporte como \texttt{.p12} (defina uma senha)
+  \item Converta para Base64: \texttt{base64 -i certificado.p12}
+  \item Cole no GitHub Secret \texttt{BUILD\_CERTIFICATE\_BASE64}
+\end{enumerate}
+
+\textbf{Provisioning Profile:}
+\begin{enumerate}
+  \item Acesse \url{https://developer.apple.com/account/resources/profiles/list}
+  \item Crie profile tipo ``App Store Connect'' para o Tecendo Sa\'ude
+  \item Fa\c{c}a download do \texttt{.mobileprovision}
+  \item Converta para Base64 e cole no GitHub Secret
+\end{enumerate}
+
+\subsection{Fluxo completo}
+
+\begin{caixainfo}
+  \textbf{Pipeline de build e distribui\c{c}\~ao:}\\[6pt]
+  \texttt{git push na main}\\
+  $\downarrow$\\
+  \texttt{GitHub Actions (CI/CD na nuvem)}\\
+  $\swarrow$ \hspace{4cm} $\searrow$\\
+  \texttt{APK (Android)} \hspace{2.5cm} \texttt{IPA (iOS)}\\
+  $\downarrow$ \hspace{5.5cm} $\downarrow$\\
+  \texttt{GitHub Releases} \hspace{2cm} \texttt{TestFlight / App Store}\\[4pt]
+  {\small\color{cinza}M\'aquinas Linux (Android) e macOS (iOS) gratuitas}
+\end{caixainfo}
+
+
+% ════════════════════════════════════
+% 4. CUSTOS
+% ════════════════════════════════════
+\section{An\'alise de Custos}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\begin{tabularx}{\textwidth}{Xcc}
+\toprule
+\textbf{Item} & \textbf{Custo Mensal} & \textbf{Custo Anual} \\
+\midrule
+GitHub --- Reposit\'orio + GitHub Actions & Gratuito & Gratuito \\
+Build Android (APK) & Gratuito & Gratuito \\
+Apple Developer Program (com fee waiver) & Gratuito & \textbf{Gratuito} \\
+Build iOS (IPA) via GitHub Actions & Gratuito & Gratuito \\
+Supabase --- Backend & Gratuito & Gratuito \\
+\midrule
+\textbf{TOTAL} & \textbf{R\$ 0} & \textbf{R\$ 0} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{caixaalerta}
+  \textbf{Sem o fee waiver:} O Apple Developer Program custaria US\$ 99/ano (aprox. R\$ 500/ano). Com o fee waiver aprovado para organiza\c{c}\~oes eleg\'iveis, esse custo \'e \textbf{eliminado integralmente}.
+\end{caixaalerta}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{0.7\textwidth}{|X|c|}
+\hline
+\rowcolor{red!10}
+\textbf{Sem fee waiver} & \textbf{\color{vermelho}R\$ 500/ano} \\
+\hline
+\rowcolor{verdeC}
+\textbf{Com fee waiver (Tecendo Sa\'ude)} & \textbf{\color{verde}R\$ 0/ano} \\
+\hline
+\end{tabularx}
+\caption{Comparativo --- Apple Developer Program}
+\end{table}
+
+
+% ════════════════════════════════════
+% 5. RESUMO
+% ════════════════════════════════════
+\section{Resumo}
+
+\begin{tcolorbox}[
+  colback=verdeC, colframe=verde,
+  arc=10pt, boxrule=1.2pt,
+  left=15pt, right=15pt, top=12pt, bottom=12pt
+]
+\begin{center}
+  {\large\bfseries\color{verdeE}Infraestrutura completa de distribui\c{c}\~ao mobile}\\[6pt]
+  {\color{cinza}Android + iOS \quad$|$\quad Custo zero \quad$|$\quad 100\% automatizado via VS Code}
+\end{center}
+\end{tcolorbox}
+
+\vspace{0.3cm}
+
+\begin{itemize}
+  \item \textbf{Android:} Build autom\'atico j\'a operacional. APK gerado a cada \texttt{git push}.
+  \item \textbf{iOS:} Fee waiver da Apple elimina o custo de US\$ 99/ano para institui\c{c}\~oes educacionais, governamentais e ONGs.
+  \item \textbf{Custo total:} R\$ 0 --- todas as tecnologias e servi\c{c}os s\~ao gratuitos.
+  \item \textbf{Fluxo:} Desenvolvedor edita no VS Code $\rightarrow$ \texttt{git push} $\rightarrow$ app compilado e publicado automaticamente.
+\end{itemize}
+
+\vfill
+\begin{center}
+  \small\color{cinza}\textit{Tecendo Sa\'ude --- Linhas do Cuidado Integral \`a Sa\'ude na Amaz\^onia \quad$|$\quad Mar\c{c}o de 2026}
+\end{center}
+
+\end{document}
