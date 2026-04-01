@@ -195,6 +195,15 @@ let replyAudioTimer = null;
 let replyAudioMs = 0;
 let registroSelecionadoChat = null;
 const mediaCache = new Map();
+let _registrosIndex = new Map(); // patient_id -> registros[]
+
+// Colunas para carregamento rápido da lista (sem campos pesados)
+const PERFIS_COLS_LIST = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,equipe_ubs,gestante,gestacao_semanas,tem_filhos,qtd_filhos,filhos_json,hipertensao,diabetes,condicoes,peso_inicial,altura,meta_pa_max,meta_glicemia,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min,meta_glicemia_max,meta_glicemia_min,created_by_cpf';
+const PERFIS_COLS_FULL = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,equipe_ubs,hipertensao,tempo_diag_has,diabetes,tempo_diag_dm,gestante,infeccao_urinaria_gestacao,dependencias,tempo_dependencia,condicoes,altura,peso_inicial,peso_atual,peso_primeira_consulta,imc_pre_gestacional,imc_atual,dum,gestacao_semanas,previsao_parto,faz_pre_natal,inicio_pre_natal,data_ultima_consulta_pre_natal,enxerga_bem,consulta_oftalmo,tempo_consulta_oftalmo,dificuldade_mastigar_falar_engolir,uso_medicacoes,nomes_medicacoes,posologia_dosagem,posologia_horario,data_ultima_prescricao,data_ultima_dispensacao,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max,created_by_nome,created_by_ubs,created_by_cpf,created_at,updated_at,meta_glicemia_max,meta_glicemia_min,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min';
+const REGISTROS_COLS_LIGHT = 'registro_id,patient_id,pa_sistolica,pa_diastolica,glicemia_mg,peso_kg,gestante,gestacao_semanas,atividade_fisica,status,tipo,created_at,updated_at';
+const REGISTROS_COLS_FULL = 'registro_id,patient_id,pa_sistolica,pa_diastolica,glicemia_mg,peso_kg,gestante,gestacao_semanas,atividade_fisica,texto,resposta,resposta_data,replies_json,status,tipo,created_at,updated_at';
+// Cache de pacientes com dados completos já carregados
+const _fullDataCache = new Set();
 
 function normalizarRepliesJson(reg) {
   const raw = reg?.replies_json;
@@ -279,57 +288,143 @@ async function carregarDados() {
 
     console.log('Conectando ao Supabase...');
 
-    // 1. Carregar perfis (pacientes)
-    const { data: perfisData, error: perfisError } = await supabase
-      .from('perfis')
-      .select('*')
-      .order('nome');
+    // ---- FASE 1: Carregamento rápido (colunas leves, lotes paralelos) ----
+    const t0 = performance.now();
+
+    // 1. Carregar perfis com colunas leves (sem medicação, endereço, etc.)
+    let perfisQuery = supabase.from('perfis').select(PERFIS_COLS_LIST, { count: 'exact' }).order('nome').range(0, 4999);
+    
+    const ubsPro = (profissionalAtual?.ubs || '').trim().toLowerCase();
+    const isCoordenador = ubsPro.includes('coordenador');
+    if (!isCoordenador && profissionalAtual?.cpf) {
+      const cpfPro = String(profissionalAtual.cpf).replace(/\D/g, '');
+      perfisQuery = perfisQuery.eq('created_by_cpf', cpfPro);
+    }
+    const { data: perfisData, error: perfisError } = await perfisQuery;
 
     if (perfisError) {
       console.error('Erro ao carregar perfis:', perfisError);
       throw perfisError;
     }
 
-    console.log('Perfis recebidos:', perfisData?.length || 0);
+    console.log(`Perfis recebidos: ${perfisData?.length || 0} em ${Math.round(performance.now() - t0)}ms`);
 
-    // 2. Carregar registros (PA, glicemia, peso)
-    const { data: registrosData, error: registrosError } = await supabase
-      .from('registros')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (registrosError) {
-      console.error('Erro ao carregar registros:', registrosError);
-      throw registrosError;
-    }
-
-    console.log('Registros recebidos:', registrosData?.length || 0);
-
-    pacientes = perfisData || [];
-    registros = (registrosData || []).map(r => {
-      const replies = normalizarRepliesJson(r);
-      const texto = (r.texto && String(r.texto).trim()) ? r.texto : montarTextoPadrao(r);
-      return { ...r, replies_json: replies, texto };
-    });
-
-    console.log('Perfis carregados:', pacientes.length);
-    console.log('Registros carregados:', registros.length);
-
-    if (pacientes.length === 0) {
-      mostrarErro('Nenhum usuário do SUS cadastrado no banco de dados. Execute o SQL de seed no Supabase.');
+    if (!perfisData || perfisData.length === 0) {
+      mostrarErro('Nenhum paciente cadastrado. Cadastre pacientes pela Ficha do Usuário do SUS.');
       return;
     }
 
-    // 3. Classificar cada paciente com base nos registros
-    pacientes = pacientes.map(p => classificarPaciente(p));
+    // 2. Carregar registros LEVES em lotes PARALELOS (sem texto/replies_json)
+    const patientIds = perfisData.map(p => p.patient_id).filter(Boolean);
+    let registrosData = [];
+    if (patientIds.length > 0) {
+      const BATCH_SIZE = 300;
+      const batchPromises = [];
+      for (let i = 0; i < patientIds.length; i += BATCH_SIZE) {
+        const batch = patientIds.slice(i, i + BATCH_SIZE);
+        batchPromises.push(
+          supabase.from('registros')
+            .select(REGISTROS_COLS_LIGHT)
+            .in('patient_id', batch)
+            .order('created_at', { ascending: false })
+            .range(0, 4999)
+        );
+      }
+      const results = await Promise.all(batchPromises);
+      for (const res of results) {
+        if (res.error) { console.error('Erro registros:', res.error); throw res.error; }
+        if (res.data) registrosData.push(...res.data);
+      }
+    }
 
-    // 4. Ordenar: críticos primeiro, depois atenção, estáveis, sem dados
+    console.log(`Registros recebidos: ${registrosData.length} em ${Math.round(performance.now() - t0)}ms`);
+
+    pacientes = perfisData;
+    registros = registrosData.map(r => ({
+      ...r,
+      replies_json: [],
+      texto: montarTextoPadrao(r)
+    }));
+
+    // 3. Construir índice de registros por patient_id (evita O(n*m) no classificar)
+    _registrosIndex = new Map();
+    for (const r of registros) {
+      if (!r.patient_id) continue;
+      if (!_registrosIndex.has(r.patient_id)) _registrosIndex.set(r.patient_id, []);
+      _registrosIndex.get(r.patient_id).push(r);
+    }
+
+    // 4. Classificar e ordenar
+    pacientes = pacientes.map(p => classificarPaciente(p));
     pacientes.sort((a, b) => {
       const ordem = { critico: 0, atencao: 1, estavel: 2, sem_dados: 3 };
-      return ordem[a.classificacao] - ordem[b.classificacao];
+      return (ordem[a.classificacao] ?? 3) - (ordem[b.classificacao] ?? 3);
     });
 
-    // 5. Notificações para o profissional
+    // 4. Renderizar lista imediatamente (sem badges de mensagem — carregam em background)
+    atualizarEstatisticas();
+    popularFiltrosContexto();
+    renderizarListaPacientes();
+    _fullDataCache.clear();
+
+    console.log(`Dashboard renderizado em ${Math.round(performance.now() - t0)}ms`);
+
+    // ---- FASE 2: Carregar dados completos em background (texto, mensagens, notificações) ----
+    setTimeout(() => carregarDadosCompletosBg(), 200);
+
+  } catch (error) {
+    console.error('Erro ao carregar dados:', error);
+    mostrarErro('Erro: ' + error.message + ' - Verifique o console (F12) para detalhes');
+  }
+}
+
+// Carrega texto/replies_json em background e atualiza badges de mensagem
+async function carregarDadosCompletosBg() {
+  try {
+    if (!supabase || pacientes.length === 0) return;
+    const patientIds = pacientes.map(p => p.patient_id).filter(Boolean);
+    if (patientIds.length === 0) return;
+
+    // Carregar apenas campos de mensagem (leve: sem vitais repetidos)
+    const MSG_COLS = 'registro_id,patient_id,texto,resposta,resposta_data,replies_json';
+    const BATCH_SIZE = 300;
+    const batchPromises = [];
+    for (let i = 0; i < patientIds.length; i += BATCH_SIZE) {
+      const batch = patientIds.slice(i, i + BATCH_SIZE);
+      batchPromises.push(
+        supabase.from('registros').select(MSG_COLS).in('patient_id', batch)
+      );
+    }
+    const results = await Promise.all(batchPromises);
+    const msgMap = new Map();
+    for (const res of results) {
+      if (res.data) {
+        for (const row of res.data) {
+          msgMap.set(row.registro_id, row);
+        }
+      }
+    }
+
+    // Merge mensagens nos registros existentes
+    for (const reg of registros) {
+      const msg = msgMap.get(reg.registro_id);
+      if (msg) {
+        reg.replies_json = normalizarRepliesJson(msg);
+        reg.texto = (msg.texto && String(msg.texto).trim()) ? msg.texto : reg.texto;
+        reg.resposta = msg.resposta || null;
+        reg.resposta_data = msg.resposta_data || null;
+      }
+    }
+
+    // Reconstruir índice com dados enriquecidos
+    _registrosIndex = new Map();
+    for (const r of registros) {
+      if (!r.patient_id) continue;
+      if (!_registrosIndex.has(r.patient_id)) _registrosIndex.set(r.patient_id, []);
+      _registrosIndex.get(r.patient_id).push(r);
+    }
+
+    // Notificações
     const totalNovas = registros.reduce((acc, reg) => acc + contarNovasMensagens(reg), 0);
     const criticos = pacientes.filter(p => p.classificacao === 'critico').length;
     const lastMsgCount = Number(localStorage.getItem('pro_last_msg_count') || 0);
@@ -343,13 +438,50 @@ async function carregarDados() {
     localStorage.setItem('pro_last_msg_count', String(totalNovas));
     localStorage.setItem('pro_last_crit_count', String(criticos));
 
-    atualizarEstatisticas();
-    popularFiltrosContexto();
+    // Re-renderizar para mostrar badges de mensagens
     renderizarListaPacientes();
+    console.log('✅ Dados completos (mensagens) carregados em background');
+  } catch (err) {
+    console.warn('Erro ao carregar dados completos em bg:', err);
+  }
+}
 
-  } catch (error) {
-    console.error('Erro ao carregar dados:', error);
-    mostrarErro('Erro: ' + error.message + ' - Verifique o console (F12) para detalhes');
+// Carrega perfil completo + registros completos de um paciente (lazy, on-demand)
+async function carregarDadosCompletosPaciente(patientId) {
+  if (_fullDataCache.has(patientId)) return;
+  try {
+    const [perfilRes, regsRes] = await Promise.all([
+      supabase.from('perfis').select(PERFIS_COLS_FULL).eq('patient_id', patientId).single(),
+      supabase.from('registros').select(REGISTROS_COLS_FULL).eq('patient_id', patientId).order('created_at', { ascending: false })
+    ]);
+
+    if (perfilRes.data) {
+      const idx = pacientes.findIndex(p => p.patient_id === patientId);
+      if (idx >= 0) {
+        const prev = pacientes[idx];
+        pacientes[idx] = { ...prev, ...perfilRes.data, classificacao: prev.classificacao, alertas: prev.alertas, dadosVitais: prev.dadosVitais, dadosGestacionais: prev.dadosGestacionais, ultimoRegistro: prev.ultimoRegistro, historico: prev.historico };
+      }
+    }
+    if (regsRes.data) {
+      // Substituir registros deste paciente pelos completos
+      registros = registros.filter(r => r.patient_id !== patientId);
+      const novos = regsRes.data.map(r => ({
+        ...r,
+        replies_json: normalizarRepliesJson(r),
+        texto: (r.texto && String(r.texto).trim()) ? r.texto : montarTextoPadrao(r)
+      }));
+      registros.push(...novos);
+
+      // Atualizar índice para este paciente
+      _registrosIndex.set(patientId, novos);
+
+      // Re-classificar com dados completos
+      const idx = pacientes.findIndex(p => p.patient_id === patientId);
+      if (idx >= 0) pacientes[idx] = classificarPaciente(pacientes[idx]);
+    }
+    _fullDataCache.add(patientId);
+  } catch (err) {
+    console.warn('Erro ao carregar dados completos do paciente:', err);
   }
 }
 
@@ -357,15 +489,15 @@ async function carregarDados() {
 // CLASSIFICAR PACIENTE (baseado nos REGISTROS)
 // ============================================
 function classificarPaciente(paciente) {
-  // Buscar todos os registros deste paciente
-  const regsDoPC = registros.filter(r => r.patient_id === paciente.patient_id);
+  // Buscar registros via índice (O(1) lookup em vez de O(n) filter)
+  const regsDoPC = _registrosIndex.get(paciente.patient_id) || [];
   const regsOrdenados = regsDoPC.sort((a, b) => new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0));
   const temVitais = r => r && (r.pa_sistolica != null || r.pa_diastolica != null || r.glicemia_mg != null || r.peso_kg != null);
   const ultimoRegClinico = regsOrdenados.find(r => r.tipo !== 'cadastro' && temVitais(r))
     || regsOrdenados.find(r => r.tipo !== 'cadastro')
     || regsOrdenados.find(temVitais)
     || regsOrdenados[0];
-  const ultimoReg = ultimoRegClinico; // Preferir registro clínico para classificação
+  const ultimoReg = ultimoRegClinico;
 
   let classificacao = 'sem_dados';
   let alertas = [];
@@ -688,9 +820,14 @@ function renderizarListaPacientes() {
       isIdoso ? '<span class="badge badge-info">👴 60+</span>' : ''
     ].filter(Boolean).join('');
 
+    const fotoUrl = p.foto_url || '';
+    const avatarHtml = fotoUrl
+      ? `<img src="${escapeHtml(fotoUrl)}" alt="${escapeHtml(inicial)}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'patient-initial\\'>${inicial}</div>'" />`
+      : `<div class="patient-initial">${inicial}</div>`;
+
     return `
       <div class="patient-row ${classe}" ondblclick="selecionarPaciente('${p.patient_id}')" onclick="selecionarPaciente('${p.patient_id}')">
-        <div class="patient-initial">${inicial}</div>
+        ${avatarHtml}
         <div>
           <div class="font-semibold">${p.nome || 'Sem nome'}</div>
           <div class="text-xs text-muted">${subtitulo || 'Sem registro'} ${badgeMsg}</div>
@@ -755,13 +892,25 @@ function filtrarPacientes() {
 // ============================================
 // SELECIONAR PACIENTE
 // ============================================
-function selecionarPaciente(patient_id) {
+async function selecionarPaciente(patient_id) {
   pacienteSelecionado = pacientes.find(p => p.patient_id === patient_id);
   if (!pacienteSelecionado) return;
 
   abrirPainelDetalhe();
 
-  document.getElementById('detailName').textContent = pacienteSelecionado.nome || 'Usuário do SUS';
+  // Carregar dados completos do paciente em background (perfil + registros com texto/replies)
+  carregarDadosCompletosPaciente(patient_id).then(() => {
+    // Atualizar referência após enriquecimento
+    pacienteSelecionado = pacientes.find(p => p.patient_id === patient_id) || pacienteSelecionado;
+  });
+
+  // Update header with photo
+  const fotoUrl = pacienteSelecionado.foto_url || '';
+  const inicialChar = (pacienteSelecionado.nome || 'U').charAt(0).toUpperCase();
+  const fotoHtml = fotoUrl
+    ? `<img src="${escapeHtml(fotoUrl)}" alt="" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.5);" onerror="this.outerHTML='<div style=\\'width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;color:#fff;\\'>${inicialChar}</div>'" />`
+    : `<div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;color:#fff;">${inicialChar}</div>`;
+  document.getElementById('detailName').innerHTML = `<div style="display:flex;align-items:center;gap:12px;">${fotoHtml}<span>${escapeHtml(pacienteSelecionado.nome || 'Usuário do SUS')}</span></div>`;
 
   // Calcular idade e verificar se é idoso
   const idadePac = calcularIdade(pacienteSelecionado.nascimento);
@@ -797,6 +946,10 @@ function selecionarPaciente(patient_id) {
   }
 
   showTab('resumo');
+
+  // Auto-scroll to detail panel
+  const panel = document.getElementById('detailPanel');
+  if (panel) setTimeout(() => panel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
 function abrirPainelDetalhe() {
@@ -1392,9 +1545,98 @@ async function abrirFichaCadastral() {
 // ============================================
 // RENDERIZAR GRÁFICOS
 // ============================================
+let currentPeriodFilter = 'all';
+
+function filtrarPorPeriodo(hist, periodo) {
+  if (periodo === 'all') return hist;
+  const agora = new Date();
+  const dias = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 }[periodo] || 9999;
+  const limite = new Date(agora.getTime() - dias * 86400000);
+  return hist.filter(r => new Date(r.created_at || 0) >= limite);
+}
+
+function criarChartConfig(hist, tipo) {
+  const labels = hist.map(r => formatarDataCurta(r.created_at));
+  const datasets = [
+    {
+      label: 'PA Máxima',
+      data: hist.map(r => r.pa_sistolica || null),
+      backgroundColor: 'rgba(239, 68, 68, 0.6)',
+      borderColor: '#ef4444'
+    },
+    {
+      label: 'PA Mínima',
+      data: hist.map(r => r.pa_diastolica || null),
+      backgroundColor: 'rgba(245, 158, 11, 0.6)',
+      borderColor: '#f59e0b'
+    },
+    {
+      label: 'Peso (kg)',
+      data: hist.map(r => r.peso_kg || null),
+      backgroundColor: 'rgba(34, 197, 94, 0.6)',
+      borderColor: '#22c55e'
+    },
+    {
+      label: 'Glicemia (mg/dL)',
+      data: hist.map(r => r.glicemia_mg || null),
+      type: 'line',
+      borderColor: '#3b82f6',
+      backgroundColor: 'rgba(59, 130, 246, 0.2)',
+      tension: 0.6,
+      cubicInterpolationMode: 'monotone',
+      pointRadius: 4,
+      pointHoverRadius: 7
+    }
+  ];
+
+  const useDatalabels = window.ChartDataLabels != null;
+  const plugins = useDatalabels ? [ChartDataLabels] : [];
+
+  return {
+    type: 'bar',
+    data: { labels, datasets },
+    plugins,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'bottom' },
+        datalabels: useDatalabels ? {
+          display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
+          anchor: 'end',
+          align: 'top',
+          offset: 2,
+          font: { size: 10, weight: '600' },
+          color: (ctx) => ctx.dataset.borderColor || '#333',
+          formatter: (val) => val != null ? val : ''
+        } : false,
+        tooltip: {
+          enabled: true,
+          backgroundColor: 'rgba(15,23,42,0.9)',
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: true,
+          callbacks: {
+            title: (items) => {
+              if (!items.length) return '';
+              const idx = items[0].dataIndex;
+              const reg = hist[idx];
+              return reg?.created_at ? new Date(reg.created_at).toLocaleString('pt-BR') : items[0].label;
+            },
+            label: (item) => ` ${item.dataset.label}: ${item.formattedValue}`
+          }
+        }
+      },
+      scales: { y: { beginAtZero: false } }
+    }
+  };
+}
+
 function renderizarGraficos(container) {
   const p = pacienteSelecionado;
-  const hist = (p.historico || []).slice(0, 30).reverse();
   const histFull = (p.historico || []).slice().reverse();
   const histGest = histFull.filter(r => r.gestacao_semanas && r.peso_kg);
   const isGestante = normalizarSim(p.dadosVitais?.gestante)
@@ -1404,147 +1646,330 @@ function renderizarGraficos(container) {
     || histGest.length > 0;
 
   if (!window.Chart) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>Chart.js não carregado</p></div>`;
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>Chart.js não carregado</p></div>
+    <div style="margin-top:16px;"><button class="btn btn-primary btn-block" onclick="gerarRelatorioPDF()">📄 Baixar Relatório PDF</button></div>`;
     return;
   }
 
-  if (hist.length < 2) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>Dados insuficientes (mínimo 2 registros)</p></div>`;
+  if (histFull.length < 2) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><p>Gráficos precisam de pelo menos 2 registros para serem gerados.<br>Continue alimentando os dados do paciente.</p></div>
+    <div style="margin-top:16px;"><button class="btn btn-primary btn-block" onclick="gerarRelatorioPDF()">📄 Baixar Relatório PDF</button></div>`;
     return;
   }
 
-  const chartWidth = Math.max(600, hist.length * 40);
+  const periodos = [
+    { key: '7d', label: '7 dias' },
+    { key: '30d', label: '30 dias' },
+    { key: '90d', label: '3 meses' },
+    { key: '1y', label: '1 ano' },
+    { key: 'all', label: 'Todo período' }
+  ];
+
   container.innerHTML = `
-    <div class="section-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-      <span>Evolução dos Indicadores (por dia)</span>
-      <button class="btn btn-ghost" style="padding:6px 10px; font-size:12px;" onclick="abrirGraficoExpandido()">Expandir</button>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+      <span class="section-title" style="margin:0;">Período:</span>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        ${periodos.map(p => `<button class="filter-btn ${currentPeriodFilter === p.key ? 'active' : ''}" onclick="setPeriodFilter('${p.key}')" style="padding:6px 12px;font-size:12px;">${p.label}</button>`).join('')}
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <span class="section-title">Evolução dos Indicadores</span>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost" style="padding:6px 10px; font-size:12px;" onclick="expandirGrafico('indicadores')">⛶ Expandir</button>
+      </div>
     </div>
     <div style="height:320px; margin-bottom: 24px; width:100%;">
       <canvas id="healthChart"></canvas>
     </div>
-    <div class="section-title">Atividade Física (Calendário)</div>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+      <span class="section-title">Atividade Física (Calendário)</span>
+      <button class="btn btn-ghost" style="padding:6px 10px; font-size:12px;" onclick="expandirGrafico('atividade')">⛶ Expandir</button>
+    </div>
     <div id="activityChartContainer" style="min-height:260px; width:100%;"></div>
     ${isGestante && histGest.length >= 2 ? `
-      <div class="section-title mt-4">Curva de Ganho de Peso Gestacional</div>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px;">
+        <span class="section-title">Curva de Ganho de Peso Gestacional</span>
+        <button class="btn btn-ghost" style="padding:6px 10px; font-size:12px;" onclick="expandirGrafico('gestacional')">⛶ Expandir</button>
+      </div>
       <div style="height:300px; width:100%;"><canvas id="gestChart"></canvas></div>
     ` : ''}
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary btn-block" onclick="gerarRelatorioPDF()">📄 Baixar Relatório PDF</button>
+    </div>
   `;
+
+  const hist = filtrarPorPeriodo(histFull, currentPeriodFilter);
 
   if (chartInstance) chartInstance.destroy();
   if (activityChartInstance) activityChartInstance.destroy();
 
-  const ctx = document.getElementById('healthChart').getContext('2d');
+  if (hist.length >= 2) {
+    const ctx = document.getElementById('healthChart').getContext('2d');
+    chartInstance = new Chart(ctx, criarChartConfig(hist, 'main'));
+  } else {
+    document.getElementById('healthChart').parentElement.innerHTML = '<div class="empty-state"><p>Sem dados no período selecionado</p></div>';
+  }
 
-  chartInstance = new Chart(ctx, {
-    type: 'bar',
+  // Atividade física — calendário
+  renderizarAtividadeCalendario();
+
+  if (isGestante && histGest.length >= 2) {
+    renderizarGraficoGestacional(histGest, p);
+  }
+
+  window.__histFullForChart = histFull;
+  window.__histGestForChart = histGest;
+}
+
+function renderizarGraficoGestacional(histGest, p) {
+  const ctxEl = document.getElementById('gestChart');
+  if (!ctxEl) return;
+  const imcInfo = calcularClasseIMC(p) || { classIMC: 'EUTROFIA', imc: 0 };
+  const curva = CURVA_PESO_GESTACIONAL[imcInfo.classIMC] || CURVA_PESO_GESTACIONAL.EUTROFIA;
+  const pesoInicial = parseFloat(p.peso_inicial) || parseFloat(histGest[0]?.peso_kg) || 0;
+  const labels = histGest.map(r => `Sem ${r.gestacao_semanas}`);
+  const ganhoReal = histGest.map(r => (parseFloat(r.peso_kg) - pesoInicial) || null);
+  const ganhoMin = histGest.map(r => (curva.min * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
+  const ganhoMax = histGest.map(r => (curva.max * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
+
+  const useDatalabels = window.ChartDataLabels != null;
+  const gestPlugins = useDatalabels ? [ChartDataLabels] : [];
+
+  const ctxGest = ctxEl.getContext('2d');
+  new Chart(ctxGest, {
+    type: 'line',
+    plugins: gestPlugins,
     data: {
-      labels: hist.map(r => formatarDataCurta(r.created_at)),
+      labels,
       datasets: [
         {
-          label: 'PA Máxima',
-          data: hist.map(r => r.pa_sistolica || null),
-          backgroundColor: 'rgba(239, 68, 68, 0.6)',
-          borderColor: '#ef4444'
-        },
-        {
-          label: 'PA Mínima',
-          data: hist.map(r => r.pa_diastolica || null),
-          backgroundColor: 'rgba(245, 158, 11, 0.6)',
-          borderColor: '#f59e0b'
-        },
-        {
-          label: 'Peso (kg)',
-          data: hist.map(r => r.peso_kg || null),
-          backgroundColor: 'rgba(34, 197, 94, 0.6)',
-          borderColor: '#22c55e'
-        },
-        {
-          label: 'Glicemia (mg/dL)',
-          data: hist.map(r => r.glicemia_mg || null),
-          type: 'line',
+          label: 'Ganho Real (kg)',
+          data: ganhoReal,
           borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.2)',
+          backgroundColor: 'rgba(59, 130, 246, 0.15)',
           tension: 0.6,
-          lineTension: 0.6,
-          cubicInterpolationMode: 'monotone',
-          borderJoinStyle: 'round',
-          borderCapStyle: 'round',
-          pointRadius: 3
+          pointRadius: 4,
+          pointHoverRadius: 7
+        },
+        {
+          label: 'Ganho Mín. Esperado (kg)',
+          data: ganhoMin,
+          borderColor: '#16a34a',
+          backgroundColor: 'rgba(22, 163, 74, 0.08)',
+          tension: 0.4,
+          pointRadius: 0
+        },
+        {
+          label: 'Ganho Máx. Esperado (kg)',
+          data: ganhoMax,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.08)',
+          tension: 0.4,
+          pointRadius: 0
         }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: true, position: 'bottom' } },
-      elements: {
-        line: {
-          tension: 0.6
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: true, position: 'bottom' },
+        datalabels: useDatalabels ? {
+          display: (ctx) => ctx.datasetIndex === 0 && ctx.dataset.data[ctx.dataIndex] != null,
+          anchor: 'end',
+          align: 'top',
+          offset: 2,
+          font: { size: 10, weight: '600' },
+          color: '#3b82f6',
+          formatter: (val) => val != null ? Number(val).toFixed(1) : ''
+        } : false,
+        tooltip: {
+          enabled: true,
+          backgroundColor: 'rgba(15,23,42,0.9)',
+          titleFont: { size: 14, weight: 'bold' },
+          bodyFont: { size: 13 },
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: true,
+          callbacks: {
+            label: (item) => ` ${item.dataset.label}: ${item.formattedValue} kg`
+          }
         }
       },
-      scales: { y: { beginAtZero: false } }
+      scales: { y: { beginAtZero: true } }
     }
   });
+}
+
+function setPeriodFilter(periodo) {
+  currentPeriodFilter = periodo;
+  const content = document.getElementById('detailContent');
+  if (content) renderizarGraficos(content);
+}
+
+// ============================================
+// EXPANDIR GRÁFICOS EM MODAL
+// ============================================
+let expandedChartInstance = null;
+
+function expandirGrafico(tipo) {
+  let modal = document.getElementById('expandedChartModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'expandedChartModal';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; padding:16px; z-index:11000;';
+    modal.innerHTML = `
+      <div style="background:#fff; width:min(1100px, 96vw); height:min(85vh, 900px); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div id="expandedChartTitle" style="font-weight:700;"></div>
+          <button class="btn btn-ghost" onclick="fecharGraficoExpandido()">✕ Fechar</button>
+        </div>
+        <div id="expandedChartBody" style="flex:1; min-height:0; overflow:auto;"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+
+  modal.style.display = 'flex';
+  const title = document.getElementById('expandedChartTitle');
+  const body = document.getElementById('expandedChartBody');
+  if (expandedChartInstance) { expandedChartInstance.destroy(); expandedChartInstance = null; }
+
+  if (tipo === 'indicadores') {
+    title.textContent = 'Evolução dos Indicadores (período completo)';
+    body.innerHTML = '<canvas id="healthChartExpanded" style="width:100%; height:100%;"></canvas>';
+    const histFull = window.__histFullForChart || [];
+    const ctx = document.getElementById('healthChartExpanded').getContext('2d');
+    expandedChartInstance = new Chart(ctx, criarChartConfig(histFull, 'expanded'));
+  } else if (tipo === 'atividade') {
+    title.textContent = 'Atividade Física (Calendário completo)';
+    body.innerHTML = '';
+    renderizarAtividadeCalendarioExpandido(body);
+  } else if (tipo === 'gestacional') {
+    title.textContent = 'Curva de Ganho de Peso Gestacional (completo)';
+    body.innerHTML = '<canvas id="gestChartExpanded" style="width:100%; height:100%;"></canvas>';
+    const histGest = window.__histGestForChart || [];
+    const p = pacienteSelecionado;
+    if (histGest.length >= 2 && p) {
+      const imcInfo = calcularClasseIMC(p) || { classIMC: 'EUTROFIA', imc: 0 };
+      const curva = CURVA_PESO_GESTACIONAL[imcInfo.classIMC] || CURVA_PESO_GESTACIONAL.EUTROFIA;
+      const pesoInicial = parseFloat(p.peso_inicial) || parseFloat(histGest[0]?.peso_kg) || 0;
+      const labels = histGest.map(r => `Sem ${r.gestacao_semanas}`);
+      const ganhoReal = histGest.map(r => (parseFloat(r.peso_kg) - pesoInicial) || null);
+      const ganhoMin = histGest.map(r => (curva.min * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
+      const ganhoMax = histGest.map(r => (curva.max * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
+      const ctx = document.getElementById('gestChartExpanded').getContext('2d');
+      const useDL = window.ChartDataLabels != null;
+      expandedChartInstance = new Chart(ctx, {
+        type: 'line',
+        plugins: useDL ? [ChartDataLabels] : [],
+        data: {
+          labels,
+          datasets: [
+            { label: 'Ganho Real (kg)', data: ganhoReal, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.15)', tension: 0.6, pointRadius: 4, pointHoverRadius: 7 },
+            { label: 'Ganho Mín. (kg)', data: ganhoMin, borderColor: '#16a34a', tension: 0.4, pointRadius: 0 },
+            { label: 'Ganho Máx. (kg)', data: ganhoMax, borderColor: '#f59e0b', tension: 0.4, pointRadius: 0 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'bottom' },
+            datalabels: useDL ? { display: (ctx) => ctx.datasetIndex === 0 && ctx.dataset.data[ctx.dataIndex] != null, anchor: 'end', align: 'top', font: { size: 10, weight: '600' }, color: '#3b82f6', formatter: (v) => v != null ? Number(v).toFixed(1) : '' } : false,
+            tooltip: { enabled: true, backgroundColor: 'rgba(15,23,42,0.9)', padding: 12, cornerRadius: 8 }
+          },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+  }
+}
+
+function renderizarAtividadeCalendarioExpandido(container) {
+  const p = pacienteSelecionado;
+  const histFull = (p.historico || []).slice().reverse();
+  const dataMap = {};
+  histFull.forEach(r => {
+    if (!r.created_at) return;
+    const d = r.created_at.substring(0, 10);
+    dataMap[d] = !!(r.atividade_fisica && r.atividade_fisica !== 'nenhuma');
+  });
+  if (Object.keys(dataMap).length === 0) {
+    container.innerHTML = '<div class="empty-state"><p>Sem registros de atividade</p></div>';
+    return;
+  }
+  const dates = Object.keys(dataMap).sort();
+  const firstDate = new Date(dates[0] + 'T00:00:00');
+  const lastDate = new Date(dates[dates.length - 1] + 'T00:00:00');
+  const start = new Date(firstDate);
+  const dow0 = (start.getDay() + 6) % 7;
+  start.setDate(start.getDate() - dow0);
+  const end = new Date(lastDate);
+  const dow1 = (end.getDay() + 6) % 7;
+  if (dow1 < 6) end.setDate(end.getDate() + (6 - dow1));
+  const weeks = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      const key = cur.toISOString().substring(0, 10);
+      const inRange = cur >= firstDate && cur <= lastDate;
+      const hasRecord = Object.prototype.hasOwnProperty.call(dataMap, key);
+      week.push({ date: new Date(cur), key, inRange, hasRecord, ativo: hasRecord ? dataMap[key] : null });
+      cur.setDate(cur.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+  const dayLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const monthNames = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const cellSize = 22;
+  const gap = 4;
+  const monthLabels = weeks.map((week, i) => {
+    const d = week[0].date;
+    if (i === 0 || d.getDate() <= 7) return monthNames[d.getMonth()];
+    return '';
+  });
+  const totalActive = Object.values(dataMap).filter(Boolean).length;
+  const totalInactive = Object.values(dataMap).filter(v => v === false).length;
+  container.innerHTML = `
+    <div style="overflow-x:auto;padding:12px;">
+      <div style="display:flex;gap:${gap}px;margin-bottom:6px;margin-left:36px;">
+        ${monthLabels.map(m => `<div style="width:${cellSize}px;font-size:10px;color:#64748b;text-align:center;">${m}</div>`).join('')}
+      </div>
+      <div style="display:flex;gap:${gap}px;">
+        <div style="display:flex;flex-direction:column;gap:${gap}px;margin-right:4px;">
+          ${dayLabels.map(l => `<div style="height:${cellSize}px;font-size:10px;color:#64748b;width:32px;display:flex;align-items:center;">${l}</div>`).join('')}
+        </div>
+        ${weeks.map(week => `
+          <div style="display:flex;flex-direction:column;gap:${gap}px;">
+            ${week.map(day => {
+              let bg = '#f1f5f9', title = '';
+              if (day.inRange && day.hasRecord) { bg = day.ativo ? '#22c55e' : '#ef4444'; title = day.ativo ? '✓ Com atividade' : '✗ Sem atividade'; }
+              else if (day.inRange) { bg = '#e2e8f0'; title = 'Sem registro'; }
+              const lbl = `${day.date.getDate()}/${day.date.getMonth()+1}`;
+              return `<div title="${lbl}${title ? ' — ' + title : ''}" style="width:${cellSize}px;height:${cellSize}px;background:${bg};border-radius:4px;"></div>`;
+            }).join('')}
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;margin-top:12px;font-size:12px;color:#475569;">
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:14px;background:#22c55e;border-radius:3px;"></div> Com atividade (${totalActive})</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:14px;background:#ef4444;border-radius:3px;"></div> Sem atividade (${totalInactive})</div>
+        <div style="display:flex;align-items:center;gap:4px;"><div style="width:14px;height:14px;background:#e2e8f0;border-radius:3px;"></div> Sem registro</div>
+      </div>
+    </div>
+  `;
+}
+
+function fecharGraficoExpandido() {
+  const modal = document.getElementById('expandedChartModal');
+  if (modal) modal.style.display = 'none';
+  if (expandedChartInstance) { expandedChartInstance.destroy(); expandedChartInstance = null; }
+}
 
   // Atividade física — calendário
   renderizarAtividadeCalendario();
-
-  if (isGestante && histGest.length >= 2) {
-    const imcInfo = calcularClasseIMC(p) || { classIMC: 'EUTROFIA', imc: 0 };
-    const curva = CURVA_PESO_GESTACIONAL[imcInfo.classIMC] || CURVA_PESO_GESTACIONAL.EUTROFIA;
-    const pesoInicial = parseFloat(p.peso_inicial) || parseFloat(histGest[0]?.peso_kg) || 0;
-    const labels = histGest.map(r => `Sem ${r.gestacao_semanas}`);
-    const ganhoReal = histGest.map(r => (parseFloat(r.peso_kg) - pesoInicial) || null);
-    const ganhoMin = histGest.map(r => (curva.min * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
-    const ganhoMax = histGest.map(r => (curva.max * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
-
-    const ctxGest = document.getElementById('gestChart').getContext('2d');
-    new Chart(ctxGest, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [
-          {
-            label: 'Ganho Real (kg)',
-            data: ganhoReal,
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.15)',
-            tension: 0.6,
-            lineTension: 0.6,
-            cubicInterpolationMode: 'monotone',
-            borderJoinStyle: 'round',
-            borderCapStyle: 'round',
-            pointRadius: 3
-          },
-          {
-            label: 'Ganho Mín. Esperado (kg)',
-            data: ganhoMin,
-            borderColor: '#16a34a',
-            backgroundColor: 'rgba(22, 163, 74, 0.08)',
-            tension: 0.4,
-            pointRadius: 0
-          },
-          {
-            label: 'Ganho Máx. Esperado (kg)',
-            data: ganhoMax,
-            borderColor: '#f59e0b',
-            backgroundColor: 'rgba(245, 158, 11, 0.08)',
-            tension: 0.4,
-            pointRadius: 0
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: true, position: 'bottom' } },
-        scales: { y: { beginAtZero: true } }
-      }
-    });
-  }
-
-  prepararModalGraficoExpandido(histFull);
-}
 
 function renderizarAtividadeCalendario() {
   const p = pacienteSelecionado;
@@ -1641,103 +2066,6 @@ function renderizarAtividadeCalendario() {
       </div>
     </div>
   `;
-}
-
-function prepararModalGraficoExpandido(histFull) {
-  let modal = document.getElementById('expandedChartModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'expandedChartModal';
-    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; padding:16px; z-index:11000;';
-    modal.innerHTML = `
-      <div style="background:#fff; width:min(1100px, 96vw); height:min(85vh, 900px); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:12px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-          <div style="font-weight:700;">Evolução dos Indicadores (período completo)</div>
-          <button class="btn btn-ghost" onclick="fecharGraficoExpandido()">Fechar</button>
-        </div>
-        <div style="flex:1; min-height:0;">
-          <canvas id="healthChartExpanded" style="width:100%; height:100%;"></canvas>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-  }
-
-  window.__histFullForChart = histFull;
-}
-
-function abrirGraficoExpandido() {
-  const modal = document.getElementById('expandedChartModal');
-  if (!modal) return;
-  modal.style.display = 'flex';
-  renderizarGraficoExpandido();
-}
-
-function fecharGraficoExpandido() {
-  const modal = document.getElementById('expandedChartModal');
-  if (modal) modal.style.display = 'none';
-}
-
-let expandedChartInstance = null;
-
-function renderizarGraficoExpandido() {
-  const histFull = window.__histFullForChart || [];
-  const canvas = document.getElementById('healthChartExpanded');
-  if (!canvas || !window.Chart) return;
-
-  if (expandedChartInstance) expandedChartInstance.destroy();
-
-  const ctx = canvas.getContext('2d');
-  expandedChartInstance = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: histFull.map(r => formatarDataCurta(r.created_at)),
-      datasets: [
-        {
-          label: 'PA Máxima',
-          data: histFull.map(r => r.pa_sistolica || null),
-          backgroundColor: 'rgba(239, 68, 68, 0.6)',
-          borderColor: '#ef4444'
-        },
-        {
-          label: 'PA Mínima',
-          data: histFull.map(r => r.pa_diastolica || null),
-          backgroundColor: 'rgba(245, 158, 11, 0.6)',
-          borderColor: '#f59e0b'
-        },
-        {
-          label: 'Peso (kg)',
-          data: histFull.map(r => r.peso_kg || null),
-          backgroundColor: 'rgba(34, 197, 94, 0.6)',
-          borderColor: '#22c55e'
-        },
-        {
-          label: 'Glicemia (mg/dL)',
-          data: histFull.map(r => r.glicemia_mg || null),
-          type: 'line',
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.2)',
-          tension: 0.6,
-          lineTension: 0.6,
-          cubicInterpolationMode: 'monotone',
-          borderJoinStyle: 'round',
-          borderCapStyle: 'round',
-          pointRadius: 3
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: true, position: 'bottom' } },
-      elements: {
-        line: {
-          tension: 0.6
-        }
-      },
-      scales: { y: { beginAtZero: false } }
-    }
-  });
 }
 
 // ============================================
@@ -2453,6 +2781,221 @@ async function fetchValoresPanicoGlobais() {
     glicemia_min: data.meta_glicemia_min
   };
 }
+// ============================================
+// RELATÓRIO PDF
+// ============================================
+async function gerarRelatorioPDF() {
+  const p = pacienteSelecionado;
+  if (!p) return alert('Selecione um paciente primeiro.');
+
+  const { jsPDF } = window.jspdf || {};
+  if (!jsPDF) return alert('Biblioteca jsPDF não carregada.');
+
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pageW = doc.internal.pageSize.getWidth();
+  let y = 15;
+
+  const addText = (text, x, size, style, color) => {
+    doc.setFontSize(size || 12);
+    doc.setFont('helvetica', style || 'normal');
+    doc.setTextColor(...(color || [30, 30, 30]));
+    doc.text(text, x || 14, y);
+  };
+
+  const addLine = () => { doc.setDrawColor(200, 200, 200); doc.line(14, y, pageW - 14, y); y += 4; };
+  const checkPage = (need) => { if (y + need > 275) { doc.addPage(); y = 15; } };
+
+  // Header
+  doc.setFillColor(22, 101, 52);
+  doc.rect(0, 0, pageW, 30, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Tecendo Saúde - Relatório do Paciente', 14, 12);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 20);
+  doc.text(`Profissional: ${profissionalAtual?.nome || profissionalAtual?.enfermeira || '-'}`, 14, 26);
+  y = 40;
+
+  // Patient info
+  addText(p.nome || 'Sem nome', 14, 16, 'bold');
+  y += 8;
+  const idade = calcularIdade(p.nascimento);
+  addText(`CPF: ${p.cpf || '-'}  |  Nascimento: ${p.nascimento || '-'}  |  ${idade}`, 14, 10, 'normal', [80, 80, 80]);
+  y += 5;
+  addText(`Gênero: ${p.genero || '-'}  |  UBS: ${p.ubs_referencia || '-'}  |  Equipe: ${p.equipe_ubs || '-'}`, 14, 10, 'normal', [80, 80, 80]);
+  y += 5;
+  addText(`Endereço: ${p.endereco || '-'}  |  Telefone: ${p.telefone || '-'}`, 14, 10, 'normal', [80, 80, 80]);
+  y += 7;
+  addLine();
+
+  // Classification
+  const classLabel = { critico: 'CRÍTICO', atencao: 'ATENÇÃO', estavel: 'ESTÁVEL', sem_dados: 'SEM DADOS' };
+  const classColor = { critico: [220, 38, 38], atencao: [217, 119, 6], estavel: [22, 163, 74], sem_dados: [100, 100, 100] };
+  checkPage(15);
+  addText('Classificação: ', 14, 12, 'bold');
+  doc.setTextColor(...(classColor[p.classificacao] || [100, 100, 100]));
+  doc.text(classLabel[p.classificacao] || 'SEM DADOS', 50, y);
+  y += 7;
+
+  // Alerts
+  if (p.alertas && p.alertas.length > 0) {
+    addText('Alertas:', 14, 11, 'bold', [180, 50, 50]);
+    y += 5;
+    p.alertas.forEach(a => {
+      checkPage(6);
+      addText(`  • ${a}`, 14, 9, 'normal', [120, 50, 50]);
+      y += 5;
+    });
+    y += 3;
+  }
+
+  addLine();
+
+  // Vital signs
+  checkPage(20);
+  addText('Dados Vitais (último registro)', 14, 13, 'bold');
+  y += 7;
+  const v = p.dadosVitais || {};
+  const vitals = [
+    ['Pressão Arterial', v.pa_sistolica ? `${v.pa_sistolica}/${v.pa_diastolica || '-'} mmHg` : '-'],
+    ['Glicemia', v.glicemia ? `${v.glicemia} mg/dL` : '-'],
+    ['Peso', v.peso ? `${v.peso} kg` : '-'],
+    ['Atividade Física', v.atividade_fisica || '-'],
+    ['Último Registro', v.data ? formatarData(v.data) : '-']
+  ];
+  vitals.forEach(([label, val]) => {
+    checkPage(6);
+    addText(`${label}: `, 14, 10, 'bold', [50, 50, 50]);
+    doc.setFont('helvetica', 'normal');
+    doc.text(val, 60, y);
+    y += 5;
+  });
+  y += 3;
+  addLine();
+
+  // Conditions
+  checkPage(20);
+  addText('Condições de Saúde', 14, 13, 'bold');
+  y += 7;
+  const conditions = [
+    ['Hipertensão', p.hipertensao || 'Não informado'],
+    ['Diabetes', p.diabetes || 'Não informado'],
+    ['Dependências', p.dependencias || 'Nenhum relato'],
+    ['Gestante', normalizarSim(p.gestante) ? 'Sim' : 'Não']
+  ];
+  conditions.forEach(([label, val]) => {
+    checkPage(6);
+    addText(`${label}: ${val}`, 14, 10, 'normal', [50, 50, 50]);
+    y += 5;
+  });
+  y += 3;
+  addLine();
+
+  // Gestational data
+  if (p.dadosGestacionais) {
+    checkPage(25);
+    const g = p.dadosGestacionais;
+    addText('Acompanhamento Gestacional', 14, 13, 'bold');
+    y += 7;
+    addText(`Semanas: ${g.semanas || '-'}  |  Ganho: ${g.ganho} kg  |  IMC inicial: ${g.imc}`, 14, 10, 'normal', [50, 50, 50]);
+    y += 5;
+    addText(`Faixa esperada: ${g.ganhoMin} - ${g.ganhoMax} kg  |  Status: ${g.mensagem}`, 14, 10, 'normal', [50, 50, 50]);
+    y += 7;
+    addLine();
+  }
+
+  // History table
+  const historico = (p.historico || []).slice(0, 30);
+  if (historico.length > 0) {
+    checkPage(20);
+    addText('Histórico de Registros (últimos 30)', 14, 13, 'bold');
+    y += 7;
+
+    // Table header
+    doc.setFillColor(240, 242, 245);
+    doc.rect(14, y - 3, pageW - 28, 7, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Data', 16, y + 1);
+    doc.text('PA', 50, y + 1);
+    doc.text('Glicemia', 80, y + 1);
+    doc.text('Peso', 110, y + 1);
+    doc.text('Atividade', 135, y + 1);
+    y += 8;
+
+    historico.forEach((r, i) => {
+      checkPage(6);
+      if (i % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(14, y - 3, pageW - 28, 6, 'F'); }
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(70, 70, 70);
+      doc.text(r.created_at ? formatarDataCurta(r.created_at) : '-', 16, y);
+      doc.text(r.pa_sistolica ? `${r.pa_sistolica}/${r.pa_diastolica || '-'}` : '-', 50, y);
+      doc.text(r.glicemia_mg ? `${r.glicemia_mg}` : '-', 80, y);
+      doc.text(r.peso_kg ? `${r.peso_kg} kg` : '-', 110, y);
+      doc.text(r.atividade_fisica || '-', 135, y);
+      y += 6;
+    });
+    y += 3;
+  }
+
+  // Capture chart as image
+  const chartCanvas = document.getElementById('healthChart');
+  if (chartCanvas) {
+    checkPage(80);
+    addText('Gráfico de Indicadores', 14, 13, 'bold');
+    y += 5;
+    try {
+      const imgData = chartCanvas.toDataURL('image/png');
+      const ratio = chartCanvas.width / chartCanvas.height;
+      const imgW = pageW - 28;
+      const imgH = imgW / ratio;
+      doc.addImage(imgData, 'PNG', 14, y, imgW, Math.min(imgH, 70));
+      y += Math.min(imgH, 70) + 5;
+    } catch { }
+  } else {
+    // Sem gráfico — informar no PDF
+    checkPage(20);
+    addText('Gráfico de Indicadores', 14, 13, 'bold');
+    y += 7;
+    addText('Gráficos precisam de pelo menos 2 registros para serem gerados.', 14, 10, 'italic', [120, 120, 120]);
+    y += 5;
+    addText('Continue alimentando os dados do paciente para visualizar a evolução.', 14, 10, 'italic', [120, 120, 120]);
+    y += 7;
+  }
+
+  // Gestational chart
+  const gestCanvas = document.getElementById('gestChart');
+  if (gestCanvas) {
+    checkPage(80);
+    addText('Curva de Peso Gestacional', 14, 13, 'bold');
+    y += 5;
+    try {
+      const imgData = gestCanvas.toDataURL('image/png');
+      const ratio = gestCanvas.width / gestCanvas.height;
+      const imgW = pageW - 28;
+      const imgH = imgW / ratio;
+      doc.addImage(imgData, 'PNG', 14, y, imgW, Math.min(imgH, 70));
+      y += Math.min(imgH, 70) + 5;
+    } catch { }
+  }
+
+  // Footer on each page
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`Tecendo Saúde - Página ${i}/${totalPages}`, pageW / 2, 290, { align: 'center' });
+  }
+
+  const nomeArquivo = `relatorio_${(p.nome || 'paciente').replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.pdf`;
+  doc.save(nomeArquivo);
+}
+
 // ============================================
 // UTILITÁRIOS
 // ============================================

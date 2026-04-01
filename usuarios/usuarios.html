@@ -10,6 +10,8 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script src="../env/env.js"></script>
 <script src="../js/config.js"></script>
 <script src="../js/utils.js"></script>
@@ -59,6 +61,12 @@
 <script type="text/babel" src="../js/components.js"></script>
 <script type="text/babel">
 const IS_PROFISSIONAL = window.location.hash === '#profissional';
+
+// Register Service Worker for mobile notifications
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('../sw.js').catch(() => {});
+}
+
 const AUTO_REPLY_TEXT = 'Olá! 😊 Recebemos sua solicitação e estamos acompanhando suas informações. Em breve, um profissional da UBS entrará em contato para prestar o atendimento necessário 🩺';
 
 const getReadKey = (registro_id, ultimaData) => `read_${registro_id || 'sem'}_${ultimaData || 'sem'}`;
@@ -67,6 +75,10 @@ const isRead = (registro_id, ultimaData) => {
 };
 
 const notifyUser = async (title, body, tag) => {
+  // Vibrate on mobile devices
+  if ('vibrate' in navigator) {
+    try { navigator.vibrate([200, 100, 200, 100, 300]); } catch {}
+  }
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch { return; }
@@ -76,9 +88,16 @@ const notifyUser = async (title, body, tag) => {
   const last = Number(localStorage.getItem(key) || 0);
   if (last && (Date.now() - last) < 60000) return;
   try {
-    new Notification(title, { body, icon: '../img/logo.png', tag });
+    // Try Service Worker notification first (works better on mobile)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag, icon: '../img/logo.png' });
+    } else {
+      new Notification(title, { body, icon: '../img/logo.png', tag, requireInteraction: true, silent: false });
+    }
     localStorage.setItem(key, String(Date.now()));
-  } catch {}
+  } catch {
+    try { new Notification(title, { body, icon: '../img/logo.png', tag }); localStorage.setItem(key, String(Date.now())); } catch {}
+  }
 };
 
 const isCriticalHealth = (pa, glicemia) => (pa && pa >= 160) || (glicemia && glicemia >= 200) || (glicemia && glicemia < 70);
@@ -155,6 +174,7 @@ const syncRegistrosSupabase = async (patient_id) => {
         pa_diastolica: r.pa_diastolica,
         peso_kg: r.peso_kg,
         glicemia_mg: r.glicemia_mg,
+        glicemia_jejum: r.glicemia_jejum || null,
         gestante: r.gestante || null,
         gestacao_semanas: r.gestacao_semanas ?? null,
         atividade_fisica: r.atividade_fisica || '',
@@ -188,6 +208,7 @@ const enviarRegistroSupabase = async (registro) => {
       pa_diastolica: registro.pa_diastolica,
       peso_kg: registro.peso_kg,
       glicemia_mg: registro.glicemia_mg,
+      glicemia_jejum: registro.glicemia_jejum || null,
       gestante: registro.gestante || null,
       gestacao_semanas: registro.gestacao_semanas ?? null,
       atividade_fisica: registro.atividade_fisica || null,
@@ -258,13 +279,10 @@ const PatientLogin = ({onLogin, onBack}) => {
     setChecking(true); setMsg('Verificando...');
     const clean = cpf.replace(/\D/g,'');
     const local = await db.perfil.where('cpf').equals(clean).first();
-    console.log({ local, online: navigator.onLine });
     if(local && navigator.onLine){
       try {
         const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
-        console.log(data)
         if(data){
-          console.log(data)
           await db.perfil.put({ ...local, ...data, patient_id: data.patient_id || local.patient_id, synced: 1 });
           setTimeout(()=>onLogin(clean, { ...local, ...data }),300);
         } else { setTimeout(()=>onLogin(clean, local),300); }
@@ -273,13 +291,22 @@ const PatientLogin = ({onLogin, onBack}) => {
       setTimeout(()=>onLogin(clean, local),300);
     } else if(navigator.onLine){
       try {
-
         const { data } = await supabase.from('perfis').select('*').eq('cpf', clean).maybeSingle();
-        
-        console.log({ ...data, patient_id: data.patient_id, synced: 1 })
-
-        if(data){ await db.perfil.add({ ...data, patient_id: data.patient_id, synced: 1 }); setTimeout(()=>onLogin(clean, data),300); }
-        else { setMsg('CPF não encontrado.'); }
+        if(data){
+          await db.perfil.add({ ...data, patient_id: data.patient_id, synced: 1 });
+          setTimeout(()=>onLogin(clean, data),300);
+        } else {
+          // Not in perfis — check profissionais
+          const { data: pro } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
+          if(pro){
+            // Professional found — redirect to FichaMedica with pre-filled data
+            sessionStorage.setItem('autocadastro_pro', JSON.stringify(pro));
+            setMsg('Profissional encontrado! Redirecionando para cadastro...');
+            setTimeout(() => { window.location.href = '../profissionais/profissionais.html?autocadastro=1'; }, 800);
+          } else {
+            setMsg('CPF não encontrado. Solicite ao profissional o seu cadastro.');
+          }
+        }
       } catch { setMsg('Erro de conexão.'); }
     } else { setMsg('Offline: CPF não encontrado.'); }
     setChecking(false);
@@ -310,6 +337,36 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
   const isGestante = isSim(user.gestante) || temDadosGestacao;
   const mostrarGestacao = isGestante && !isHomem;
   const mostrarCrianca = temFilhos;
+
+  const [diasInativo, setDiasInativo] = useState(0);
+  const [mostrarAlertaInatividade, setMostrarAlertaInatividade] = useState(false);
+  const DIAS_LIMITE_INATIVIDADE = 7;
+
+  useEffect(() => {
+    const verificarInatividade = async () => {
+      const patientId = user.patient_id || 'cpf-' + user.cpf;
+      try {
+        const regs = await db.registros.where('patient_id').equals(patientId).toArray();
+        const monitors = regs.filter(r => (r.tipo || 'monitoramento') === 'monitoramento' || r.pa_sistolica || r.glicemia_mg);
+        if (!monitors.length) {
+          setDiasInativo(999);
+          setMostrarAlertaInatividade(true);
+          notifyUser('Tecendo Saúde', 'Você ainda não registrou nenhum monitoramento. Atualize seus dados de saúde!', 'inatividade_' + patientId);
+          return;
+        }
+        monitors.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        const ultimo = monitors[0];
+        const diffMs = Date.now() - new Date(ultimo.created_at || 0).getTime();
+        const diffDias = Math.floor(diffMs / 86400000);
+        setDiasInativo(diffDias);
+        if (diffDias >= DIAS_LIMITE_INATIVIDADE) {
+          setMostrarAlertaInatividade(true);
+          notifyUser('Tecendo Saúde - Lembrete', `Faz ${diffDias} dias que você não atualiza seus dados. Registre sua pressão e glicemia!`, 'inatividade_' + patientId + '_' + new Date().toISOString().slice(0,10));
+        }
+      } catch {}
+    };
+    verificarInatividade();
+  }, [user]);
   
   return (
     <div className="p-6 fade-in">
@@ -324,12 +381,33 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
         <div className="text-sm font-bold text-emerald-800 mb-1">🔔 Lembrete diário</div>
         <div className="text-xs text-emerald-700">Verifique sua saúde e atualize seu monitoramento.</div>
       </div>
+      {mostrarAlertaInatividade && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-4 animate-pulse">
+          <div className="flex items-start gap-3">
+            <div className="text-3xl">⚠️</div>
+            <div>
+              <div className="font-extrabold text-red-800 text-sm">
+                {diasInativo >= 999 ? 'Você ainda não registrou nenhum monitoramento!' : `Faz ${diasInativo} dias sem atualizar seus dados!`}
+              </div>
+              <div className="text-xs text-red-600 mt-1">Registre sua pressão, glicemia e peso para acompanharmos sua saúde.</div>
+              <button onClick={() => onSelect('saude')} className="mt-2 bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold">
+                REGISTRAR AGORA →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="section-title">O que você deseja fazer?</div>
       <div className="space-y-3">
         <button className="big-btn" onClick={() => onSelect('saude')}>
           <div className="big-btn-icon bg-emerald-100">❤️</div>
           <div className="font-bold text-lg text-slate-800">Pressão e Glicemia</div>
           <div className="text-gray-400 text-sm">Registre PA, peso, glicemia</div>
+        </button>
+        <button className="big-btn" onClick={() => onSelect('monitoramento')}>
+          <div className="big-btn-icon bg-indigo-100">📊</div>
+          <div className="font-bold text-lg text-slate-800">Meu Monitoramento</div>
+          <div className="text-gray-400 text-sm">Veja seus gráficos e evolução</div>
         </button>
         {mostrarGestacao && (
           <button className="big-btn" onClick={() => onSelect('gestacao')}>
@@ -372,6 +450,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
   const [peso, setPeso] = useState('');
   const [glicemia, setGlicemia] = useState('');
   const [atividade, setAtividade] = useState([]);
+  const [glicemiaJejum, setGlicemiaJejum] = useState('');
   const [lastAt, setLastAt] = useState(null);
   const [saving, setSaving] = useState(false);
   
@@ -456,8 +535,9 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
     try {
       const rid = uuidv4(), now = new Date().toISOString();
       const gestacaoInfo = await calcularGestacaoDinamicaRegistro(patientKey, now);
-      const localId = await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
-      await enviarRegistroSupabase({ id: localId, registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
+      const jejumVal = glicemiaJejum || null;
+      const localId = await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}${jejumVal ? (jejumVal === 'jejum' ? ' (jejum)' : ' (pós-refeição)') : ''}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, glicemia_jejum: jejumVal, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
+      await enviarRegistroSupabase({ id: localId, registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}${jejumVal ? (jejumVal === 'jejum' ? ' (jejum)' : ' (pós-refeição)') : ''}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, glicemia_jejum: jejumVal, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
       await syncRegistrosSupabase(patientKey);
       setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade: atividadeConcatenada || '', updated_at: now });
       setLastAt(now);
@@ -468,7 +548,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
       } else {
         alert('✅ Monitoramento salvo!');
       }
-      setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade([]);
+      setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade([]); setGlicemiaJejum('');
       syncManager();
     } finally { setSaving(false); }
   };
@@ -484,10 +564,23 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
         <h3 className="text-lg font-extrabold text-emerald-900 mb-1">Monitoramento diário</h3>
         <p className="text-sm text-emerald-700 mb-4">Preencha os novos valores</p>
         <div className="grid grid-cols-2 gap-3">
-          <div><label className="text-xs text-slate-500 font-semibold">PA Máxima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMax} onChange={e=>setBpMax(e.target.value)} placeholder="120" /></div>
-          <div><label className="text-xs text-slate-500 font-semibold">PA Mínima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMin} onChange={e=>setBpMin(e.target.value)} placeholder="80" /></div>
-          <div><label className="text-xs text-slate-500 font-semibold">Peso (kg)</label><input className="input-box" type="number" step="0.1" inputMode="decimal" value={peso} onChange={e=>setPeso(e.target.value)} placeholder="70" /></div>
-          <div><label className="text-xs text-slate-500 font-semibold">Glicemia (mg/dL)</label><input className="input-box" type="number" inputMode="numeric" value={glicemia} onChange={e=>setGlicemia(e.target.value)} placeholder="100" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">PA Máxima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMax} onChange={e=>setBpMax(e.target.value)} placeholder="Ex.: 120" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">PA Mínima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMin} onChange={e=>setBpMin(e.target.value)} placeholder="Ex.: 80" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">Peso (kg)</label><input className="input-box" type="number" step="0.1" inputMode="decimal" value={peso} onChange={e=>setPeso(e.target.value)} placeholder="Ex.: 70" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">Glicemia (mg/dL)</label><input className="input-box" type="number" inputMode="numeric" value={glicemia} onChange={e=>setGlicemia(e.target.value)} placeholder="Ex.: 100" /></div>
+        </div>
+        <div className="mt-2">
+          <label className="text-xs text-slate-500 font-semibold block mb-1">Condição da Glicemia</label>
+          <div className="flex gap-3">
+            <label className={`flex-1 flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-3 text-sm font-bold cursor-pointer transition-all ${glicemiaJejum === 'jejum' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+              <input type="radio" name="jejum" className="hidden" checked={glicemiaJejum === 'jejum'} onChange={() => setGlicemiaJejum('jejum')} />
+              🍽️ Em Jejum
+            </label>
+            <label className={`flex-1 flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-3 text-sm font-bold cursor-pointer transition-all ${glicemiaJejum === 'pos_refeicao' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-500'}`}>
+              <input type="radio" name="jejum" className="hidden" checked={glicemiaJejum === 'pos_refeicao'} onChange={() => setGlicemiaJejum('pos_refeicao')} />
+              🥗 Pós-refeição
+            </label>
+          </div>
         </div>
         <div className="mt-2">
           <label className="text-xs text-slate-500 font-semibold block mb-2">Atividade Física</label>
@@ -510,7 +603,253 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
   );
 };
 
-// Acompanhamento da Gestação
+// Meu Monitoramento - Gráficos do Paciente (offline via Dexie)
+const MeuMonitoramento = ({ user, onBack }) => {
+  const patientKey = user.patient_id || 'cpf-' + user.cpf;
+  const [registros, setRegistros] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [periodo, setPeriodo] = useState('all');
+  const chartSaudeRef = useRef(null);
+  const chartGlicRef = useRef(null);
+  const chartPesoRef = useRef(null);
+  const instanceSaude = useRef(null);
+  const instanceGlic = useRef(null);
+  const instancePeso = useRef(null);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      await syncRegistrosSupabase(patientKey);
+      const regs = await db.registros.where('patient_id').equals(patientKey).toArray();
+      const monitors = regs.filter(r => (r.tipo || 'monitoramento') === 'monitoramento' || r.pa_sistolica || r.glicemia_mg || r.peso_kg);
+      monitors.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+      setRegistros(monitors);
+      setLoading(false);
+    };
+    load();
+  }, [patientKey]);
+
+  const filtrarPorPeriodo = (regs, p) => {
+    if (p === 'all') return regs;
+    const now = Date.now();
+    const map = { '7d': 7, '30d': 30, '90d': 90, '1y': 365 };
+    const dias = map[p] || 9999;
+    const limite = now - dias * 86400000;
+    return regs.filter(r => new Date(r.created_at || 0).getTime() >= limite);
+  };
+
+  const fmtData = (d) => {
+    if (!d) return '';
+    const dt = new Date(d);
+    return dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  useEffect(() => {
+    if (loading || !registros.length) return;
+    const hist = filtrarPorPeriodo(registros, periodo);
+    if (hist.length < 1) return;
+
+    const labels = hist.map(r => fmtData(r.created_at));
+    const useDatalabels = window.ChartDataLabels != null;
+    const plugins = useDatalabels ? [ChartDataLabels] : [];
+    const dlConfig = useDatalabels ? {
+      display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
+      anchor: 'end', align: 'top', offset: 2,
+      font: { size: 9, weight: '600' },
+      color: (ctx) => ctx.dataset.borderColor || '#333',
+      formatter: (val) => val != null ? val : ''
+    } : false;
+
+    // PA Chart
+    if (instanceSaude.current) instanceSaude.current.destroy();
+    if (chartSaudeRef.current) {
+      const ctx = chartSaudeRef.current.getContext('2d');
+      instanceSaude.current = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'PA Máxima', data: hist.map(r => r.pa_sistolica || null), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', tension: 0.4, pointRadius: 4, fill: false },
+            { label: 'PA Mínima', data: hist.map(r => r.pa_diastolica || null), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.4, pointRadius: 4, fill: false }
+          ]
+        },
+        plugins,
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 11 } } }, datalabels: dlConfig },
+          scales: { y: { beginAtZero: false, title: { display: true, text: 'mmHg', font: { size: 11 } } } }
+        }
+      });
+    }
+
+    // Glicemia Chart
+    if (instanceGlic.current) instanceGlic.current.destroy();
+    if (chartGlicRef.current) {
+      const ctx = chartGlicRef.current.getContext('2d');
+      const glicData = hist.map(r => r.glicemia_mg || null);
+      const bgColors = hist.map(r => {
+        if (!r.glicemia_mg) return 'rgba(59,130,246,0.5)';
+        if (r.glicemia_jejum === 'jejum') return 'rgba(16,185,129,0.6)';
+        if (r.glicemia_jejum === 'pos_refeicao') return 'rgba(245,158,11,0.6)';
+        return 'rgba(59,130,246,0.5)';
+      });
+      const borderColors = hist.map(r => {
+        if (!r.glicemia_mg) return '#3b82f6';
+        if (r.glicemia_jejum === 'jejum') return '#10b981';
+        if (r.glicemia_jejum === 'pos_refeicao') return '#f59e0b';
+        return '#3b82f6';
+      });
+      instanceGlic.current = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{ label: 'Glicemia (mg/dL)', data: glicData, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 2, borderRadius: 6 }]
+        },
+        plugins,
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            datalabels: dlConfig,
+            tooltip: {
+              callbacks: {
+                afterLabel: (item) => {
+                  const r = hist[item.dataIndex];
+                  if (r?.glicemia_jejum === 'jejum') return '(Em jejum)';
+                  if (r?.glicemia_jejum === 'pos_refeicao') return '(Pós-refeição)';
+                  return '';
+                }
+              }
+            }
+          },
+          scales: { y: { beginAtZero: false, title: { display: true, text: 'mg/dL', font: { size: 11 } } } }
+        }
+      });
+    }
+
+    // Peso Chart
+    if (instancePeso.current) instancePeso.current.destroy();
+    if (chartPesoRef.current) {
+      const ctx = chartPesoRef.current.getContext('2d');
+      instancePeso.current = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{ label: 'Peso (kg)', data: hist.map(r => r.peso_kg || null), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.15)', tension: 0.4, pointRadius: 5, fill: true }]
+        },
+        plugins,
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, datalabels: dlConfig },
+          scales: { y: { beginAtZero: false, title: { display: true, text: 'kg', font: { size: 11 } } } }
+        }
+      });
+    }
+
+    return () => {
+      if (instanceSaude.current) instanceSaude.current.destroy();
+      if (instanceGlic.current) instanceGlic.current.destroy();
+      if (instancePeso.current) instancePeso.current.destroy();
+    };
+  }, [registros, periodo, loading]);
+
+  const PERIODOS = [
+    { key: '7d', label: '7 dias' },
+    { key: '30d', label: '30 dias' },
+    { key: '90d', label: '3 meses' },
+    { key: '1y', label: '1 ano' },
+    { key: 'all', label: 'Tudo' }
+  ];
+
+  const hist = filtrarPorPeriodo(registros, periodo);
+
+  // Stats summary
+  const ultimoReg = hist.length ? hist[hist.length - 1] : null;
+  const mediaPA = hist.length ? Math.round(hist.reduce((s, r) => s + (r.pa_sistolica || 0), 0) / hist.filter(r => r.pa_sistolica).length) || '--' : '--';
+  const mediaGlic = hist.length ? Math.round(hist.reduce((s, r) => s + (r.glicemia_mg || 0), 0) / hist.filter(r => r.glicemia_mg).length) || '--' : '--';
+
+  return (
+    <div className="p-5 fade-in min-h-screen pb-20">
+      <div className="flex items-center gap-4 mb-4">
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <h2 className="text-xl font-bold">Meu Monitoramento</h2>
+      </div>
+
+      {loading && <div className="text-center text-gray-400 py-12">Carregando dados...</div>}
+
+      {!loading && registros.length === 0 && (
+        <div className="card text-center py-12">
+          <div className="text-5xl mb-3">📊</div>
+          <div className="text-slate-500 font-bold">Nenhum registro encontrado</div>
+          <div className="text-sm text-slate-400 mt-1">Registre sua pressão e glicemia para ver os gráficos aqui</div>
+        </div>
+      )}
+
+      {!loading && registros.length > 0 && (
+        <>
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+              <div className="text-[10px] text-slate-500 font-bold uppercase">Registros</div>
+              <div className="text-xl font-extrabold text-slate-800">{hist.length}</div>
+            </div>
+            <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+              <div className="text-[10px] text-slate-500 font-bold uppercase">PA Média</div>
+              <div className="text-xl font-extrabold text-red-500">{mediaPA}</div>
+            </div>
+            <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+              <div className="text-[10px] text-slate-500 font-bold uppercase">Glic. Média</div>
+              <div className="text-xl font-extrabold text-blue-500">{mediaGlic}</div>
+            </div>
+          </div>
+
+          {/* Period filters */}
+          <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+            {PERIODOS.map(p => (
+              <button key={p.key} onClick={() => setPeriodo(p.key)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${periodo === p.key ? 'bg-emerald-600 text-white shadow' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {hist.length < 1 && <div className="card text-center py-8 text-slate-400">Sem dados no período selecionado</div>}
+
+          {hist.length >= 1 && (
+            <>
+              {/* PA Chart */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
+                <h3 className="text-sm font-extrabold text-slate-700 mb-2">📈 Pressão Arterial</h3>
+                <div style={{height: '220px'}}><canvas ref={chartSaudeRef}></canvas></div>
+              </div>
+
+              {/* Glicemia Chart */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
+                <h3 className="text-sm font-extrabold text-slate-700 mb-2">🩸 Glicemia</h3>
+                <div className="flex gap-3 mb-2">
+                  <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Jejum</span>
+                  <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Pós-refeição</span>
+                  <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Não informado</span>
+                </div>
+                <div style={{height: '220px'}}><canvas ref={chartGlicRef}></canvas></div>
+              </div>
+
+              {/* Peso Chart */}
+              <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
+                <h3 className="text-sm font-extrabold text-slate-700 mb-2">⚖️ Peso</h3>
+                <div style={{height: '200px'}}><canvas ref={chartPesoRef}></canvas></div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+      <button className="btn-sec mt-2" onClick={onBack}>← Voltar</button>
+    </div>
+  );
+};
+
+// Acompanhamento da Gestação (com suporte a Puerpério/Pós-parto)
 const AcompanhamentoGestacao = ({ user, onBack }) => {
   const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const parseSemana = (value) => {
@@ -528,6 +867,15 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
 
   const [semanas, setSemanas] = useState(parseSemana(user.gestacao_semanas));
   const [pesoAtualCalc, setPesoAtualCalc] = useState(parsePeso(user.peso_atual));
+  const [modoPuerpero, setModoPuerpero] = useState(false);
+  const [dataParto, setDataParto] = useState(user.data_parto || '');
+  const [diasPosParto, setDiasPosParto] = useState(0);
+  const [pesoRecemNascido, setPesoRecemNascido] = useState(user.peso_recem_nascido || '');
+  const [alturaBebe, setAlturaBebe] = useState(user.altura_recem_nascido || '');
+  const [amamentando, setAmamentando] = useState(user.amamentando || '');
+  const [humorMae, setHumorMae] = useState('');
+  const [notasPuerpero, setNotasPuerpero] = useState('');
+  const [salvandoPuerpero, setSalvandoPuerpero] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -538,8 +886,8 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
         const monitors = regs.filter(r => (r?.tipo || 'monitoramento') === 'monitoramento');
 
         const ordenados = monitors.sort((a, b) => {
-          const ta = parseDataMs(a.created_at || a.created_at || a.updated_at || a.updated_at);
-          const tb = parseDataMs(b.created_at || b.created_at || b.updated_at || b.updated_at);
+          const ta = parseDataMs(a.created_at || a.updated_at);
+          const tb = parseDataMs(b.created_at || b.updated_at);
           return tb - ta;
         });
 
@@ -547,12 +895,31 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
         const ultSemanaReg = ordenados.find(r => parseSemana(r?.gestacao_semanas) > 0);
 
         const baseSemana = parseSemana(ultSemanaReg?.gestacao_semanas) || parseSemana(user.gestacao_semanas);
-        const baseDataMs = parseDataMs(ultSemanaReg?.created_at || ultSemanaReg?.created_at || ultSemanaReg?.updated_at || ultSemanaReg?.updated_at);
+        const baseDataMs = parseDataMs(ultSemanaReg?.created_at || ultSemanaReg?.updated_at);
         const nowMs = Date.now();
         const diffDias = baseDataMs > 0 ? Math.max(0, Math.floor((nowMs - baseDataMs) / 86400000)) : 0;
         const semanasDinamicas = baseSemana > 0 ? Math.min(42, baseSemana + Math.floor(diffDias / 7)) : 0;
 
         const pesoAtualDinamico = ultimoPesoReg ? parsePeso(ultimoPesoReg.peso_kg) : parsePeso(user.peso_atual);
+
+        // Check if postpartum (semanas >= 40 or data_parto exists)
+        const partoRegistrado = localStorage.getItem(`parto_${patientKey}`);
+        if (partoRegistrado) {
+          try {
+            const partoInfo = JSON.parse(partoRegistrado);
+            if (ativo) {
+              setModoPuerpero(true);
+              setDataParto(partoInfo.data_parto || '');
+              setPesoRecemNascido(partoInfo.peso_bebe || '');
+              setAlturaBebe(partoInfo.altura_bebe || '');
+              setAmamentando(partoInfo.amamentando || '');
+              const dpMs = new Date(partoInfo.data_parto || 0).getTime();
+              if (dpMs > 0) setDiasPosParto(Math.floor((Date.now() - dpMs) / 86400000));
+            }
+          } catch {}
+        } else if (semanasDinamicas >= 40) {
+          if (ativo) setModoPuerpero(true);
+        }
 
         if (ativo) {
           setSemanas(semanasDinamicas);
@@ -575,19 +942,159 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
   const pesoAtual = pesoAtualCalc || pesoInicial;
   const ganho = pesoAtual - pesoInicial;
   const fazPreNatal = user.faz_pre_natal === 'Sim';
+
+  const registrarParto = async () => {
+    if (!dataParto) return alert('Informe a data do parto.');
+    setSalvandoPuerpero(true);
+    try {
+      const info = {
+        data_parto: dataParto,
+        peso_bebe: pesoRecemNascido,
+        altura_bebe: alturaBebe,
+        amamentando: amamentando
+      };
+      localStorage.setItem(`parto_${patientKey}`, JSON.stringify(info));
+
+      const rid = uuidv4(), now = new Date().toISOString();
+      const texto = `Parto registrado em ${dataParto}. Peso bebê: ${pesoRecemNascido || 'N/I'}g, Altura: ${alturaBebe || 'N/I'}cm. Amamentando: ${amamentando || 'N/I'}`;
+      await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0 });
+      await enviarRegistroSupabase({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now });
+
+      setModoPuerpero(true);
+      const dpMs = new Date(dataParto).getTime();
+      if (dpMs > 0) setDiasPosParto(Math.floor((Date.now() - dpMs) / 86400000));
+      alert('✅ Parto registrado com sucesso!');
+    } catch { alert('Erro ao registrar.'); }
+    setSalvandoPuerpero(false);
+  };
+
+  const salvarNotaPuerpero = async () => {
+    if (!humorMae && !notasPuerpero) return alert('Preencha pelo menos um campo.');
+    setSalvandoPuerpero(true);
+    try {
+      const rid = uuidv4(), now = new Date().toISOString();
+      const texto = `Puerpério dia ${diasPosParto}: Humor: ${humorMae || 'N/I'}. ${notasPuerpero || ''}`.trim();
+      await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0 });
+      await enviarRegistroSupabase({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now });
+      alert('✅ Registro de puerpério salvo!');
+      setHumorMae(''); setNotasPuerpero('');
+    } catch { alert('Erro ao salvar.'); }
+    setSalvandoPuerpero(false);
+  };
   
   return (
     <div className="p-5 fade-in min-h-screen">
-      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button><h2 className="text-xl font-bold">Gestação</h2></div>
-      <div className="status-card" style={{background: 'linear-gradient(135deg, #fff 0%, #fdf2f8 100%)', borderColor: '#fbcfe8'}}>
-        <div className="text-center mb-4"><div className="text-5xl mb-2">🤰</div><h3 className="text-2xl font-extrabold text-pink-700">{semanas} semanas</h3></div>
-        <div className="metric-grid">
-          <div className="metric-item bg-pink-50"><div className="metric-label">Previsão Parto</div><div className="metric-value text-base text-pink-700">{previsao}</div></div>
-          <div className="metric-item bg-pink-50"><div className="metric-label">Pré-natal</div><div className={`metric-value text-base ${fazPreNatal ? 'text-emerald-600' : 'text-amber-600'}`}>{fazPreNatal ? '✅ Em dia' : '⚠️ Pendente'}</div></div>
-          <div className="metric-item"><div className="metric-label">Peso Inicial</div><div className="metric-value">{pesoInicial || '--'} kg</div></div>
-          <div className="metric-item"><div className="metric-label">Ganho de Peso</div><div className="metric-value">{ganho > 0 ? '+' : ''}{ganho.toFixed(1)} kg</div></div>
-        </div>
-      </div>
+      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button><h2 className="text-xl font-bold">{modoPuerpero ? 'Puerpério / Pós-parto' : 'Gestação'}</h2></div>
+
+      {!modoPuerpero ? (
+        <>
+          <div className="status-card" style={{background: 'linear-gradient(135deg, #fff 0%, #fdf2f8 100%)', borderColor: '#fbcfe8'}}>
+            <div className="text-center mb-4"><div className="text-5xl mb-2">🤰</div><h3 className="text-2xl font-extrabold text-pink-700">{semanas} semanas</h3></div>
+            <div className="metric-grid">
+              <div className="metric-item bg-pink-50"><div className="metric-label">Previsão Parto</div><div className="metric-value text-base text-pink-700">{previsao}</div></div>
+              <div className="metric-item bg-pink-50"><div className="metric-label">Pré-natal</div><div className={`metric-value text-base ${fazPreNatal ? 'text-emerald-600' : 'text-amber-600'}`}>{fazPreNatal ? '✅ Em dia' : '⚠️ Pendente'}</div></div>
+              <div className="metric-item"><div className="metric-label">Peso Inicial</div><div className="metric-value">{pesoInicial || '--'} kg</div></div>
+              <div className="metric-item"><div className="metric-label">Ganho de Peso</div><div className="metric-value">{ganho > 0 ? '+' : ''}{ganho.toFixed(1)} kg</div></div>
+            </div>
+          </div>
+
+          {semanas >= 36 && (
+            <div className="bg-pink-50 border-2 border-pink-300 rounded-xl p-4 mt-4">
+              <h4 className="font-extrabold text-pink-800 mb-2">🎉 Registrar Parto</h4>
+              <p className="text-xs text-pink-600 mb-3">Quando o bebê nascer, informe aqui para iniciar o acompanhamento pós-parto.</p>
+              <label className="text-xs text-slate-500 font-semibold">Data do parto</label>
+              <input type="date" className="input-box" value={dataParto} onChange={e => setDataParto(e.target.value)} />
+              <label className="text-xs text-slate-500 font-semibold">Peso do bebê (gramas)</label>
+              <input type="number" className="input-box" inputMode="numeric" placeholder="Ex: 3200" value={pesoRecemNascido} onChange={e => setPesoRecemNascido(e.target.value)} />
+              <label className="text-xs text-slate-500 font-semibold">Altura do bebê (cm)</label>
+              <input type="number" className="input-box" inputMode="numeric" placeholder="Ex: 49" value={alturaBebe} onChange={e => setAlturaBebe(e.target.value)} />
+              <label className="text-xs text-slate-500 font-semibold">Está amamentando?</label>
+              <div className="flex gap-3 mb-3">
+                <label className={`flex-1 text-center py-2 rounded-xl border-2 font-bold text-sm cursor-pointer ${amamentando === 'sim' ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 text-slate-500'}`}>
+                  <input type="radio" name="amament" className="hidden" checked={amamentando === 'sim'} onChange={() => setAmamentando('sim')} /> Sim
+                </label>
+                <label className={`flex-1 text-center py-2 rounded-xl border-2 font-bold text-sm cursor-pointer ${amamentando === 'nao' ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 text-slate-500'}`}>
+                  <input type="radio" name="amament" className="hidden" checked={amamentando === 'nao'} onChange={() => setAmamentando('nao')} /> Não
+                </label>
+              </div>
+              <button className="btn-primary" style={{background: 'linear-gradient(135deg, #ec4899, #be185d)'}} disabled={salvandoPuerpero} onClick={registrarParto}>
+                {salvandoPuerpero ? 'SALVANDO...' : '🎉 REGISTRAR PARTO'}
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Puerpério / Pós-parto View */}
+          <div className="status-card" style={{background: 'linear-gradient(135deg, #fff 0%, #fce7f3 100%)', borderColor: '#f9a8d4'}}>
+            <div className="text-center mb-4">
+              <div className="text-5xl mb-2">👶🤱</div>
+              <h3 className="text-xl font-extrabold text-pink-700">Puerpério</h3>
+              {dataParto && <div className="text-sm text-pink-600 font-bold">{diasPosParto} dias pós-parto</div>}
+            </div>
+            <div className="metric-grid">
+              <div className="metric-item bg-pink-50">
+                <div className="metric-label">Data do Parto</div>
+                <div className="metric-value text-base text-pink-700">{dataParto ? new Date(dataParto + 'T12:00:00').toLocaleDateString('pt-BR') : '--'}</div>
+              </div>
+              <div className="metric-item bg-pink-50">
+                <div className="metric-label">Amamentando</div>
+                <div className="metric-value text-base">{amamentando === 'sim' ? '🤱 Sim' : amamentando === 'nao' ? '❌ Não' : '--'}</div>
+              </div>
+              {pesoRecemNascido && (
+                <div className="metric-item">
+                  <div className="metric-label">Peso Bebê</div>
+                  <div className="metric-value">{pesoRecemNascido}g</div>
+                </div>
+              )}
+              {alturaBebe && (
+                <div className="metric-item">
+                  <div className="metric-label">Altura Bebê</div>
+                  <div className="metric-value">{alturaBebe}cm</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Puerpério alerts */}
+          {diasPosParto <= 42 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-3 mb-3">
+              <div className="flex items-start gap-3">
+                <div className="text-2xl">⚠️</div>
+                <div>
+                  <div className="font-bold text-amber-800 text-sm">Período pós-parto ({diasPosParto <= 7 ? 'Imediato' : diasPosParto <= 42 ? 'Tardio' : 'Remoto'})</div>
+                  <div className="text-xs text-amber-600 mt-1">
+                    {diasPosParto <= 7 ? 'Atenção especial: sangramentos, febre, dor intensa. Procure a UBS se necessário.' : 'Continue acompanhando sua saúde e a do bebê. Agende consulta pós-parto na UBS.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Daily puerpério log */}
+          <div className="bg-white border border-pink-100 rounded-2xl p-5 shadow-sm mt-3">
+            <h3 className="text-base font-extrabold text-pink-900 mb-3">📝 Registro diário - Puerpério</h3>
+            <label className="text-xs text-slate-500 font-semibold block mb-1">Como você está se sentindo?</label>
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {['😊 Bem', '😐 Normal', '😔 Triste', '😰 Ansiosa', '😡 Irritada', '😴 Cansada'].map(opt => {
+                const val = opt.split(' ')[1];
+                return (
+                  <button key={opt} onClick={() => setHumorMae(val)}
+                    className={`px-3 py-2 rounded-full text-xs font-bold transition-all ${humorMae === val ? 'bg-pink-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="text-xs text-slate-500 font-semibold block mb-1">Observações (sintomas, dúvidas)</label>
+            <textarea className="input-box" placeholder="Ex.: Dor na cesárea, amamentação difícil..." value={notasPuerpero} onChange={e => setNotasPuerpero(e.target.value)} rows={3} />
+            <button className="btn-primary mt-2" style={{background: 'linear-gradient(135deg, #ec4899, #be185d)'}} disabled={salvandoPuerpero} onClick={salvarNotaPuerpero}>
+              {salvandoPuerpero ? 'SALVANDO...' : '💾 SALVAR REGISTRO'}
+            </button>
+          </div>
+        </>
+      )}
+
       <button className="btn-sec mt-4" onClick={onBack}>← Voltar</button>
     </div>
   );
@@ -1278,12 +1785,17 @@ const ProAuth = ({onAuth, onBack}) => {
     if(clean.length !== 11) return alert('CPF inválido');
     setLoading(true);
     try {
-      const localPatient = await db.perfil.where('cpf').equals(clean).first();
-      if(localPatient){ setMsg('CPF é de usuário do SUS.'); setLoading(false); return; }
-      if(navigator.onLine){ try { const { data: remotePatient } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle(); if(remotePatient){ setMsg('CPF é de usuário do SUS.'); setLoading(false); return; } } catch {} }
-      const { data } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
-      if(data){ onAuth(data); }
-      else { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('CPF não encontrado. Complete seu cadastro.'); }
+      const { data: pro } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
+      if(pro){ onAuth(pro); setLoading(false); return; }
+      const { data: paciente } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle();
+      if(paciente){
+        setMsg('Este CPF pertence a um usuário do SUS. Acesso profissional não permitido.');
+        setLoading(false);
+        return;
+      }
+      setReg(r=>({...r, cpf: mascaraCPF(clean)}));
+      setStep('register');
+      setMsg('CPF não encontrado. Complete seu cadastro como profissional.');
     } catch { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('Offline. Cadastre-se.'); }
     setLoading(false);
   };
@@ -1381,11 +1893,20 @@ const App = () => {
     return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('online', onOnline); };
   }, [pullAutomatico]);
 
+  // Medication reminder state for in-app banner
+  const [medAlertaBanner, setMedAlertaBanner] = useState(null);
+
   useEffect(() => {
     if (!user || IS_PROFISSIONAL) return;
     if (!patientUsesMedication(user.uso_medicacoes)) return;
 
     const patientId = user.patient_id || user.patient_id || user.cpf || 'anon';
+
+    // Request notification permission proactively on first load
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+
     const checkReminder = async () => {
       const horarios = extrairHorariosMedicacao(user.posologia_horario);
       if (!horarios.length) return;
@@ -1394,28 +1915,54 @@ const App = () => {
       const hh = String(now.getHours()).padStart(2, '0');
       const mm = String(now.getMinutes()).padStart(2, '0');
       const hhmm = `${hh}:${mm}`;
-      if (!horarios.includes(hhmm)) return;
+
+      // Check exact match AND 1 minute before/after for tolerance
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      const matchedHorario = horarios.find(h => {
+        const [hPart, mPart] = h.split(':').map(Number);
+        const horMins = hPart * 60 + mPart;
+        return Math.abs(nowMins - horMins) <= 1;
+      });
+      if (!matchedHorario) return;
 
       const dia = now.toISOString().slice(0, 10);
-      const firedKey = `med_alert_fired_${patientId}_${dia}_${hhmm}`;
+      const firedKey = `med_alert_fired_${patientId}_${dia}_${matchedHorario}`;
       if (localStorage.getItem(firedKey) === '1') return;
       localStorage.setItem(firedKey, '1');
 
       const nomes = String(user.nomes_medicacoes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
       const body = nomes
-        ? `Está na hora da medicação (${hhmm}): ${nomes}.`
-        : `Está na hora da medicação (${hhmm}).`;
-      const popupBody = `Lembrete de medicação: ${body}`;
+        ? `Está na hora da medicação (${matchedHorario}): ${nomes}.`
+        : `Está na hora da medicação (${matchedHorario}).`;
 
+      // 1) Play audio alert
       tocarAlertaMedicacao();
-      if (typeof nativeAlert === 'function') nativeAlert(popupBody);
-      else alert(popupBody);
-      await notifyUser('Alerta de medicação', body, `med_${patientId}_${dia}_${hhmm}`);
+
+      // 2) Vibrate on mobile
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate([300, 200, 300, 200, 500]); } catch {}
+      }
+
+      // 3) Show in-app banner (persistent, works everywhere)
+      setMedAlertaBanner({ texto: body, horario: matchedHorario });
+
+      // 4) Show native notification
+      await notifyUser('💊 Alerta de Medicação', body, `med_${patientId}_${dia}_${matchedHorario}`);
+
+      // 5) Fallback: browser alert for devices without notification support
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
+        alert(`💊 ${body}`);
+      }
     };
 
     checkReminder();
-    const timerId = setInterval(checkReminder, 30000);
-    return () => clearInterval(timerId);
+    const timerId = setInterval(checkReminder, 15000); // Check every 15s for better precision
+
+    // Also check on visibility change (when user returns to app)
+    const onVisible = () => { if (document.visibilityState === 'visible') checkReminder(); };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => { clearInterval(timerId); document.removeEventListener('visibilitychange', onVisible); };
   }, [user]);
 
   const loginPatient = async (cpf, profile) => { const p = profile || await db.perfil.where('cpf').equals(cpf).first(); if(p){ const patient_id = p.patient_id || p.patient_id || 'cpf-' + cpf; localStorage.setItem('currentProfileId', patient_id); setUser({ ...p, patient_id }); setRoute('menu'); } };
@@ -1427,9 +1974,24 @@ const App = () => {
   return (
     <>
       <OfflineBanner online={online} />
+      {medAlertaBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 shadow-lg" style={{animation: 'fadeIn 0.3s'}}>
+          <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
+            <div className="flex items-center gap-3">
+              <div className="text-3xl animate-bounce">💊</div>
+              <div>
+                <div className="font-extrabold text-sm">Hora da Medicação!</div>
+                <div className="text-xs opacity-90">{medAlertaBanner.texto}</div>
+              </div>
+            </div>
+            <button onClick={() => setMedAlertaBanner(null)} className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg">✕</button>
+          </div>
+        </div>
+      )}
       {route === 'login' && <PatientLogin onLogin={loginPatient} onBack={() => window.location.href = '../index.html'} />}
       {route === 'menu' && user && <PatientMainMenu user={user} onSelect={(opt) => setRoute(opt)} onLogout={logout} />}
       {route === 'saude' && user && <AcompanhamentoSaude user={user} onBack={() => setRoute('menu')} />}
+      {route === 'monitoramento' && user && <MeuMonitoramento user={user} onBack={() => setRoute('menu')} />}
       {route === 'gestacao' && user && <AcompanhamentoGestacao user={user} onBack={() => setRoute('menu')} />}
       {route === 'crianca' && user && <AcompanhamentoCrianca user={user} onBack={() => setRoute('menu')} />}
       {route === 'chat' && user && <ConverseConosco user={user} onBack={() => setRoute('menu')} />}

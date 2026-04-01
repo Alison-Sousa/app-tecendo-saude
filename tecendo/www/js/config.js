@@ -12,12 +12,12 @@ var supabase = SUPABASE_CONFIG_MISSING ? null : window.supabase.createClient(SUP
 // Database IndexedDB (Dexie)
 var db = new Dexie('TecendoSaudeDB_V22_Fixed');
 db.version(1).stores({
-  perfil:'++id,patient_id,synced, nome, cpf, nascimento, regiao, ubs_referencia, genero, raca, endereco, telefone, escolaridade, profissao, mora_sozinho, acs_responsavel, hipertensao, diabetes, dependencias, tempo_vicio, altura, peso_inicial, enxerga_bem, consulta_oftalmo, uso_medicacoes, atividade_fisica, freq_atividade, tipo_atividade, meta_peso, meta_glicemia, meta_pa_min, meta_pa_max',
+  perfil:'++id,patient_id,synced, nome, cpf, nascimento, regiao, ubs_referencia, genero, raca, endereco, telefone, escolaridade, profissao, mora_sozinho, acs_responsavel, hipertensao, diabetes, dependencias, tempo_dependencia, altura, peso_inicial, enxerga_bem, consulta_oftalmo, uso_medicacoes, atividade_fisica, freq_atividade, tipo_atividade, meta_peso, meta_glicemia, meta_pa_min, meta_pa_max',
   registros:'++id,registro_id,patient_id,device_id,created_at,updated_at,status,synced',
   midias:'++id,registro_id,name,type,synced'
 });
 db.version(3).stores({
-  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,acs_responsavel,hipertensao,diabetes,dependencias,tempo_dependencia,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registro_id,patient_id,device_id,created_at,updated_at,status,synced',
   midias:'++id,registro_id,name,type,synced',
   medicamentos: '++id,medication_id,patient_id,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -26,7 +26,7 @@ db.version(3).stores({
 });
 
 db.version(4).stores({
-  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_dependencia,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registro_id,patient_id,device_id,created_at,updated_at,status,synced',
   midias:'++id,registro_id,name,type,synced',
   medicamentos: '++id,medication_id,patient_id,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -41,7 +41,7 @@ db.version(4).stores({
 });
 
 db.version(5).stores({
-  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,qtd_filhos_outro,filho1_nome,filho1_idade,filho2_nome,filho2_idade,filho3_nome,filho3_idade,filho4_nome,filho4_idade,filho5_nome,filho5_idade,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,qtd_filhos_outro,filho1_nome,filho1_idade,filho2_nome,filho2_idade,filho3_nome,filho3_idade,filho4_nome,filho4_idade,filho5_nome,filho5_idade,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_dependencia,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registro_id,patient_id,device_id,created_at,updated_at,status,synced',
   midias:'++id,registro_id,name,type,synced',
   medicamentos: '++id,medication_id,patient_id,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -62,7 +62,7 @@ db.version(5).stores({
 });
 
 db.version(6).stores({
-  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_detalhes,vacinas_criancas_status,vacinas_criancas_data,acs_responsavel,hipertensao,diabetes,dependencias,tempo_dependencia,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registro_id,patient_id,device_id,created_at,updated_at,status,synced',
   midias:'++id,registro_id,name,type,synced',
   medicamentos: '++id,medication_id,patient_id,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -72,8 +72,8 @@ db.version(6).stores({
   });
 });
 
-db.version(8).stores({
-  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,hipertensao,diabetes,dependencias,tempo_vicio,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
+db.version(7).stores({
+  perfil:'++id,patient_id,synced,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,hipertensao,diabetes,dependencias,tempo_dependencia,altura,peso_inicial,enxerga_bem,consulta_oftalmo,uso_medicacoes,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max',
   registros:'++id,registro_id,patient_id,device_id,created_at,updated_at,status,synced',
   midias:'++id,registro_id,name,type,synced',
   medicamentos: '++id,medication_id,patient_id,synced,tipo_medicamento,nome_medicamento,dosagem,horarios,data_prescricao,data_dispensacao,data_inicio,data_termino,ativo'
@@ -84,7 +84,7 @@ db.version(8).stores({
 });
 
 // Listas de referência
-var LISTA_UBS = ["UBS Antônio Evangelista", "UBS Boa Esperança", "UBS Divinópolis", "UBS Márcio Marinho", "UBS Haroldo Martins", "UBS Maria Bibiana da Silva", "UBS Nadime Miranda", "UBS Neli Loeblein", "UBS Vicente Alves da Silva"];
+var LISTA_UBS = ["UBS Antônio Evangelista", "UBS Boa Esperança", "UBS Divinópolis", "UBS Márcio Marinho", "UBS Haroldo Martins", "UBS Maria Bibiana da Silva", "UBS Nadime Miranda", "UBS Neli Loeblein", "UBS Vicente Alves da Silva", "UBS São Sebastião", "UBS Santa Maria do Uruará"];
 var LISTA_REGIOES = ["Santarém", "Belterra", "Mojuí dos Campos", "Alenquer", "Curuá", "Óbidos", "Oriximiná", "Terra Santa", "Faro", "Juruti", "Monte Alegre", "Almeirim", "Prainha"];
 var LISTA_ACS = ["Acsa Kelly Gelio de Sá Lucena","Adriano Grings de Abreu","Cleonice Fabiano","Cleudes Meireles do Prado","Daniella de Almeida Santos","Edvânia Barbosa Sousa","Eliane Sousa Matos","Eliselma Alves Barreto","Elizângela Guedes Moura","Érica Sousa Scalabrim","Erika Sousa Duarte","Francisca Deneide França da Silva","Glaucione Santos Brito","Lourdes Dallabrida Rech","Luzineide Brito dos Santos","Marisane Aparecida Facioni","Paulo Afonso Borges da Silva","Raimunda de Souza Brandão","Robson Lima de Oliveira","Silvana Cardoso Ott","Silvana de Sousa Silva","Silvana Ferreira de Almeida","Vânea Pereira Scalabrin","Antonio Benigno de Freita","Antonio Pereira Correa","Auzenira Carvalho Cunha","Célia Alves Cruz","Elzana Lopes de Castro","Eudilene Vitor Gomes Matos","Evando Oliveira Santos","Fabiana Gomes Peixoto","Geizeane Maria das G. Sales","Genival Rodrigues Marinho","Hosana Lopes de Castro","Josias Martins de Oliveira","Léia de Souza Alves","Maria da Conceição dos Santos Ribeiro","Maria de Andrade Lima","Maria Elismar Bezerra Barbosa","Rita Delmondes Ferreira","Valdemir Machado de Alegor","Alzilene Braga","Ariane do Nascimento da Silva","Claudiléia de Sousa Castro","Edi Alves de Barros","Elaine Soares de Sousa","Ivanete Teixeira Silva","Ivonete Henz","Natividade Pereira de Aguiar","Regilene Hecki da Costa","Jackeline Paiva Batista","Juliana Lisboa","Aucineia Moreira Galvão","Edicínia Rabelo Lourido","Katya Cruz de Sousa","Regiane Lira da Silva","Cláudio José Gonçalves Marques","Elinete Cunha de Sousa","Hiranildes Ramos Pereira","Joelma Costa Castro","José Antonio Sousa de Menezes","Manoel Edinaldo Rodrigues Oliveira","Márcio José Oliveira Figueira","Maria de Lourdes Pinto Costa","Maria Selma Figueira Costa","Mariane Ferreira Castro","Nelma Isabel Marinho Figueira","Orlandino Manoel dos Santos Costa","Vaneila de Siqueira Gamboa","Claudenira Pena Viegas","Jacymar Silva de Brito","Maria Gracinete Lima Fróes","Mariza Damião Lopes","Ana Célia de Oliveira","Benedito Neris dos Santos","Celina de Sousa","Cícera Maria da Silva","Eliana Carvalho da Silva","Jacilene da Silva Oliveira","Jucineide da Silva Farias","Leidaiane da Silva Bentes","Lucia de Fátima Farias","Luciana da Silva Santos","Luciene da Silva Santos","Manoel Messias da Silva","Maria de Nazaré Rodrigues da Silva","Maria do Socorro da Silva","Maria Liduina de Sousa","Marilene de Sousa Santos","Meire Luci dos Santos Oliveira","Mirian dos Santos Oliveira","Neuza de Fátima Alves da Silva","Rosangela Maria da Silva","Rosinete da Silva Santos","Sandra da Silva Rebelo","Silvia Helena de Oliveira","Simone da Silva Bentes","Valdenice da Silva dos Santos","Valdete da Silva Costa","Vera Lúcia de Sousa Castro"];
 
@@ -96,8 +96,8 @@ var PROFISSIONAL_ROSTER = [
   { municipio: 'Jacareacanga', ubs: 'UBS São Francisco', enfermeira: 'Cássia Rayana Queiroz Lauer' },
   { municipio: 'Jacareacanga', ubs: 'UBS Alto Tapajos', enfermeira: 'Laís Akai Barbosa' },
   { municipio: 'Prainha', ubs: 'Coordenador(a)', enfermeira: 'Eliziane Moraes Nascimento (coord)' },
-  { municipio: 'Prainha', ubs: 'ESF São Sebastião', enfermeira: 'Benezaidi Furtado Magno' },
-  { municipio: 'Prainha', ubs: 'ESF Santa Maria do Uruara', enfermeira: 'Naziane Oliveira Lira' },
+  { municipio: 'Prainha', ubs: 'UBS São Sebastião', enfermeira: 'Benezaidi Furtado Magno' },
+  { municipio: 'Prainha', ubs: 'UBS Santa Maria do Uruará', enfermeira: 'Naziane Oliveira Lira' },
   { municipio: 'Rurópolis', ubs: 'Coordenador(a)', enfermeira: 'Elenilde Ferreira da Silva' },
   { municipio: 'Rurópolis', ubs: 'UBS Divinópolis', enfermeira: 'Jarliene Cruz' },
   { municipio: 'Rurópolis', ubs: 'UBS Neli Loeblein', enfermeira: 'Géssica Cristine de Oliveira Hermer' },
@@ -130,7 +130,7 @@ var LEARN_ITEMS = [
       'Se sentir dor no peito, falta de ar, tontura forte ou visão turva, procure ajuda.'
     ],
     video: 'https://www.youtube.com/watch?v=B3sm1ey3VyI',
-    audio: 'Hipertensao.mp3'
+    audio: 'Hipertensão.mp3'
   },
   {
     title: 'Cuidados Infantis',

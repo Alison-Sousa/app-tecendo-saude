@@ -1,0 +1,79 @@
+name: Build & Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Generate env.js from secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          node build-env.js
+          cp env/env.js tecendo/www/env/env.js
+
+      - name: Install Cordova CLI
+        run: npm install -g cordova
+
+      - name: Install project dependencies
+        working-directory: tecendo
+        run: npm install
+
+      - name: Add Android platform
+        working-directory: tecendo
+        run: cordova platform add android
+
+      - name: Build APK
+        working-directory: tecendo
+        run: cordova build android
+
+      - name: Prepare APK for release
+        run: |
+          APK=$(find tecendo/platforms/android -name "*.apk" | head -1)
+          cp "$APK" tecendo-saude.apk
+          echo "APK_SIZE=$(du -h tecendo-saude.apk | cut -f1)" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Tecendo Saúde v1.0.${{ github.run_number }}"
+          body: |
+            📱 **APK gerado automaticamente**
+            Tamanho: ${{ env.APK_SIZE }}
+
+            **Como instalar no Android:**
+            1. Baixe `tecendo-saude.apk`
+            2. Abra no celular
+            3. Permita instalação de fontes desconhecidas
+            4. Instale!
+          files: tecendo-saude.apk
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

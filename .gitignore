@@ -1,4 +1,14 @@
 .env
 *.env
 .env.*
-env/env.js
+**/env/env.js
+
+# Dependencies
+node_modules/
+
+# Cordova build artifacts
+tecendo/platforms/
+tecendo/plugins/
+
+# APK build output
+*.apk

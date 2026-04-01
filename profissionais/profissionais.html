@@ -57,17 +57,19 @@ const ProAuth = ({onAuth, onBack}) => {
     if(clean.length !== 11) return alert('CPF inválido');
     setLoading(true);
     try {
-      const localPatient = await db.perfil.where('cpf').equals(clean).first();
-      if(localPatient){ setMsg('CPF é de usuário do SUS. Use a área do usuário do SUS para acessar.'); setLoading(false); return; }
-      if(navigator.onLine){
-        try {
-          const { data: remotePatient } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle();
-          if(remotePatient){ setMsg('CPF é de usuário do SUS. Use a área do usuário do SUS para acessar.'); setLoading(false); return; }
-        } catch { }
+      const { data: pro } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
+      if(pro){ onAuth(pro); setLoading(false); return; }
+      // Not a professional — check if exists as patient
+      const { data: paciente } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle();
+      if(paciente){
+        setMsg('Este CPF pertence a um usuário do SUS. Acesso profissional não permitido.');
+        setLoading(false);
+        return;
       }
-      const { data } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
-      if(data){ onAuth(data); }
-      else { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('CPF não encontrado. Complete seu cadastro.'); }
+      // Not found anywhere — allow registration
+      setReg(r=>({...r, cpf: mascaraCPF(clean)}));
+      setStep('register');
+      setMsg('CPF não encontrado. Complete seu cadastro como profissional.');
     } catch { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('Offline ou erro. Cadastre-se.'); }
     setLoading(false);
   };
@@ -77,8 +79,6 @@ const ProAuth = ({onAuth, onBack}) => {
     setLoading(true);
     try {
       const cpfClean = reg.cpf.replace(/\D/g,'');
-      const { data: existingPatient } = await supabase.from('perfis').select('cpf').eq('cpf', cpfClean).maybeSingle();
-      if(existingPatient){ alert('CPF já cadastrado como usuário do SUS. Use outro CPF para profissional.'); setLoading(false); return; }
       const payload = { nome: reg.nome, cpf: cpfClean, municipio: reg.municipio, ubs: reg.ubs, telefone: reg.telefone };
       const { data, error } = await supabase.from('profissionais').insert(payload).select().maybeSingle();
       if(error){ alert('Erro ao cadastrar: ' + error.message); }
@@ -138,7 +138,7 @@ const ProAuth = ({onAuth, onBack}) => {
 // Ficha Médica do usuário do SUS
 const FichaMedica = ({initialData, onSave, onCancel}) => {
   const defaultFicha = {
-    foto_url:'', nome:'', cpf:'', nascimento:'', genero:'', raca:'', endereco:'', telefone:'', escolaridade:'', profissao:'', mora_sozinho:'', mora_companheiro:'', tem_filhos:'', qtd_filhos:'', filhos_json:'', regiao:'', ubs_referencia:'', equipe_ubs:'', acs_responsavel:'', hipertensao:'', tempo_diag_has:'', diabetes:'', tempo_diag_dm:'', infeccao_urinaria_gestacao:'', dependencias:'', tempo_dependencia:'', altura:'', peso_inicial:'', peso_atual:'', peso_primeira_consulta:'', imc_pre_gestacional:'', dum:'', gestacao_semanas:'', previsao_parto:'', faz_pre_natal:'', inicio_pre_natal:'', data_ultima_consulta_pre_natal:'', enxerga_bem:'', consulta_oftalmo:'', tempo_consulta_oftalmo:'', dificuldade_mastigar_falar_engolir:'', uso_medicacoes:'', nomes_medicacoes:'', posologia_dosagem:'', posologia_horario:'', data_ultima_prescricao:'', data_ultima_dispensacao:'', atividade_fisica:'', freq_atividade:'', tipo_atividade:'', meta_peso:'', meta_glicemia:'', meta_pa_min:'', meta_pa_max:'', condicoes:''
+    foto_url:'', nome:'', cpf:'', nascimento:'', genero:'', raca:'', endereco:'', telefone:'', escolaridade:'', profissao:'', mora_sozinho:'', mora_companheiro:'', tem_filhos:'', qtd_filhos:'', filhos_json:'', regiao:'', ubs_referencia:'', equipe_ubs:'', acs_responsavel:'', hipertensao:'', tempo_diag_has:'', diabetes:'', tempo_diag_dm:'', gestante:'', infeccao_urinaria_gestacao:'', dependencias:'', tempo_dependencia:'', altura:'', peso_inicial:'', peso_atual:'', peso_primeira_consulta:'', imc_pre_gestacional:'', imc_atual:'', dum:'', gestacao_semanas:'', previsao_parto:'', faz_pre_natal:'', inicio_pre_natal:'', data_ultima_consulta_pre_natal:'', enxerga_bem:'', consulta_oftalmo:'', tempo_consulta_oftalmo:'', dificuldade_mastigar_falar_engolir:'', uso_medicacoes:'', nomes_medicacoes:'', posologia_dosagem:'', posologia_horario:'', data_ultima_prescricao:'', data_ultima_dispensacao:'', atividade_fisica:'', freq_atividade:'', tipo_atividade:'', meta_peso:'', meta_glicemia:'', meta_pa_min:'', meta_pa_max:'', condicoes:''
   };
   const [form, setForm] = useState({ ...defaultFicha, ...(initialData || {}) });
   const [fotoPreview, setFotoPreview] = useState(initialData?.foto_url || '');
@@ -150,6 +150,13 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   const [acsOptions, setAcsOptions] = useState(Array.from(new Set((LISTA_ACS || []).filter(Boolean))).sort((a,b)=>a.localeCompare(b, 'pt-BR')));
   const [medicacoes, setMedicacoes] = useState([{ nome:'', dosagem:'', horario:'' }]);
   const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [showCameraFoto, setShowCameraFoto] = useState(false);
+  const [showCameraClinica, setShowCameraClinica] = useState(false);
+  const cameraVideoRef = useRef(null);
+  const cameraStreamRef = useRef(null);
+  const cameraClinicaVideoRef = useRef(null);
+  const cameraClinicaStreamRef = useRef(null);
 
   const mascaraHorarioMedicacao = (value) => {
     const digits = String(value || '').replace(/\D/g, '').slice(0, 4);
@@ -201,7 +208,11 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     };
   }, [fotoPreview, extraFotos]);
   
-  const requiredLabel = label => (<div className="section-title flex items-center justify-between"><span>{label}</span><span className="text-[10px] font-black text-rose-500 uppercase tracking-wide">Necessário</span></div>);
+  const requiredLabel = (label, fieldKey) => {
+    const empty = submitted && fieldKey && !form[fieldKey];
+    return (<div className="section-title flex items-center justify-between"><span>{label} <span className="text-rose-500 font-black">*</span></span>{empty && <span className="text-[11px] font-bold text-rose-500">Preencha este campo</span>}</div>);
+  };
+  const requiredInputClass = (fieldKey) => submitted && !form[fieldKey] ? 'input-box border-2 border-rose-400' : 'input-box';
   const updateField = (key, value) => setForm(prev => ({ ...prev, [key]: value }));
   const setFilhosState = (next) => setForm(prev => ({ ...prev, __filhosState: next }));
   
@@ -217,10 +228,69 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     return Number.isFinite(imc) ? imc.toFixed(1) : '';
   };
 
+  const calcularImcAtual = () => {
+    const alturaRaw = String(form.altura || '').replace(',', '.');
+    const pesoRaw = String(form.peso_atual || '').replace(',', '.');
+    const alturaNum = parseFloat(alturaRaw);
+    const pesoNum = parseFloat(pesoRaw);
+    if(!alturaNum || !pesoNum) return '';
+    const alturaM = alturaNum > 3 ? (alturaNum / 100) : alturaNum;
+    if(!alturaM) return '';
+    const imc = pesoNum / (alturaM * alturaM);
+    return Number.isFinite(imc) ? imc.toFixed(1) : '';
+  };
+
+  const calcularIdadeGestacional = () => {
+    const dumStr = String(form.dum || '').trim();
+    if (dumStr.length !== 10) return '';
+    const partes = dumStr.split('/');
+    if (partes.length !== 3) return '';
+    const [dd, mm, yyyy] = partes.map(Number);
+    const dumDate = new Date(yyyy, mm - 1, dd);
+    if (isNaN(dumDate.getTime())) return '';
+    const hoje = new Date();
+    const diffMs = hoje - dumDate;
+    if (diffMs < 0) return '';
+    const semanas = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
+    return semanas <= 42 ? String(semanas) : '';
+  };
+
+  const calcularDPP = () => {
+    const dumStr = String(form.dum || '').trim();
+    if (dumStr.length !== 10) return '';
+    const partes = dumStr.split('/');
+    if (partes.length !== 3) return '';
+    const [dd, mm, yyyy] = partes.map(Number);
+    const dumDate = new Date(yyyy, mm - 1, dd);
+    if (isNaN(dumDate.getTime())) return '';
+    const dpp = new Date(dumDate);
+    dpp.setDate(dpp.getDate() + 280);
+    const d = String(dpp.getDate()).padStart(2, '0');
+    const m = String(dpp.getMonth() + 1).padStart(2, '0');
+    const y = dpp.getFullYear();
+    return `${d}/${m}/${y}`;
+  };
+
   useEffect(() => {
     const imc = calcularImcPreGestacional();
     setForm(prev => (prev.imc_pre_gestacional === imc ? prev : { ...prev, imc_pre_gestacional: imc }));
   }, [form.altura, form.peso_inicial]);
+
+  useEffect(() => {
+    const imc = calcularImcAtual();
+    setForm(prev => (prev.imc_atual === imc ? prev : { ...prev, imc_atual: imc }));
+  }, [form.altura, form.peso_atual]);
+
+  useEffect(() => {
+    const semanas = calcularIdadeGestacional();
+    const dpp = calcularDPP();
+    setForm(prev => {
+      const updates = {};
+      if (prev.gestacao_semanas !== semanas) updates.gestacao_semanas = semanas;
+      if (prev.previsao_parto !== dpp) updates.previsao_parto = dpp;
+      return Object.keys(updates).length ? { ...prev, ...updates } : prev;
+    });
+  }, [form.dum]);
 
   useEffect(() => {
     let cancelled = false;
@@ -251,11 +321,60 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     return () => { cancelled = true; };
   }, []);
   
+  useEffect(() => {
+    const clean = (form.cpf || '').replace(/\D/g, '');
+    if (clean.length !== 11) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.from('profissionais').select('nome,telefone').eq('cpf', clean).maybeSingle();
+        if (data && !cancelled) {
+          setForm(prev => ({
+            ...prev,
+            nome: prev.nome || data.nome || '',
+            telefone: prev.telefone || data.telefone || ''
+          }));
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [form.cpf]);
+
   const handleFoto = e => {
     const file = e.target.files[0];
     if(fotoPreview && fotoPreview.startsWith('blob:')) URL.revokeObjectURL(fotoPreview);
     if(file){ const url = URL.createObjectURL(file); setFotoFile(file); setFotoPreview(url); }
     else { setFotoFile(null); setFotoPreview(form.foto_url || ''); }
+  };
+  
+  const openCameraFoto = async () => {
+    setShowCameraFoto(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      cameraStreamRef.current = stream;
+      if (cameraVideoRef.current) cameraVideoRef.current.srcObject = stream;
+    } catch { alert('Câmera indisponível'); setShowCameraFoto(false); }
+  };
+
+  const closeCameraFoto = () => {
+    cameraStreamRef.current?.getTracks().forEach(t => t.stop());
+    setShowCameraFoto(false);
+  };
+
+  const takeFotoFromCamera = () => {
+    if (!cameraVideoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = cameraVideoRef.current.videoWidth;
+    canvas.height = cameraVideoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(cameraVideoRef.current, 0, 0);
+    canvas.toBlob((blob) => {
+      if (fotoPreview && fotoPreview.startsWith('blob:')) URL.revokeObjectURL(fotoPreview);
+      const file = new File([blob], `foto_perfil_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const url = URL.createObjectURL(blob);
+      setFotoFile(file);
+      setFotoPreview(url);
+      closeCameraFoto();
+    }, 'image/jpeg', 0.9);
   };
   
   const handleExtraFotos = e => {
@@ -271,8 +390,37 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     if(item?.preview) URL.revokeObjectURL(item.preview);
     setExtraFotos(prev => prev.filter((_, i) => i !== index));
   };
+
+  const openCameraClinica = async () => {
+    setShowCameraClinica(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      cameraClinicaStreamRef.current = stream;
+      if (cameraClinicaVideoRef.current) cameraClinicaVideoRef.current.srcObject = stream;
+    } catch { alert('Câmera indisponível'); setShowCameraClinica(false); }
+  };
+
+  const closeCameraClinica = () => {
+    cameraClinicaStreamRef.current?.getTracks().forEach(t => t.stop());
+    setShowCameraClinica(false);
+  };
+
+  const takeFotoClinica = () => {
+    if (!cameraClinicaVideoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = cameraClinicaVideoRef.current.videoWidth;
+    canvas.height = cameraClinicaVideoRef.current.videoHeight;
+    canvas.getContext('2d').drawImage(cameraClinicaVideoRef.current, 0, 0);
+    canvas.toBlob((blob) => {
+      const file = new File([blob], `foto_clinica_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const preview = URL.createObjectURL(blob);
+      setExtraFotos(prev => [...prev, { file, preview }]);
+      closeCameraClinica();
+    }, 'image/jpeg', 0.9);
+  };
   
-  const REQUIRED_KEYS = ['nome','cpf','nascimento','genero','raca','endereco','telefone','escolaridade','profissao','mora_sozinho','regiao','ubs_referencia','acs_responsavel','hipertensao','diabetes','dependencias','tempo_dependencia','peso_inicial','enxerga_bem','consulta_oftalmo','uso_medicacoes','atividade_fisica','freq_atividade','tipo_atividade','meta_peso','meta_glicemia','meta_pa_min','meta_pa_max','tem_filhos'];
+  const REQUIRED_KEYS = ['nome','cpf','nascimento','genero','raca','endereco','telefone','escolaridade','profissao','mora_sozinho','regiao','ubs_referencia','acs_responsavel','hipertensao','diabetes','dependencias','peso_inicial','enxerga_bem','consulta_oftalmo','uso_medicacoes','atividade_fisica','freq_atividade','tipo_atividade','tem_filhos'];
+  const REQUIRED_LABELS = {nome:'Nome completo',cpf:'CPF',nascimento:'Data de Nascimento',genero:'Gênero',raca:'Raça/Cor',endereco:'Endereço',telefone:'Telefone',escolaridade:'Grau de Instrução',profissao:'Profissão',mora_sozinho:'Mora sozinho?',regiao:'Região',ubs_referencia:'Unidade de Referência',acs_responsavel:'Agente Comunitário de Saúde',hipertensao:'Tem hipertensão?',diabetes:'Tem diabetes?',dependencias:'Hábitos',peso_inicial:'Peso Inicial',enxerga_bem:'Enxerga bem?',consulta_oftalmo:'Consulta com oftalmologista',uso_medicacoes:'Usa medicações?',atividade_fisica:'Atividade física',freq_atividade:'Frequência de atividade',tipo_atividade:'Tipo de atividade',tem_filhos:'Tem filhos?'};
   
   const handleSubmit = async () => {
     setSaving(true);
@@ -288,7 +436,10 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       }
       cleaned.nomes_medicacoes = medsClean.map(m => m.nome || '').join('|');
       cleaned.posologia_dosagem = medsClean.map(m => m.dosagem || '').join('|');
-      cleaned.posologia_horario = medsClean.map(m => m.horario || '').join('|');
+      cleaned.posologia_horario = medsClean.map(m => {
+        if (m.horario === 'Horário específico' && m.horario_especifico) return m.horario_especifico;
+        return m.horario || '';
+      }).join('|');
       if (cleaned.tem_filhos !== 'Sim') {
         cleaned.qtd_filhos = '0';
         cleaned.filhos_json = '[]';
@@ -301,13 +452,23 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
         if (filhosArray.length !== total) { alert('Preencha todos os filhos informados.'); return; }
         for (let i = 0; i < filhosArray.length; i += 1) {
           const f = filhosArray[i];
-          if (!f.nome || !f.idade || !f.vacinaStatus) { alert(`Preencha nome, idade e vacina do filho ${i+1}.`); return; }
-          if (f.vacinaStatus === 'Agendada' && !f.vacinaData) { alert(`Informe a data da vacina do filho ${i+1}.`); return; }
+          const idadeNum = parseInt(f.idade, 10) || 0;
+          const menorDe18 = f.idade !== '' && idadeNum < 18;
+          if (!f.nome || !f.idade) { alert(`Preencha nome e idade do filho ${i+1}.`); return; }
+          if (menorDe18 && !f.vacinaStatus) { alert(`Preencha o status de vacinação do filho ${i+1} (menor de 18 anos).`); return; }
+          if (menorDe18 && f.vacinaStatus === 'Agendada' && !f.vacinaData) { alert(`Informe a data da vacinação do filho ${i+1}.`); return; }
+          if (!menorDe18) { f.vacinaStatus = 'Não se aplica'; f.vacinaData = 'Não se aplica'; }
           if (!f.vacinaData) f.vacinaData = 'Não se aplica';
         }
         cleaned.filhos_json = JSON.stringify(filhosArray);
       }
-      for(const key of REQUIRED_KEYS){ if(!cleaned[key]){ alert('Preencha todos os campos obrigatórios.'); return; } }
+      for(const key of REQUIRED_KEYS){ if(!cleaned[key]){ 
+        setSubmitted(true);
+        const missing = REQUIRED_KEYS.filter(k => !cleaned[k]).map(k => REQUIRED_LABELS[k] || k);
+        alert('Campos obrigatórios não preenchidos:\n\n• ' + missing.join('\n• '));
+        setSaving(false);
+        return; 
+      } }
       let fotoFinal = form.foto_url || '';
       if(fotoFile) fotoFinal = await fileToDataUrl(fotoFile);
       const imcCalc = calcularImcPreGestacional();
@@ -323,18 +484,29 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       {isNewPatient && (<div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 mb-6"><div className="text-sm font-bold mb-1">⚠ Novo Prontuário</div><div className="text-xs">Cadastro iniciado pelo profissional. Preencha todas as informações do usuário do SUS.</div></div>)}
       <div className="section-title">Foto de Perfil (opcional)</div>
       <div className="flex items-center gap-4 mb-6">
-        <label className="thumb" style={{background:'#fff', overflow:'hidden', position:'relative', zIndex:1, flexShrink:0}}>
+        <div className="thumb" style={{background:'#fff', overflow:'hidden', position:'relative', zIndex:1, flexShrink:0}}>
           {fotoPreview ? <img src={fotoPreview} alt="foto" style={{width:'100%',height:'100%',objectFit:'cover'}}/> : '📷'}
-          <input type="file" accept="image/*" className="hidden-input" onChange={handleFoto} />
-        </label>
-        <div className="text-xs text-gray-500 font-semibold">Escolha uma imagem nítida do usuário do SUS.</div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <button type="button" className="btn-sec w-auto px-4 py-2 text-xs" onClick={openCameraFoto}>📸 Tirar Foto</button>
+        </div>
+        <div className="text-xs text-gray-500 font-semibold">Tire uma foto do usuário do SUS.</div>
       </div>
-      {requiredLabel('Nome completo')}
-      <input className="input-box" value={form.nome} onChange={e=>updateField('nome', e.target.value)} placeholder="Nome completo" />
-      {requiredLabel('CPF')}
-      <input className="input-box" value={form.cpf} onChange={e=>updateField('cpf', mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" />
-      {requiredLabel('Data de Nascimento')}
-      <input className="input-box" value={form.nascimento} onChange={e=>updateField('nascimento', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" />
+      {showCameraFoto && (
+        <div className="modal-bg" style={{flexDirection:'column',gap:'16px',zIndex:9999}}>
+          <video ref={cameraVideoRef} autoPlay playsInline muted style={{width:'100%',maxWidth:'400px',borderRadius:'16px',background:'#000'}} />
+          <div className="flex gap-4 items-center">
+            <button type="button" onClick={takeFotoFromCamera} className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-lg">📸</button>
+            <button type="button" onClick={closeCameraFoto} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">✕</button>
+          </div>
+        </div>
+      )}
+      {requiredLabel('Nome completo', 'nome')}
+      <input className={requiredInputClass('nome')} value={form.nome} onChange={e=>updateField('nome', e.target.value)} placeholder="Ex.: Maria da Silva" />
+      {requiredLabel('CPF', 'cpf')}
+      <input className={requiredInputClass('cpf')} value={form.cpf} onChange={e=>updateField('cpf', mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" />
+      {requiredLabel('Data de Nascimento', 'nascimento')}
+      <input className={requiredInputClass('nascimento')} value={form.nascimento} onChange={e=>updateField('nascimento', mascaraData(e.target.value))} placeholder="Ex.: 01/01/1990" inputMode="numeric" />
       <div className="section-title">Condições (pode marcar mais de uma)</div>
       <div className="flex flex-wrap gap-2 mb-4">
         {['Hipertensão Arterial','Diabetes','Cuidados Infantis','Gestação'].map(label => {
@@ -349,21 +521,21 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
           return (<button key={label} type="button" onClick={toggle} className={`px-4 py-2 rounded-full text-sm font-semibold border ${isActive ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200'}`}>{label}</button>);
         })}
       </div>
-      {requiredLabel('Gênero')}
-      <select className="input-box" value={form.genero} onChange={e=>updateField('genero', e.target.value)}><option value="">Escolha...</option><option>Masculino (a)</option><option>Feminino (a)</option><option>Não informado</option></select>
-      {requiredLabel('Raça/Cor')}
-      <select className="input-box" value={form.raca} onChange={e=>updateField('raca', e.target.value)}><option value="">Escolha...</option><option>Branco</option><option>Pardo</option><option>Negro</option><option>Asiático</option><option>Indígena</option></select>
-      {requiredLabel('Endereço')}
-      <input className="input-box" value={form.endereco} onChange={e=>updateField('endereco', e.target.value)} placeholder="Rua das Mangueiras, nº 245, Bairro Nazaré, Belém – PA" />
-      {requiredLabel('Telefone')}
-      <input className="input-box" value={form.telefone} onChange={e=>updateField('telefone', mascaraTelefone(e.target.value))} placeholder="(91) 98765-4321" inputMode="tel" />
-      {requiredLabel('Grau de Instrução')}
-      <select className="input-box" value={form.escolaridade} onChange={e=>updateField('escolaridade', e.target.value)}><option value="">Escolha...</option><option>Sem instrução</option><option>Fundamental incompleto</option><option>Fundamental completo</option><option>Médio incompleto</option><option>Médio completo</option><option>Superior incompleto</option><option>Superior completo</option></select>
-      {requiredLabel('Profissão')}
-      <input className="input-box" value={form.profissao} onChange={e=>updateField('profissao', e.target.value)} placeholder="Profissão" />
-      {requiredLabel('Mora sozinho?')}
+      {requiredLabel('Gênero', 'genero')}
+      <select className={requiredInputClass('genero')} value={form.genero} onChange={e=>updateField('genero', e.target.value)}><option value="">Escolha...</option><option>Masculino (a)</option><option>Feminino (a)</option><option>Não informado</option></select>
+      {requiredLabel('Raça/Cor', 'raca')}
+      <select className={requiredInputClass('raca')} value={form.raca} onChange={e=>updateField('raca', e.target.value)}><option value="">Escolha...</option><option>Branco</option><option>Pardo</option><option>Negro</option><option>Asiático</option><option>Indígena</option></select>
+      {requiredLabel('Endereço', 'endereco')}
+      <input className={requiredInputClass('endereco')} value={form.endereco} onChange={e=>updateField('endereco', e.target.value)} placeholder="Ex.: Rua das Mangueiras, nº 245, Bairro Nazaré" />
+      {requiredLabel('Telefone', 'telefone')}
+      <input className={requiredInputClass('telefone')} value={form.telefone} onChange={e=>updateField('telefone', mascaraTelefone(e.target.value))} placeholder="(91) 98765-4321" inputMode="tel" />
+      {requiredLabel('Grau de Instrução', 'escolaridade')}
+      <select className={requiredInputClass('escolaridade')} value={form.escolaridade} onChange={e=>updateField('escolaridade', e.target.value)}><option value="">Escolha...</option><option>Sem instrução</option><option>Fundamental incompleto</option><option>Fundamental completo</option><option>Médio incompleto</option><option>Médio completo</option><option>Superior incompleto</option><option>Superior completo</option></select>
+      {requiredLabel('Profissão', 'profissao')}
+      <input className={requiredInputClass('profissao')} value={form.profissao} onChange={e=>updateField('profissao', e.target.value)} placeholder="Ex.: Agricultora" />
+      {requiredLabel('Mora sozinho?', 'mora_sozinho')}
 <select 
-  className="input-box" 
+  className={requiredInputClass('mora_sozinho')} 
   value={form.mora_sozinho} 
   onChange={e => {
     const val = e.target.value;
@@ -375,10 +547,12 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   <option>Não, com familiares (pais)</option>
   <option>Não, com companheiro(a)</option>
   <option>Não, com companheiro(a) e filho(s)</option>
+  <option>Não, com companheiro(a) e familiares</option>
+  <option>Não, com familiares de várias gerações</option>
   <option>Não, com amigos</option>
   <option>Sim, moro sozinho(a)</option>
-</select>      {requiredLabel('Filhos')}
-      <select className="input-box" value={form.tem_filhos} onChange={e=>updateField('tem_filhos', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+</select>      {requiredLabel('Filhos', 'tem_filhos')}
+      <select className={requiredInputClass('tem_filhos')} value={form.tem_filhos} onChange={e=>updateField('tem_filhos', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Quantidade de filhos')}
       <input
   className={`input-box ${form.tem_filhos !== 'Sim' ? 'bg-gray-100' : ''}`} // Adiciona um fundo cinza quando desabilitado
@@ -400,19 +574,26 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
 />
       {form.tem_filhos === 'Sim' && (Array.isArray(form.__filhosState) ? form.__filhosState.length : 0) > 0 && (
         <>
-          <div className="section-title">Filhos (nome, idade e vacinação)</div>
+          <div className="section-title">Filhos (nome, data de nascimento e vacinação)</div>
           <div className="space-y-3">
-            {(form.__filhosState || []).map((f, idx) => (
+            {(form.__filhosState || []).map((f, idx) => {
+              const idadeNum = parseInt(f.idade, 10) || 0;
+              const menorDe18 = f.idade !== '' && idadeNum < 18;
+              return (
               <div key={idx} className="card" style={{padding:'12px'}}>
                 <div className="text-xs font-bold mb-2">Filho {idx + 1}</div>
                 <div className="grid" style={{gridTemplateColumns:'1fr 120px', gap:'10px'}}>
                   <input className="input-box" value={f.nome} onChange={e=>{
                     const next = [...form.__filhosState]; next[idx] = { ...next[idx], nome: e.target.value }; setFilhosState(next);
-                  }} placeholder="Nome completo" />
-                  <input className="input-box" type="number" min="0" max="120" inputMode="numeric" value={f.idade} onChange={e=>{
-                    const next = [...form.__filhosState]; next[idx] = { ...next[idx], idade: e.target.value.replace(/\D/g,'') }; setFilhosState(next);
-                  }} placeholder="Idade" />
+                  }} placeholder="Ex.: João" />
+                  <div>
+                    <label className="text-[10px] text-slate-500 font-semibold">Idade (anos)</label>
+                    <input className="input-box" type="number" min="0" max="120" inputMode="numeric" value={f.idade} onChange={e=>{
+                      const next = [...form.__filhosState]; next[idx] = { ...next[idx], idade: e.target.value.replace(/\D/g,'') }; setFilhosState(next);
+                    }} placeholder="Ex.: 5" />
+                  </div>
                 </div>
+                {menorDe18 && (
                 <div className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:'10px'}}>
                   <select className="input-box" value={f.vacinaStatus} onChange={e=>{
                     const next = [...form.__filhosState]; next[idx] = { ...next[idx], vacinaStatus: e.target.value }; setFilhosState(next);
@@ -422,18 +603,26 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
                     <option>Atrasada</option>
                     <option>Agendada</option>
                   </select>
-                  <input className="input-box" value={f.vacinaData} onChange={e=>{
-                    const next = [...form.__filhosState]; next[idx] = { ...next[idx], vacinaData: mascaraData(e.target.value) }; setFilhosState(next);
-                  }} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+                  <div>
+                    <label className="text-[10px] text-slate-500 font-semibold">Data da vacinação</label>
+                    <input className="input-box" value={f.vacinaData} onChange={e=>{
+                      const next = [...form.__filhosState]; next[idx] = { ...next[idx], vacinaData: mascaraData(e.target.value) }; setFilhosState(next);
+                    }} placeholder="Ex.: 01/01/1990" inputMode="numeric" maxLength={10} />
+                  </div>
                 </div>
+                )}
+                {!menorDe18 && f.idade !== '' && (
+                  <div className="text-xs text-slate-400 italic mt-1">Vacinação: não se aplica (maior de 18 anos)</div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
-      {requiredLabel('Região')}
-      <select className="input-box" value={form.regiao} onChange={e=>updateField('regiao', e.target.value)}><option value="">Escolha...</option>{LISTA_REGIOES.map(r => <option key={r}>{r}</option>)}</select>
-      {requiredLabel('Unidade de Referência')}
+      {requiredLabel('Região', 'regiao')}
+      <select className={requiredInputClass('regiao')} value={form.regiao} onChange={e=>updateField('regiao', e.target.value)}><option value="">Escolha...</option>{LISTA_REGIOES.map(r => <option key={r}>{r}</option>)}</select>
+      {requiredLabel('Unidade de Referência', 'ubs_referencia')}
       <div className="input-box">
         <div className="flex gap-2">
           <input
@@ -464,7 +653,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
         </div>
 
       </div>
-      {requiredLabel('Equipe UBS')}
+      {requiredLabel('Equipe UBS', 'equipe_ubs')}
       <div className="input-box">
         <div className="flex gap-2">
           <input
@@ -497,7 +686,7 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
         </div>
 
       </div>
-      {requiredLabel('Agente Comunitário de Saúde')}
+      {requiredLabel('Agente Comunitário de Saúde', 'acs_responsavel')}
       <div className="input-box">
         <div className="flex gap-2">
           <input
@@ -528,8 +717,8 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
         </div>
 
       </div>
-      {requiredLabel('Tem hipertensão?')}
-      <select className="input-box" value={form.hipertensao} onChange={e => {
+      {requiredLabel('Tem hipertensão?', 'hipertensao')}
+      <select className={requiredInputClass('hipertensao')} value={form.hipertensao} onChange={e => {
         const val = e.target.value;
         updateField('hipertensao', val);
         if (val === 'Não') updateField('tempo_diag_has', 'Não se aplica');
@@ -537,8 +726,8 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo de diagnóstico - HAS')}
       <input className="input-box" value={form.hipertensao === 'Não' ? 'Não se aplica' : form.tempo_diag_has} onChange={e=>updateField('tempo_diag_has', e.target.value)} disabled={form.hipertensao === 'Não'} placeholder="Ex.: 2 anos" />
-      {requiredLabel('Tem diabetes?')}
-      <select className="input-box" value={form.diabetes} onChange={e => {
+      {requiredLabel('Tem diabetes?', 'diabetes')}
+      <select className={requiredInputClass('diabetes')} value={form.diabetes} onChange={e => {
         const val = e.target.value;
         updateField('diabetes', val);
         if (val === 'Não') updateField('tempo_diag_dm', 'Não se aplica');
@@ -546,82 +735,115 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       {requiredLabel('Tempo de diagnóstico - DM')}
       <input className="input-box" value={form.diabetes === 'Não' ? 'Não se aplica' : form.tempo_diag_dm} onChange={e=>updateField('tempo_diag_dm', e.target.value)} disabled={form.diabetes === 'Não'} placeholder="Ex.: 3 anos" />
+      <div className="section-title">É gestante?</div>
+      <select className="input-box" value={form.gestante} onChange={e => {
+        const val = e.target.value;
+        updateField('gestante', val);
+        if (val !== 'Sim') {
+          updateField('infeccao_urinaria_gestacao', '');
+          updateField('peso_primeira_consulta', '');
+          updateField('dum', '');
+          updateField('gestacao_semanas', '');
+          updateField('previsao_parto', '');
+          updateField('faz_pre_natal', '');
+          updateField('inicio_pre_natal', '');
+          updateField('data_ultima_consulta_pre_natal', '');
+        }
+      }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {form.gestante === 'Sim' && (<>
       {requiredLabel('Teve infecção urinária durante a gestação?')}
-      <select className="input-box" value={form.infeccao_urinaria_gestacao} onChange={e=>updateField('infeccao_urinaria_gestacao', e.target.value)}><option value="">Escolha...</option><option>Não é gestante</option><option>Sim</option><option>Não</option></select>
-      {requiredLabel('Dependências')}
-      <div className="grid grid-cols-2 gap-2 pb-4">
-        {['Tabagismo','Etilismo','Ex-etilista','Ex-tabagista','Uso de drogas ilícitas','Nenhum relato'].map(option => {
-          const selected = String(form.dependencias || '').split('|').map(v => v.trim()).filter(Boolean);
-          const checked = selected.includes(option);
-          const hasNone = selected.includes('Nenhum relato');
-          return (
-            <label key={option} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={checked}
-                onChange={e => {
-                  let next;
-                  if (option === 'Nenhum relato') {
-                    next = e.target.checked ? ['Nenhum relato'] : [];
-                  } else {
-                    next = e.target.checked ? [...selected.filter(v => v !== 'Nenhum relato'), option] : selected.filter(v => v !== option);
-                  }
-                  updateField('dependencias', next.join('|'));
-
-                  if (option === 'Nenhum relato' && e.target.checked) {
-                    updateField('tempo_dependencia', 'Não se aplica');
-                  }
-
-                  if (hasNone && !checked) {
-                    if (form.tempo_dependencia === 'Não se aplica') updateField('tempo_dependencia', '');
-                  }
-                }}
-              />
-              {option}
-            </label>
-          );
-        })}
-      </div>
-      <div className="section-title">Tempo de dependência</div>
-      <select
-        className="input-box"
-        value={String(form.dependencias || '').split('|').map(v => v.trim()).includes('Nenhum relato') ? 'Não se aplica' : form.tempo_dependencia}
-        onChange={e=>updateField('tempo_dependencia', e.target.value)}
-        disabled={String(form.dependencias || '').split('|').map(v => v.trim()).includes('Nenhum relato')}
-      >
-        <option value="">Escolha...</option>
-        <option>Não tem Dependência</option>
-        <option>Até 5 anos</option>
-        <option>De 5 a 10 anos</option>
-        <option>Mais de 10 anos</option>
-      </select>
-      <div className="section-title">Altura (cm)</div>
-      <input className="input-box" type="number" min="50" max="250" step="0.1" inputMode="decimal" value={form.altura} onChange={e=>updateField('altura', e.target.value)} placeholder="Ex.: 152" />
-      {requiredLabel('Peso Inicial (kg)')}
-      <input className="input-box" type="number" min="20" max="300" step="0.1" inputMode="decimal" value={form.peso_inicial} onChange={e=>updateField('peso_inicial', e.target.value)} placeholder="Ex.: 50" />
-      <div className="section-title">Peso Atual (kg)</div>
-      <input className="input-box" type="number" min="20" max="300" step="0.1" inputMode="decimal" value={form.peso_atual} onChange={e=>updateField('peso_atual', e.target.value)} placeholder="Ex.: 60" />
+      <select className="input-box" value={form.infeccao_urinaria_gestacao} onChange={e=>updateField('infeccao_urinaria_gestacao', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       <div className="section-title">Peso na primeira consulta de pré-natal (kg)</div>
       <input className="input-box" type="number" min="20" max="300" step="0.1" inputMode="decimal" value={form.peso_primeira_consulta} onChange={e=>updateField('peso_primeira_consulta', e.target.value)} placeholder="Ex.: 55" />
       <div className="section-title">IMC pré-gestacional (calculado)</div>
       <input className="input-box bg-gray-100" value={calcularImcPreGestacional()} disabled />
       <div className="section-title">Data da última menstruação (DUM)</div>
-      <input className="input-box" value={form.dum} onChange={e=>updateField('dum', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
-      <div className="section-title">Tempo de gestação (semanas)</div>
-      <input className="input-box" type="number" min="1" max="42" inputMode="numeric" value={form.gestacao_semanas} onChange={e=>updateField('gestacao_semanas', e.target.value.replace(/\D/g,''))} placeholder="Ex.: 20" />
-      <div className="section-title">Previsão do parto</div>
-      <input className="input-box" value={form.previsao_parto} onChange={e=>updateField('previsao_parto', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      <input className="input-box" value={form.dum} onChange={e=>updateField('dum', mascaraData(e.target.value))} placeholder="Ex.: 01/01/2025" inputMode="numeric" maxLength={10} />
+      <div className="section-title">Idade Gestacional (semanas) — calculada automaticamente</div>
+      <input className="input-box bg-gray-100" value={form.gestacao_semanas ? `${form.gestacao_semanas} semanas` : ''} disabled />
+      <div className="section-title">Data Provável do Parto - DPP (calculada automaticamente)</div>
+      <input className="input-box bg-gray-100" value={form.previsao_parto} disabled />
       <div className="section-title">Faz acompanhamento de pré-natal?</div>
       <select className="input-box" value={form.faz_pre_natal} onChange={e=>updateField('faz_pre_natal', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       <div className="section-title">Início do acompanhamento do pré-natal</div>
-      <input className="input-box" value={form.inicio_pre_natal} onChange={e=>updateField('inicio_pre_natal', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      <input className="input-box" value={form.inicio_pre_natal} onChange={e=>updateField('inicio_pre_natal', mascaraData(e.target.value))} placeholder="Ex.: 01/01/1990" inputMode="numeric" maxLength={10} />
       <div className="section-title">Data da última consulta de pré-natal</div>
-      <input className="input-box" value={form.data_ultima_consulta_pre_natal} onChange={e=>updateField('data_ultima_consulta_pre_natal', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
-      {requiredLabel('Enxerga bem?')}
-      <select className="input-box" value={form.enxerga_bem} onChange={e=>updateField('enxerga_bem', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
-      {requiredLabel('Consulta com oftalmologista')}
-      <select className="input-box" value={form.consulta_oftalmo} onChange={e => {
+      <input className="input-box" value={form.data_ultima_consulta_pre_natal} onChange={e=>updateField('data_ultima_consulta_pre_natal', mascaraData(e.target.value))} placeholder="Ex.: 01/01/1990" inputMode="numeric" maxLength={10} />
+      </>)}
+      {requiredLabel('Hábitos', 'dependencias')}
+      <div className="grid grid-cols-1 gap-2 pb-4">
+        {[
+          'Problemas com cigarro',
+          'Problemas com álcool',
+          'Pessoa que já teve problemas com álcool',
+          'Pessoa que já teve problemas com cigarro',
+          'Bebe socialmente',
+          'Uso de drogas ilícitas',
+          'Nenhum relato'
+        ].map(option => {
+          const selected = String(form.dependencias || '').split('|').map(v => v.trim()).filter(Boolean);
+          const checked = selected.includes(option);
+          const hasNone = selected.includes('Nenhum relato');
+          let tempoObj = {};
+          try { tempoObj = JSON.parse(form.tempo_dependencia || '{}'); } catch { tempoObj = {}; }
+          return (
+            <div key={option}>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={checked}
+                  onChange={e => {
+                    let next;
+                    if (option === 'Nenhum relato') {
+                      next = e.target.checked ? ['Nenhum relato'] : [];
+                    } else {
+                      next = e.target.checked ? [...selected.filter(v => v !== 'Nenhum relato'), option] : selected.filter(v => v !== option);
+                    }
+                    updateField('dependencias', next.join('|'));
+                    if (option === 'Nenhum relato' && e.target.checked) {
+                      updateField('tempo_dependencia', JSON.stringify({}));
+                    }
+                    if (!e.target.checked && option !== 'Nenhum relato') {
+                      const newTempo = { ...tempoObj };
+                      delete newTempo[option];
+                      updateField('tempo_dependencia', JSON.stringify(newTempo));
+                    }
+                  }}
+                />
+                {option}
+              </label>
+              {checked && option !== 'Nenhum relato' && (
+                <select
+                  className="input-box mt-1 ml-6 text-sm"
+                  value={tempoObj[option] || ''}
+                  onChange={e => {
+                    const newTempo = { ...tempoObj, [option]: e.target.value };
+                    updateField('tempo_dependencia', JSON.stringify(newTempo));
+                  }}
+                >
+                  <option value="">Tempo...</option>
+                  <option>Até 5 anos</option>
+                  <option>De 5 a 10 anos</option>
+                  <option>Mais de 10 anos</option>
+                </select>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="section-title">Altura (cm)</div>
+      <input className="input-box" type="number" min="50" max="250" step="0.1" inputMode="decimal" value={form.altura} onChange={e=>updateField('altura', e.target.value)} placeholder="Ex.: 152" />
+      {requiredLabel('Peso Inicial (kg)', 'peso_inicial')}
+      <input className={requiredInputClass('peso_inicial')} type="number" min="20" max="300" step="0.1" inputMode="decimal" value={form.peso_inicial} onChange={e=>updateField('peso_inicial', e.target.value)} placeholder="Ex.: 50" />
+      <div className="section-title">Peso Atual (kg)</div>
+      <input className="input-box" type="number" min="20" max="300" step="0.1" inputMode="decimal" value={form.peso_atual} onChange={e=>updateField('peso_atual', e.target.value)} placeholder="Ex.: 60" />
+      <div className="section-title">IMC Atual (calculado)</div>
+      <input className="input-box bg-gray-100" value={calcularImcAtual()} disabled />
+      {requiredLabel('Enxerga bem?', 'enxerga_bem')}
+      <select className={requiredInputClass('enxerga_bem')} value={form.enxerga_bem} onChange={e=>updateField('enxerga_bem', e.target.value)}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
+      {requiredLabel('Consulta com oftalmologista', 'consulta_oftalmo')}
+      <select className={requiredInputClass('consulta_oftalmo')} value={form.consulta_oftalmo} onChange={e => {
         const val = e.target.value;
         updateField('consulta_oftalmo', val);
         if (val === 'Não') updateField('tempo_consulta_oftalmo', 'Não se aplica');
@@ -631,8 +853,8 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       <select className="input-box" value={form.consulta_oftalmo === 'Não' ? 'Não se aplica' : form.tempo_consulta_oftalmo} onChange={e=>updateField('tempo_consulta_oftalmo', e.target.value)} disabled={form.consulta_oftalmo === 'Não'}><option value="">Escolha...</option><option value="Não se aplica">Não se aplica</option><option>Até 1 ano</option><option>De 1 a 3 anos</option><option>Mais de 3 anos</option></select>
       {requiredLabel('Você sente dificuldade para mastigar, falar ou engolir?')}
       <select className="input-box" value={form.dificuldade_mastigar_falar_engolir} onChange={e=>updateField('dificuldade_mastigar_falar_engolir', e.target.value)}><option value="">Escolha...</option><option>Não</option><option>Mastigar</option><option>Falar</option><option>Engolir</option><option>Mastigar e Falar</option><option>Mastigar e Engolir</option><option>Falar e Engolir</option><option>Mastigar, Falar e Engolir</option><option>Dor na língua</option><option>Voz rouca</option><option>Ferida na boca que não cicatriza</option></select>
-      {requiredLabel('Faz uso de medicações?')}
-      <select className="input-box" value={form.uso_medicacoes} onChange={e => {
+      {requiredLabel('Faz uso de medicações?', 'uso_medicacoes')}
+      <select className={requiredInputClass('uso_medicacoes')} value={form.uso_medicacoes} onChange={e => {
         const val = e.target.value;
         updateField('uso_medicacoes', val);
         if (val === 'Não') {
@@ -642,37 +864,58 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
         }
       }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
       <div className="section-title">Medicações</div>
-      <div className="space-y-2">
+      <div className="space-y-3">
         {medicacoes.map((med, idx) => (
-          <div key={idx} className="flex gap-2 items-center">
-            <input className="input-box" style={{flex:1, minWidth:120}} value={med.nome} onChange={e => {
-              const next = [...medicacoes];
-              next[idx] = { ...next[idx], nome: e.target.value };
-              setMedicacoes(next);
-            }} placeholder="Nome" disabled={form.uso_medicacoes === 'Não'} />
-            <input className="input-box" style={{flex:1, minWidth:120}} value={med.dosagem} onChange={e => {
-              const next = [...medicacoes];
-              next[idx] = { ...next[idx], dosagem: e.target.value };
-              setMedicacoes(next);
-            }} placeholder="Dosagem" disabled={form.uso_medicacoes === 'Não'} />
-            <input className="input-box" style={{flex:1, minWidth:120}} value={med.horario} onChange={e => {
-              const next = [...medicacoes];
-              next[idx] = { ...next[idx], horario: mascaraHorarioMedicacao(e.target.value) };
-              setMedicacoes(next);
-            }} placeholder="HH:MM" inputMode="numeric" maxLength={5} disabled={form.uso_medicacoes === 'Não'} />
-            <button type="button" className="btn-sec" style={{width:40, padding:'0 8px'}} onClick={() => setMedicacoes(prev => [...prev, { nome:'', dosagem:'', horario:'' }])} disabled={form.uso_medicacoes === 'Não'}>+</button>
-            {idx > 0 && (
-              <button type="button" className="btn-sec" style={{width:40, padding:'0 8px'}} onClick={() => setMedicacoes(prev => prev.filter((_, i) => i !== idx))} disabled={form.uso_medicacoes === 'Não'}>-</button>
-            )}
+          <div key={idx} className="border rounded-xl p-3 bg-white">
+            <div className="flex gap-2 items-center mb-2">
+              <input className="input-box mb-0" style={{flex:1}} value={med.nome} onChange={e => {
+                const next = [...medicacoes];
+                next[idx] = { ...next[idx], nome: e.target.value };
+                setMedicacoes(next);
+              }} placeholder="Ex.: Losartana" disabled={form.uso_medicacoes === 'Não'} />
+              <input className="input-box mb-0" style={{flex:1}} value={med.dosagem} onChange={e => {
+                const next = [...medicacoes];
+                next[idx] = { ...next[idx], dosagem: e.target.value };
+                setMedicacoes(next);
+              }} placeholder="Ex.: 50mg" disabled={form.uso_medicacoes === 'Não'} />
+            </div>
+            <div className="flex gap-2 items-center">
+              <select className="input-box mb-0" style={{flex:1}} value={med.horario} onChange={e => {
+                const next = [...medicacoes];
+                next[idx] = { ...next[idx], horario: e.target.value };
+                setMedicacoes(next);
+              }} disabled={form.uso_medicacoes === 'Não'}>
+                <option value="">Quando toma?</option>
+                <option>Manhã</option>
+                <option>Tarde</option>
+                <option>Noite</option>
+                <option>Manhã e Noite</option>
+                <option>Manhã, Tarde e Noite</option>
+                <option>Antes da refeição</option>
+                <option>Após a refeição</option>
+                <option>Horário específico</option>
+              </select>
+              {med.horario === 'Horário específico' && (
+                <input className="input-box mb-0" style={{width:100}} value={med.horario_especifico || ''} onChange={e => {
+                  const next = [...medicacoes];
+                  next[idx] = { ...next[idx], horario_especifico: mascaraHorarioMedicacao(e.target.value) };
+                  setMedicacoes(next);
+                }} placeholder="Ex.: 08:00" inputMode="numeric" maxLength={5} />
+              )}
+              {idx > 0 && (
+                <button type="button" style={{width:36, height:36, padding:0, borderRadius:'50%', background:'#fee2e2', color:'#dc2626', border:'1px solid #fca5a5', fontWeight:800, fontSize:16, cursor:'pointer'}} onClick={() => setMedicacoes(prev => prev.filter((_, i) => i !== idx))} disabled={form.uso_medicacoes === 'Não'}>✕</button>
+              )}
+            </div>
           </div>
         ))}
+        <button type="button" style={{width:'100%', padding:'14px', borderRadius:'14px', background:'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color:'#fff', fontWeight:800, fontSize:16, border:'none', cursor:'pointer', boxShadow:'0 4px 12px rgba(22,163,74,0.3)', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px'}} onClick={() => setMedicacoes(prev => [...prev, { nome:'', dosagem:'', horario:'' }])} disabled={form.uso_medicacoes === 'Não'}>➕ Adicionar Medicação</button>
       </div>
       <div className="section-title">Data da última prescrição</div>
-      <input className="input-box" value={form.data_ultima_prescricao} onChange={e=>updateField('data_ultima_prescricao', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
+      <input className="input-box" value={form.data_ultima_prescricao} onChange={e=>updateField('data_ultima_prescricao', mascaraData(e.target.value))} placeholder="Ex.: 01/01/1990" inputMode="numeric" maxLength={10} />
       <div className="section-title">Data da última dispensação</div>
-      <input className="input-box" value={form.data_ultima_dispensacao} onChange={e=>updateField('data_ultima_dispensacao', mascaraData(e.target.value))} placeholder="DD/MM/AAAA" inputMode="numeric" maxLength={10} />
-      {requiredLabel('Faz Atividade Física?')}
-      <select className="input-box" value={form.atividade_fisica} onChange={e => {
+      <input className="input-box" value={form.data_ultima_dispensacao} onChange={e=>updateField('data_ultima_dispensacao', mascaraData(e.target.value))} placeholder="Ex.: 01/01/1990" inputMode="numeric" maxLength={10} />
+      {requiredLabel('Faz Atividade Física?', 'atividade_fisica')}
+      <select className={requiredInputClass('atividade_fisica')} value={form.atividade_fisica} onChange={e => {
         const val = e.target.value;
         updateField('atividade_fisica', val);
         if (val === 'Não') {
@@ -683,9 +926,9 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
           if (form.tipo_atividade === 'Não se aplica') updateField('tipo_atividade', '');
         }
       }}><option value="">Escolha...</option><option>Sim</option><option>Não</option></select>
-      {requiredLabel('Frequência da Atividade Física')}
+      {requiredLabel('Frequência da Atividade Física', 'freq_atividade')}
       <select className="input-box" value={form.atividade_fisica === 'Não' ? 'Não se aplica' : form.freq_atividade} onChange={e=>updateField('freq_atividade', e.target.value)} disabled={form.atividade_fisica === 'Não'}><option value="">Escolha...</option><option value="Não se aplica">Não se aplica</option><option>1x semana</option><option>2-3x semana</option><option>4-5x semana</option><option>Diário</option><option>Nunca</option></select>
-      {requiredLabel('Que tipo de Atividade Física?')}
+      {requiredLabel('Que tipo de Atividade Física?', 'tipo_atividade')}
       <div className="grid grid-cols-2 gap-2 pb-4">
         {['Caminhada','Corrida','Musculação','Dança','Esportes','Outra'].map(option => {
           const selected = String(form.tipo_atividade || '').split('|').map(v => v.trim()).filter(Boolean);
@@ -707,19 +950,28 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
           );
         })}
       </div>
-      {requiredLabel('Meta de Peso')}
+      <div className="section-title">Meta de Peso (opcional)</div>
       <input className="input-box" value={form.meta_peso} onChange={e=>updateField('meta_peso', e.target.value)} placeholder="Ex.: 60" />
-      {requiredLabel('Meta Glicemia')}
+      <div className="section-title">Meta Glicemia (opcional)</div>
       <input className="input-box" value={form.meta_glicemia} onChange={e=>updateField('meta_glicemia', e.target.value)} placeholder="Ex.: 110" />
-      {requiredLabel('Meta PA Mínima')}
-      <input className="input-box" value={form.meta_pa_min} onChange={e=>updateField('meta_pa_min', e.target.value)} placeholder="Ex.: 110" />
-      {requiredLabel('Meta PA Máxima')}
+      <div className="section-title">Meta PA Máxima (opcional)</div>
       <input className="input-box" value={form.meta_pa_max} onChange={e=>updateField('meta_pa_max', e.target.value)} placeholder="Ex.: 140" />
+      <div className="section-title">Meta PA Mínima (opcional)</div>
+      <input className="input-box" value={form.meta_pa_min} onChange={e=>updateField('meta_pa_min', e.target.value)} placeholder="Ex.: 110" />
       <div className="section-title">Fotos clínicas (opcional)</div>
       <div className="flex items-center gap-4 mb-4 flex-wrap">
-        <label className="thumb" style={{background:'#fff', overflow:'hidden', position:'relative', zIndex:1, flexShrink:0}}>📷<input type="file" accept="image/*" multiple className="hidden-input" onChange={handleExtraFotos} /></label>
-        <div className="text-xs text-gray-500 font-semibold">Envie fotos (pé, pele, boca, etc.) se necessário.</div>
+        <button type="button" className="btn-sec w-auto px-4 py-2 text-xs" onClick={openCameraClinica}>📸 Tirar Foto</button>
+        <div className="text-xs text-gray-500 font-semibold">Tire fotos (pé, pele, boca, etc.) se necessário.</div>
       </div>
+      {showCameraClinica && (
+        <div style={{position:'fixed', inset:0, zIndex:9999, background:'#000', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center'}}>
+          <video ref={cameraClinicaVideoRef} autoPlay playsInline style={{width:'100%', maxHeight:'70vh', objectFit:'contain'}} />
+          <div className="flex gap-4 mt-4">
+            <button type="button" onClick={takeFotoClinica} className="w-16 h-16 bg-white rounded-full border-4 border-emerald-500" />
+            <button type="button" onClick={closeCameraClinica} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">✕</button>
+          </div>
+        </div>
+      )}
       {extraFotos.length > 0 && (
         <div className="flex gap-2 flex-wrap mb-4">
           {extraFotos.map((item, idx) => (<div key={`${item.file.name}-${idx}`} className="border rounded-xl p-2 bg-white"><img src={item.preview} alt="foto" className="w-24 h-24 object-cover rounded-lg" /><button type="button" className="btn-sec w-full mt-2 text-xs" onClick={()=>removerExtraFoto(idx)}>Remover</button></div>))}
@@ -732,9 +984,9 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
 };
 
 // Dashboard do Profissional
-const ProDash = ({user, onLogout}) => {
-  const [mode, setMode] = React.useState('menu');
-  const [formData, setFormData] = useState({});
+const ProDash = ({user, onLogout, initialMode, initialFormData}) => {
+  const [mode, setMode] = React.useState(initialMode || 'menu');
+  const [formData, setFormData] = useState(initialFormData || {});
   const [saving, setSaving] = useState(false);
   
   useEffect(() => { sessionStorage.setItem('profissional', JSON.stringify(user)); }, [user]);
@@ -862,13 +1114,30 @@ const ProfissionalApp = () => {
 
   useEffect(() => { const f = () => setOnline(navigator.onLine); window.addEventListener('online', f); window.addEventListener('offline', f); return () => { window.removeEventListener('online', f); window.removeEventListener('offline', f); }; }, []);
 
+  const [autoCadastroData, setAutoCadastroData] = useState(null);
+
   useEffect(() => {
     const raw = sessionStorage.getItem('profissional');
     if (raw) { try { const prof = JSON.parse(raw); if (prof) { setUser(prof); setRoute('dash'); return; } } catch (e) { } }
+    // Handle ?autocadastro=1 from patient login redirect
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('autocadastro') === '1') {
+      const proRaw = sessionStorage.getItem('autocadastro_pro');
+      if (proRaw) {
+        try {
+          const pro = JSON.parse(proRaw);
+          sessionStorage.removeItem('autocadastro_pro');
+          setUser(pro);
+          setAutoCadastroData({ cpf: mascaraCPF(pro.cpf || ''), nome: pro.nome || '', telefone: pro.telefone || '', ubs_referencia: pro.ubs || '' });
+          setRoute('dash');
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch {}
+      }
+    }
   }, []);
 
   const loginPro = (data) => { setUser(data); setRoute('dash'); };
-  const logout = () => { sessionStorage.removeItem('profissional'); setUser(null); setRoute('login'); };
+  const logout = () => { sessionStorage.removeItem('profissional'); sessionStorage.removeItem('autocadastro_pro'); setUser(null); setRoute('login'); };
 
   if(SUPABASE_CONFIG_MISSING) return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center">
@@ -882,7 +1151,7 @@ const ProfissionalApp = () => {
     <>
       <OfflineBanner online={online} />
       {route === 'login' && <ProAuth onAuth={loginPro} onBack={() => window.location.href = '../index.html'} />}
-      {route === 'dash' && <ProDash user={user} onLogout={logout} />}
+      {route === 'dash' && <ProDash user={user} onLogout={logout} initialMode={autoCadastroData ? 'novo_cadastro' : undefined} initialFormData={autoCadastroData || undefined} />}
     </>
   );
 };

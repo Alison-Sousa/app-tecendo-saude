@@ -27,57 +27,17 @@
   .card { background: #fff; padding: 16px; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); margin-bottom: 12px; border: 1px solid #f1f5f9; }
   .section-title { font-size: 13px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin: 24px 0 8px 0; letter-spacing: 1px; }
   .loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; font-weight: 700; color: var(--primary); }
+  @keyframes slideDownFade { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
-<script src='cordova.js'></script>
-<script>
-function requestInitialPermissions() {
-  if (!window.cordova || !window.cordova.plugins || !window.cordova.plugins.permissions) {
-    console.log('Permissões do Cordova não disponível (navegador web)');
-    return;
-  }
-
-  const permissions = window.cordova.plugins.permissions;
-  const permsToRequest = [
-    permissions.RECORD_AUDIO,
-    permissions.CAMERA,
-    permissions.MODIFY_AUDIO_SETTINGS
-  ];
-
-  console.log('Solicitando permissões de mídia...');
-
-  permsToRequest.forEach((perm) => {
-    permissions.checkPermission(
-      perm,
-      (status) => {
-        if (!status.hasPermission) {
-          console.log('Solicitando:', perm);
-          permissions.requestPermission(perm,
-            (s) => console.log(`Permissão ${perm} concedida:`, s.hasPermission),
-            (e) => console.warn(`Erro ao solicitar ${perm}:`, e)
-          );
-        } else {
-          console.log(`Permissão ${perm} já concedida`);
-        }
-      },
-      (e) => console.warn(`Erro ao verificar ${perm}:`, e)
-    );
-  });
-}
-
-document.addEventListener('deviceready', requestInitialPermissions, false);
-</script></head>
+</head>
 <body>
+
 <div id="root"></div>
+
 <script type="text/babel" src="./js/components.js"></script>
 <script type="text/babel">
-  
-// ================================================
-// TELA INICIAL - ROTEADOR PRINCIPAL
-// ================================================
-
-// LEARN_ITEMS vem de config.js
-// getYoutubeId vem de utils.js
-// Loading e OfflineBanner vêm de components.js
+const { useState, useEffect } = React;
 
 // Tela de boas-vindas
 const WelcomeScreen = ({onPatient, onProfessional}) => (
@@ -92,7 +52,7 @@ const WelcomeScreen = ({onPatient, onProfessional}) => (
   </div>
 );
 
-// Tela de tópicos educativos do usuário do SUS
+// Tela de tópicos educativos
 const PatientTopicsScreen = ({onContinue, onBack, online}) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   
@@ -115,9 +75,11 @@ const PatientTopicsScreen = ({onContinue, onBack, online}) => {
           <div>
             <p className="text-sm text-emerald-700 font-semibold">Conteúdo educativo</p>
             <h1 className="text-3xl font-extrabold text-emerald-900">Escolha um tema</h1>
-            <p className="text-gray-600">Tire dúvidas sobre aferição e monitoramento com vídeos, textos e áudios.</p>
           </div>
-          <button className="btn-sec w-auto px-5" onClick={onBack}>← Voltar</button>
+          <div className="flex gap-2">
+            <button className="btn-sec w-auto px-5" onClick={onBack}>← Voltar</button>
+            <button className="btn-primary w-auto px-5" onClick={onContinue}>Login →</button>
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
@@ -126,7 +88,6 @@ const PatientTopicsScreen = ({onContinue, onBack, online}) => {
             <div className="card text-left border-2 border-emerald-500 bg-emerald-50">
               <div className="text-xs uppercase tracking-[0.3em] text-emerald-500 font-bold">{currentItem?.title}</div>
               <div className="text-lg font-extrabold text-slate-900 mt-2">{currentItem?.kicker}</div>
-              <div className="text-sm text-slate-600 mt-2">Use as setas para trocar o tema</div>
             </div>
           </div>
           <button className="btn-sec w-auto px-3" onClick={nextItem}>→</button>
@@ -134,172 +95,207 @@ const PatientTopicsScreen = ({onContinue, onBack, online}) => {
         
         {currentItem && (
           <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm">
-            <div className="text-[11px] uppercase tracking-[0.3em] text-emerald-500 font-bold mb-2">{currentItem.title}</div>
             <h2 className="text-2xl font-extrabold text-slate-900 mb-3">{currentItem.kicker}</h2>
             <div className="space-y-2 text-sm text-slate-700">
               {currentItem.body.map((p,i) => (<p key={i}>{p}</p>))}
             </div>
-            {currentItem.audio && (
-              <div className="mt-3">
-                <audio controls src={`audios/${encodeURIComponent(currentItem.audio)}`} className="w-full" />
-              </div>
-            )}
             {online && currentItem.video && videoId && (
-              <div className="mt-4 rounded-xl overflow-hidden border border-emerald-200 shadow-sm">
-                <iframe
-                  className="w-full h-56"
-                  src={`https://www.youtube.com/embed/${videoId}`}
-                  title={currentItem.title}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                ></iframe>
+              <div className="mt-4 rounded-xl overflow-hidden border border-emerald-200">
+                <iframe className="w-full h-56" src={`https://www.youtube.com/embed/${videoId}`} frameBorder="0" allowFullScreen></iframe>
               </div>
-            )}
-            {!online && (
-              <div className="mt-4 text-sm text-slate-500">Sem internet: vídeo indisponível no momento.</div>
             )}
           </div>
         )}
-        
-        <button className="btn-primary" onClick={onContinue}>Continuar para Login</button>
       </div>
     </div>
   );
 };
 
-// Tela de erro de configuração
-const ConfigErrorScreen = () => (
-  <div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center">
-    <div className="w-44 h-44 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-lg overflow-hidden">
-      <img src="img/logo.png" alt="Tecendo Saúde" className="w-36 h-36 object-contain" />
+const DownloadAppButton = () => {
+  const [open, setOpen] = useState(false);
+  const [downloading, setDownloading] = useState(null);
+  const ref = React.useRef(null);
+
+  useEffect(() => {
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('touchstart', close); };
+  }, []);
+
+  const doDownload = (platform) => {
+    setDownloading(platform);
+    setTimeout(() => {
+      if (platform === 'android') {
+        const link = document.createElement('a');
+        link.href = 'https://github.com/Alison-Sousa/app-tecendo-saude/releases/latest/download/tecendo-saude.apk';
+        link.download = 'tecendo-saude.apk';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert('📱 Em breve na App Store!\n\nPor enquanto, no iPhone/iPad:\n1. Abra este site no Safari\n2. Toque em "Compartilhar" (ícone ↑)\n3. Toque em "Adicionar à Tela de Início"\n\nO app funcionará como nativo!');
+      }
+      setDownloading(null);
+      setOpen(false);
+    }, 800);
+  };
+
+  return (
+    <div ref={ref} style={{position:'relative'}}>
+      <button onClick={() => setOpen(prev => !prev)}
+        style={{
+          background: 'linear-gradient(135deg, #1f4a2c 0%, #2f6b3f 100%)',
+          color: '#fff', padding: '10px 18px', fontSize: '13px', fontWeight: 800,
+          borderRadius: '12px', border: 'none', cursor: 'pointer',
+          boxShadow: '0 4px 15px rgba(22,163,74,0.4)',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          transition: 'all 0.2s'
+        }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        DOWNLOAD APP
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+          style={{transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.25s ease'}}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+          background: '#fff', borderRadius: '16px', boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+          border: '1px solid #e2e8f0', overflow: 'hidden', minWidth: '220px',
+          animation: 'slideDownFade 0.25s ease-out'
+        }}>
+          <button onClick={() => doDownload('android')} disabled={!!downloading}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
+              padding: '14px 16px', border: 'none', background: downloading === 'android' ? '#f0fdf4' : '#fff',
+              cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background='#f0fdf4'}
+            onMouseLeave={e => e.currentTarget.style.background= downloading === 'android' ? '#f0fdf4' : '#fff'}>
+            <div style={{
+              width: '44px', height: '44px', borderRadius: '12px',
+              background: 'linear-gradient(135deg, #a8e063 0%, #56ab2f 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              {downloading === 'android' ? (
+                <div style={{width:'20px',height:'20px',border:'3px solid rgba(255,255,255,0.3)',borderTop:'3px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}></div>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.523 15.341c-.01 0-.018 0-.028-.001a.669.669 0 01-.636-.7c.088-1.883.089-3.584.002-5.052a.668.668 0 01.634-.702.67.67 0 01.702.634c.09 1.518.089 3.271-.002 5.206a.667.667 0 01-.672.615zM6.477 15.341a.667.667 0 01-.666-.615c-.091-1.935-.092-3.688-.002-5.206a.666.666 0 01.702-.634.668.668 0 01.634.702c-.087 1.468-.086 3.169.002 5.052a.669.669 0 01-.636.7c-.01.001-.023.001-.034.001zM15.655 7.531H8.345a.667.667 0 010-1.334h7.31a.667.667 0 010 1.334zM14.63 5.83a.665.665 0 01-.497-.222l-1.38-1.553a.667.667 0 01.997-.886l1.38 1.553a.667.667 0 01-.5 1.108zM9.37 5.83a.667.667 0 01-.5-1.108l1.38-1.553a.667.667 0 01.997.886L9.867 5.608a.665.665 0 01-.497.222z"/>
+                  <path d="M16.5 17.5h-9a2 2 0 01-2-2v-8a2 2 0 012-2h9a2 2 0 012 2v8a2 2 0 01-2 2z" fill="none" stroke="white" strokeWidth="1.2"/>
+                </svg>
+              )}
+            </div>
+            <div style={{fontWeight: 800, fontSize: '14px', color: '#1e293b'}}>Android</div>
+          </button>
+
+          <div style={{height:'1px',background:'#f1f5f9',margin:'0 16px'}}></div>
+
+          <button onClick={() => doDownload('ios')} disabled={!!downloading}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: '14px',
+              padding: '14px 16px', border: 'none', background: downloading === 'ios' ? '#f0f9ff' : '#fff',
+              cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background='#f0f9ff'}
+            onMouseLeave={e => e.currentTarget.style.background= downloading === 'ios' ? '#f0f9ff' : '#fff'}>
+            <div style={{
+              width: '44px', height: '44px', borderRadius: '12px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+            }}>
+              {downloading === 'ios' ? (
+                <div style={{width:'20px',height:'20px',border:'3px solid rgba(255,255,255,0.3)',borderTop:'3px solid #fff',borderRadius:'50%',animation:'spin 0.8s linear infinite'}}></div>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 384 512" fill="white">
+                  <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+                </svg>
+              )}
+            </div>
+            <div style={{fontWeight: 800, fontSize: '14px', color: '#1e293b'}}>iOS</div>
+          </button>
+        </div>
+      )}
     </div>
-    <h1 className="text-2xl font-extrabold text-green-900 mb-2">Configuração necessária</h1>
-    <p className="text-gray-600 mb-4">Crie o arquivo env/env.js e preencha SUPABASE_URL/SUPABASE_KEY (ou VITE_SUPABASE_*).</p>
-    <p className="text-gray-500 text-sm">Use o env/env.example.js como modelo.</p>
-  </div>
-);
-const btnPolitica = document.getElementById('btnPolitica');
-  const btnFechar = document.getElementById('btnFecharPolitica');
-  const modal = document.getElementById('politicaModal');
+  );
+};
 
-  btnPolitica.addEventListener('click', () => {
-    modal.classList.remove('hidden');
-    modal.classList.add('flex'); // exibe o modal
-  });
-
-  btnFechar.addEventListener('click', () => {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex'); // oculta o modal
-  });
-
-  // Fechar modal clicando fora da caixa
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-  });
-// Aplicativo principal - Roteador
 const App = () => {
   const [route, setRoute] = useState('welcome');
   const [online, setOnline] = useState(navigator.onLine);
   
-  // Monitora status de conexão
   useEffect(() => {
     const updateOnline = () => setOnline(navigator.onLine);
     window.addEventListener('online', updateOnline);
     window.addEventListener('offline', updateOnline);
+    
+    const timer = setTimeout(() => {
+      const btnPol = document.getElementById('btnPolitica');
+      const btnFech = document.getElementById('btnFecharPolitica');
+      const mod = document.getElementById('politicaModal');
+      if(btnPol && mod && btnFech) {
+        btnPol.onclick = () => mod.classList.replace('hidden', 'flex');
+        btnFech.onclick = () => mod.classList.replace('flex', 'hidden');
+      }
+    }, 500);
+
     return () => {
       window.removeEventListener('online', updateOnline);
       window.removeEventListener('offline', updateOnline);
+      clearTimeout(timer);
     };
   }, []);
-  
-  // Verifica se há hash na URL para área profissional
-  useEffect(() => {
-    if (window.location.hash === '#profissional') {
-      window.location.href = 'usuarios/usuarios.html#profissional';
-    }
-  }, []);
-  
-  // Verifica se há perfil de paciente salvo
-  useEffect(() => {
-    const pid = localStorage.getItem('currentProfileId');
-    if (pid) {
-      // Redireciona para área do usuário do SUS se já estiver logado
-      window.location.href = 'usuarios/usuarios.html';
-    }
-  }, []);
-  
-  // Verifica configuração do Supabase
-  if (SUPABASE_CONFIG_MISSING) {
-    return <ConfigErrorScreen />;
-  }
-  
-  // Navegar para área do usuário do SUS
+
   const goToPatient = () => setRoute('patient_topics');
-  
-  // Navegar para área do profissional
-  const goToProfessional = () => {
-    window.location.href = 'usuarios/usuarios.html#profissional';
-  };
-  
-  // Navegar para login do usuário do SUS
-  const goToPatientLogin = () => {
-    window.location.href = 'usuarios/usuarios.html';
-  };
-  
-  // Voltar para tela inicial
+  const goToProfessional = () => window.location.href = 'usuarios/usuarios.html#profissional';
+  const goToPatientLogin = () => window.location.href = 'usuarios/usuarios.html';
   const goToWelcome = () => setRoute('welcome');
-  
+
   return (
     <>
       <OfflineBanner online={online} />
       
+      <div className="fixed top-4 right-4 z-[60]">
+        <DownloadAppButton />
+      </div>
+
       {route === 'welcome' && (
-        <WelcomeScreen 
-          onPatient={goToPatient} 
-          onProfessional={goToProfessional} 
-        />
+        <WelcomeScreen onPatient={goToPatient} onProfessional={goToProfessional} />
       )}
       
       {route === 'patient_topics' && (
-        <PatientTopicsScreen 
-          onContinue={goToPatientLogin} 
-          onBack={goToWelcome}
-          online={online}
-        />
+        <PatientTopicsScreen onContinue={goToPatientLogin} onBack={goToWelcome} online={online} />
       )}
     </>
   );
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-
-
 </script>
 
-</body>
 <footer class="bg-green-50 border-t border-green-200 text-center py-4 text-xs text-green-700">
   © 2026 Tecendo Saúde. 
   <button id="btnPolitica" class="underline hover:text-green-900">Política de Privacidade</button>
 </footer>
 
-<!-- Modal da Política de Privacidade -->
-<div id="politicaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+<div id="politicaModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-[100]">
   <div class="bg-white rounded-2xl max-w-lg w-11/12 p-6 shadow-lg overflow-y-auto max-h-[80vh]">
     <h2 class="text-xl font-bold text-green-900 mb-4">Política de Privacidade</h2>
     <div class="text-sm text-gray-700 space-y-2">
-      <p>A Tecendo Saúde valoriza sua privacidade. Seus dados de saúde são coletados para monitoramento individual e alertas de saúde.</p>
-      <p>Os dados são armazenados localmente no seu dispositivo e sincronizados de forma segura para análise de monitoramento e histórico.</p>
-      <p>Não compartilhamos seus dados com terceiros sem seu consentimento. Você pode solicitar a exclusão dos seus dados a qualquer momento.</p>
-      <p>As informações são protegidas por criptografia e boas práticas de segurança, de acordo com a LGPD.</p>
-      <p>Ao utilizar o aplicativo, você concorda com esta política.</p>
+      <p>A Tecendo Saúde valoriza sua privacidade. Seus dados são protegidos por criptografia de acordo com a LGPD.</p>
     </div>
-    <div class="mt-6 text-center">
+    <div class="mt-6">
       <button id="btnFecharPolitica" class="btn-primary w-full">Fechar</button>
     </div>
   </div>
 </div>
+
+</body>
 </html>
