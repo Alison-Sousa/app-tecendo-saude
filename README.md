@@ -38,9 +38,6 @@ app-tecendo-saude/
 │   └── profissionais.html    # App do profissional (login, cadastro, ficha médica)
 ├── styles/
 │   └── styles.css            # CSS global
-├── textos/
-│   ├── paciente.md           # Fluxo do paciente
-│   └── profissional.md       # Fluxo do profissional
 ├── usuarios/
 │   └── usuarios.html         # App do paciente (login, dashboard, registros)
 └── index.html                # Landing page + download do app

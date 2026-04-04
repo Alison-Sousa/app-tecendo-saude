@@ -44,7 +44,7 @@ jobs:
       - name: Copy web files into Cordova www
         run: |
           rm -rf cordova-build/app/www/*
-          cp -r index.html audios/ database/ img/ js/ monitoramento/ profissionais/ styles/ textos/ usuarios/ cordova-build/app/www/
+          cp -r index.html audios/ database/ img/ js/ monitoramento/ profissionais/ styles/ usuarios/ cordova-build/app/www/
           mkdir -p cordova-build/app/www/env
 
       - name: Generate env.js from secrets

@@ -1,30 +1,24 @@
--- 0. Extensões (UUID e crypto)
-create extension if not exists "pgcrypto";
-create extension if not exists "uuid-ossp";
+-- 0. Extensões
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. LIMPEZA (ordem correta para FKs)
-drop table if exists medicamentos cascade;
-drop table if exists registros cascade;
-drop table if exists perfis cascade;
-drop table if exists profissionais cascade;
-
--- 2. PROFISSIONAIS
-create table profissionais (
-  id uuid primary key default gen_random_uuid(),
+-- 1. PROFISSIONAIS
+CREATE TABLE IF NOT EXISTS profissionais (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   nome text,
-  cpf text not null unique,
+  cpf text NOT NULL UNIQUE,
   municipio text,
   ubs text,
   telefone text,
-  created_at timestamptz default now()
+  created_at timestamptz DEFAULT now()
 );
-create index profissionais_cpf_idx on profissionais (cpf);
+CREATE INDEX IF NOT EXISTS profissionais_cpf_idx ON profissionais (cpf);
 
--- 3. PERFIS (Pacientes)
-create table perfis (
-  id serial primary key,
-  patient_id text not null unique,
-  synced int default 1,
+-- 2. PERFIS (Pacientes)
+CREATE TABLE IF NOT EXISTS perfis (
+  id serial PRIMARY KEY,
+  patient_id text NOT NULL UNIQUE,
+  synced int DEFAULT 1,
   nome text,
   cpf text,
   nascimento text,
@@ -85,51 +79,56 @@ create table perfis (
   created_by_nome text,
   created_by_ubs text,
   created_by_cpf text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  meta_glicemia_max integer, -- Limite superior (ex: acima de 200 mg/dL)
-  meta_glicemia_min integer, -- Limite inferior (ex: abaixo de 70 mg/dL)
-  meta_pa_sis_max integer,   -- Pressão Sistólica Máxima (ex: 160)
-  meta_pa_sis_min integer,   -- Pressão Sistólica Mínima (ex: 90)
-  meta_pa_dia_max integer,   -- Pressão Diastólica Máxima (ex: 100)
-  meta_pa_dia_min integer    -- Pressão Diastólica Mínima (ex: 60)
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
-create index perfis_patient_id_idx on perfis (patient_id);
-create index perfis_cpf_idx on perfis (cpf);
-create index perfis_regiao_idx on perfis (regiao);
+CREATE INDEX IF NOT EXISTS perfis_patient_id_idx ON perfis (patient_id);
+CREATE INDEX IF NOT EXISTS perfis_cpf_idx ON perfis (cpf);
+CREATE INDEX IF NOT EXISTS perfis_regiao_idx ON perfis (regiao);
 
--- 4. REGISTROS (Atendimentos e Monitoramento Diário)
-create table registros (
-  id serial primary key,
-  registro_id text not null unique,
-  patient_id text references perfis(patient_id) on delete set null,
+-- 2.1 Colunas adicionadas em migrações (seguro para banco novo ou existente)
+ALTER TABLE perfis ADD COLUMN IF NOT EXISTS meta_glicemia_max integer;
+ALTER TABLE perfis ADD COLUMN IF NOT EXISTS meta_glicemia_min integer;
+ALTER TABLE perfis ADD COLUMN IF NOT EXISTS meta_pa_sis_max integer;
+ALTER TABLE perfis ADD COLUMN IF NOT EXISTS meta_pa_sis_min integer;
+ALTER TABLE perfis ADD COLUMN IF NOT EXISTS meta_pa_dia_max integer;
+ALTER TABLE perfis ADD COLUMN IF NOT EXISTS meta_pa_dia_min integer;
+
+-- 3. REGISTROS (Atendimentos e Monitoramento Diário)
+CREATE TABLE IF NOT EXISTS registros (
+  id serial PRIMARY KEY,
+  registro_id text NOT NULL UNIQUE,
+  patient_id text REFERENCES perfis(patient_id) ON DELETE SET NULL,
   device_id text,
   texto text,
   tipo text,
   status text,
-  pa_sistolica integer,       -- Pressão arterial máxima
-  pa_diastolica integer,      -- Pressão arterial mínima
-  peso_kg numeric(5,2),       -- Peso em kg
-  glicemia_mg integer,        -- Glicemia em mg/dL
-  gestante text,              -- 'sim' ou 'nao'
-  gestacao_semanas integer,   -- Semanas de gestação
-  atividade_fisica text,      -- Tipo de atividade física
+  pa_sistolica integer,
+  pa_diastolica integer,
+  peso_kg numeric(5,2),
+  glicemia_mg integer,
+  gestante text,
+  gestacao_semanas integer,
+  atividade_fisica text,
   resposta text,
   resposta_data timestamptz,
-  replies_json jsonb default '[]'::jsonb,
+  replies_json jsonb DEFAULT '[]'::jsonb,
   created_at timestamptz,
   updated_at timestamptz,
-  synced int default 1
+  synced int DEFAULT 1
 );
-create index registros_registro_id_idx on registros (registro_id);
-create index registros_patient_idx on registros (patient_id);
-create index registros_status_idx on registros (status);
+CREATE INDEX IF NOT EXISTS registros_registro_id_idx ON registros (registro_id);
+CREATE INDEX IF NOT EXISTS registros_patient_idx ON registros (patient_id);
+CREATE INDEX IF NOT EXISTS registros_status_idx ON registros (status);
 
--- 5. MEDICAMENTOS
-create table medicamentos (
-  id uuid primary key default gen_random_uuid(),
-  medication_id text not null unique,
-  patient_id text references perfis(patient_id) on delete cascade,
+-- 3.1 Coluna de migração glicemia_jejum
+ALTER TABLE registros ADD COLUMN IF NOT EXISTS glicemia_jejum text;
+
+-- 4. MEDICAMENTOS
+CREATE TABLE IF NOT EXISTS medicamentos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  medication_id text NOT NULL UNIQUE,
+  patient_id text REFERENCES perfis(patient_id) ON DELETE CASCADE,
   nome_paciente text,
   cpf_paciente text,
   tipo_medicamento text,
@@ -141,50 +140,53 @@ create table medicamentos (
   data_inicio date,
   data_termino date,
   ativo text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  synced int default 1
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  synced int DEFAULT 1
 );
-create index medicamentos_patient_id_idx on medicamentos (patient_id);
+CREATE INDEX IF NOT EXISTS medicamentos_patient_id_idx ON medicamentos (patient_id);
 
--- 6. FUNÇÃO + TRIGGERS (updated_at automático)
-create or replace function set_updated_at() returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
+-- 5. FUNÇÃO + TRIGGERS (updated_at automático)
+CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-create trigger perfis_updated_at before update on perfis
-for each row execute function set_updated_at();
+DROP TRIGGER IF EXISTS perfis_updated_at ON perfis;
+CREATE TRIGGER perfis_updated_at BEFORE UPDATE ON perfis
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-create trigger registros_updated_at before update on registros
-for each row execute function set_updated_at();
+DROP TRIGGER IF EXISTS registros_updated_at ON registros;
+CREATE TRIGGER registros_updated_at BEFORE UPDATE ON registros
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-create trigger medicamentos_updated_at before update on medicamentos
-for each row execute function set_updated_at();
+DROP TRIGGER IF EXISTS medicamentos_updated_at ON medicamentos;
+CREATE TRIGGER medicamentos_updated_at BEFORE UPDATE ON medicamentos
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- 7. STORAGE (Bucket público para mídias)
-insert into storage.buckets (id, name, public)
-values ('midias','midias', true)
-on conflict (id) do update set public = true;
+-- 6. STORAGE (Bucket público para mídias)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('midias', 'midias', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
 
--- 8. RLS OFF + POLÍTICAS STORAGE
-alter table profissionais disable row level security;
-alter table perfis       disable row level security;
-alter table registros    disable row level security;
-alter table medicamentos disable row level security;
+-- 7. RLS OFF + POLÍTICAS STORAGE
+ALTER TABLE profissionais DISABLE ROW LEVEL SECURITY;
+ALTER TABLE perfis        DISABLE ROW LEVEL SECURITY;
+ALTER TABLE registros     DISABLE ROW LEVEL SECURITY;
+ALTER TABLE medicamentos  DISABLE ROW LEVEL SECURITY;
 
-drop policy if exists midias_select on storage.objects;
-drop policy if exists midias_insert on storage.objects;
-drop policy if exists midias_update on storage.objects;
-drop policy if exists midias_delete on storage.objects;
+DROP POLICY IF EXISTS midias_select ON storage.objects;
+DROP POLICY IF EXISTS midias_insert ON storage.objects;
+DROP POLICY IF EXISTS midias_update ON storage.objects;
+DROP POLICY IF EXISTS midias_delete ON storage.objects;
 
-create policy midias_select on storage.objects for select using (bucket_id = 'midias');
-create policy midias_insert on storage.objects for insert with check (bucket_id = 'midias');
-create policy midias_update on storage.objects for update using (bucket_id = 'midias') with check (bucket_id = 'midias');
-create policy midias_delete on storage.objects for delete using (bucket_id = 'midias');
+CREATE POLICY midias_select ON storage.objects FOR SELECT USING (bucket_id = 'midias');
+CREATE POLICY midias_insert ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'midias');
+CREATE POLICY midias_update ON storage.objects FOR UPDATE USING (bucket_id = 'midias') WITH CHECK (bucket_id = 'midias');
+CREATE POLICY midias_delete ON storage.objects FOR DELETE USING (bucket_id = 'midias');
 
--- 9. VIEW - FICHAS CADASTRAIS COMPLETAS
-create or replace view fichas_cadastrais as
-select * from perfis;
+-- 8. VIEW - FICHAS CADASTRAIS COMPLETAS
+CREATE OR REPLACE VIEW fichas_cadastrais AS
+SELECT * FROM perfis;
