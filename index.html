@@ -254,7 +254,7 @@ const App = () => {
   }, []);
 
   const goToPatient = () => setRoute('patient_topics');
-  const goToProfessional = () => window.location.href = 'usuarios/usuarios.html#profissional';
+  const goToProfessional = () => setRoute('pro_type_select');
   const goToPatientLogin = () => window.location.href = 'usuarios/usuarios.html';
   const goToWelcome = () => setRoute('welcome');
 
@@ -268,6 +268,35 @@ const App = () => {
 
       {route === 'welcome' && (
         <WelcomeScreen onPatient={goToPatient} onProfessional={goToProfessional} />
+      )}
+
+      {route === 'pro_type_select' && (
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center">
+          <div className="w-28 h-28 bg-green-100 rounded-full flex items-center justify-center mb-6 shadow-lg overflow-hidden">
+            <img src="img/logo.png" alt="Tecendo Saúde" className="w-24 h-24 object-contain" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-green-900 mb-2">Área Profissional</h2>
+          <p className="text-gray-500 mb-8 text-base">Selecione o tipo de profissional</p>
+          <div className="w-full max-w-sm space-y-4">
+            <button onClick={() => window.location.href = 'usuarios/usuarios.html#profissional-acs'}
+              style={{width:'100%', padding:'24px', background:'#fff', borderRadius:'20px', border:'2px solid #e2e8f0', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', boxShadow:'0 4px 12px rgba(0,0,0,0.04)', transition:'all 0.2s'}}
+              onMouseOver={e=>{e.currentTarget.style.borderColor='#2f6b3f'; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(47,107,63,0.15)';}}
+              onMouseOut={e=>{e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.04)';}}>
+              <div style={{fontSize:'36px', background:'#dcfce7', width:'64px', height:'64px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>🏥</div>
+              <div style={{fontWeight:800, fontSize:'18px', color:'#1f2a44'}}>Agente Comunitário de Saúde</div>
+              <div style={{color:'#94a3b8', fontSize:'13px'}}>ACS — Cadastro e monitoramento dos seus pacientes</div>
+            </button>
+            <button onClick={() => window.location.href = 'usuarios/usuarios.html#profissional-telessaude'}
+              style={{width:'100%', padding:'24px', background:'#fff', borderRadius:'20px', border:'2px solid #e2e8f0', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', boxShadow:'0 4px 12px rgba(0,0,0,0.04)', transition:'all 0.2s'}}
+              onMouseOver={e=>{e.currentTarget.style.borderColor='#6366f1'; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(99,102,241,0.15)';}}
+              onMouseOut={e=>{e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.04)';}}>
+              <div style={{fontSize:'36px', background:'#e0e7ff', width:'64px', height:'64px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>📡</div>
+              <div style={{fontWeight:800, fontSize:'18px', color:'#1f2a44'}}>Telessaúde</div>
+              <div style={{color:'#94a3b8', fontSize:'13px'}}>Acesso completo ao monitoramento de todos os pacientes</div>
+            </button>
+          </div>
+          <button className="text-gray-500 font-bold text-sm mt-8 p-4" onClick={goToWelcome}>← VOLTAR</button>
+        </div>
       )}
       
       {route === 'patient_topics' && (

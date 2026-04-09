@@ -258,6 +258,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   profissionalAtual = prof;
   document.getElementById('profName').textContent = prof.enfermeira || prof.nome || 'Profissional';
 
+  // Show tipo badge
+  const tipoProfissional = (prof.tipo || 'acs').toLowerCase();
+  const tipoEl = document.getElementById('profTipo');
+  if (tipoEl) {
+    const label = tipoProfissional === 'telessaude' ? 'Telessaúde' : 'ACS';
+    tipoEl.textContent = 'Profissional ' + label;
+    tipoEl.style.display = 'inline-block';
+    tipoEl.style.padding = '3px 10px';
+    tipoEl.style.borderRadius = '20px';
+    tipoEl.style.fontSize = '11px';
+    tipoEl.style.fontWeight = '800';
+    tipoEl.style.marginLeft = '8px';
+    if (tipoProfissional === 'telessaude') {
+      tipoEl.style.background = '#e0e7ff';
+      tipoEl.style.color = '#4338ca';
+    } else {
+      tipoEl.style.background = '#dcfce7';
+      tipoEl.style.color = '#166534';
+    }
+  }
+
   await carregarDados();
 });
 
@@ -295,8 +316,10 @@ async function carregarDados() {
     let perfisQuery = supabase.from('perfis').select(PERFIS_COLS_LIST, { count: 'exact' }).order('nome').range(0, 4999);
     
     const ubsPro = (profissionalAtual?.ubs || '').trim().toLowerCase();
+    const tipoPro = (profissionalAtual?.tipo || 'acs').trim().toLowerCase();
     const isCoordenador = ubsPro.includes('coordenador');
-    if (!isCoordenador && profissionalAtual?.cpf) {
+    const isTelessaude = tipoPro === 'telessaude';
+    if (!isCoordenador && !isTelessaude && profissionalAtual?.cpf) {
       const cpfPro = String(profissionalAtual.cpf).replace(/\D/g, '');
       perfisQuery = perfisQuery.eq('created_by_cpf', cpfPro);
     }

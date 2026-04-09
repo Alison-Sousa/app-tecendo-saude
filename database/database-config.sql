@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS profissionais (
 );
 CREATE INDEX IF NOT EXISTS profissionais_cpf_idx ON profissionais (cpf);
 
+-- 1.1 Coluna tipo (acs ou telessaude)
+ALTER TABLE profissionais ADD COLUMN IF NOT EXISTS tipo text DEFAULT 'acs';
+CREATE INDEX IF NOT EXISTS profissionais_tipo_idx ON profissionais (tipo);
+
 -- 2. PERFIS (Pacientes)
 CREATE TABLE IF NOT EXISTS perfis (
   id serial PRIMARY KEY,

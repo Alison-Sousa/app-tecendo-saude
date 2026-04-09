@@ -60,7 +60,8 @@
 <div id="root"></div>
 <script type="text/babel" src="../js/components.js"></script>
 <script type="text/babel">
-const IS_PROFISSIONAL = window.location.hash === '#profissional';
+const IS_PROFISSIONAL = window.location.hash.startsWith('#profissional');
+const PRO_TIPO = window.location.hash === '#profissional-telessaude' ? 'telessaude' : 'acs';
 
 // Register Service Worker for mobile notifications
 if ('serviceWorker' in navigator) {
@@ -1772,12 +1773,13 @@ const ChatConversa = ({ user, registro, onBack }) => {
 };
 
 // Login Profissional
-const ProAuth = ({onAuth, onBack}) => {
+const ProAuth = ({onAuth, onBack, tipo}) => {
   const [step, setStep] = useState('cpf');
   const [cpf, setCpf] = useState('');
   const [reg, setReg] = useState({nome:'', cpf:'', municipio:'', ubs:'', telefone:''});
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
+  const tipoLabel = tipo === 'telessaude' ? 'Telessaúde' : 'ACS';
   
   const checkCpf = async () => {
     if(!cpf) return alert('Digite o CPF');
@@ -1786,7 +1788,16 @@ const ProAuth = ({onAuth, onBack}) => {
     setLoading(true);
     try {
       const { data: pro } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
-      if(pro){ onAuth(pro); setLoading(false); return; }
+      if(pro){
+        const proTipo = pro.tipo || 'acs';
+        if(proTipo !== tipo){
+          const outroLabel = proTipo === 'telessaude' ? 'Telessaúde' : 'ACS';
+          setMsg(`Este CPF já está cadastrado como profissional ${outroLabel}. Não é possível acessar como ${tipoLabel}.`);
+          setLoading(false);
+          return;
+        }
+        onAuth({...pro, tipo: proTipo}); setLoading(false); return;
+      }
       const { data: paciente } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle();
       if(paciente){
         setMsg('Este CPF pertence a um usuário do SUS. Acesso profissional não permitido.');
@@ -1795,7 +1806,7 @@ const ProAuth = ({onAuth, onBack}) => {
       }
       setReg(r=>({...r, cpf: mascaraCPF(clean)}));
       setStep('register');
-      setMsg('CPF não encontrado. Complete seu cadastro como profissional.');
+      setMsg(`CPF não encontrado. Complete seu cadastro como profissional ${tipoLabel}.`);
     } catch { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('Offline. Cadastre-se.'); }
     setLoading(false);
   };
@@ -1805,9 +1816,9 @@ const ProAuth = ({onAuth, onBack}) => {
     setLoading(true);
     try {
       const cpfClean = reg.cpf.replace(/\D/g,'');
-      const { data, error } = await supabase.from('profissionais').insert({ nome: reg.nome, cpf: cpfClean, municipio: reg.municipio, ubs: reg.ubs, telefone: reg.telefone }).select().maybeSingle();
+      const { data, error } = await supabase.from('profissionais').insert({ nome: reg.nome, cpf: cpfClean, municipio: reg.municipio, ubs: reg.ubs, telefone: reg.telefone, tipo: tipo }).select().maybeSingle();
       if(error){ alert('Erro: ' + error.message); }
-      else { alert('Cadastrado!'); onAuth(data); }
+      else { alert('Cadastrado com sucesso!'); onAuth({...data, tipo: tipo}); }
     } catch(e) { alert('Falha: ' + e.message); }
     setLoading(false);
   };
@@ -1815,7 +1826,8 @@ const ProAuth = ({onAuth, onBack}) => {
   if(loading) return <Loading text="Verificando..." />;
   if(step==='register') return (
     <div className="p-6 fade-in">
-      <h2 className="text-2xl font-bold mb-4">Cadastro Profissional</h2>
+      <h2 className="text-2xl font-bold mb-2">Cadastro Profissional</h2>
+      <div className="mb-4"><span style={{display:'inline-block', padding:'4px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:800, background: tipo === 'telessaude' ? '#e0e7ff' : '#dcfce7', color: tipo === 'telessaude' ? '#4338ca' : '#166534'}}>{tipoLabel}</span></div>
       {msg && <div className="text-xs font-bold mb-4 text-blue-700 bg-blue-50 p-3 rounded-lg border border-blue-200">{msg}</div>}
       <div className="section-title">CPF</div><input className="input-box bg-gray-100" value={reg.cpf} disabled />
       <div className="section-title">Município</div><select className="input-box" value={reg.municipio} onChange={e=>{ const m = e.target.value; const ubsOpts = m ? getUbsByMunicipio(m) : []; const nextUbs = ubsOpts.length === 1 ? ubsOpts[0] : ''; setReg(prev => ({ ...prev, municipio: m, ubs: nextUbs })); }}><option value="">Selecione...</option>{PROFISSIONAL_MUNICIPIOS.map(m => <option key={m} value={m}>{m}</option>)}</select>
@@ -1828,7 +1840,8 @@ const ProAuth = ({onAuth, onBack}) => {
   );
   return (
     <div className="p-6 fade-in pt-20">
-      <h2 className="text-2xl font-bold mb-4">Acesso Profissional</h2>
+      <h2 className="text-2xl font-bold mb-2">Acesso Profissional</h2>
+      <div className="mb-4"><span style={{display:'inline-block', padding:'4px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:800, background: tipo === 'telessaude' ? '#e0e7ff' : '#dcfce7', color: tipo === 'telessaude' ? '#4338ca' : '#166534'}}>{tipoLabel}</span></div>
       <p className="text-gray-500 mb-6">Digite seu CPF para entrar</p>
       {msg && <div className="text-xs font-bold mb-4 text-amber-800 bg-amber-50 p-3 rounded-lg border border-amber-200">{msg}</div>}
       <input className="input-box text-center text-xl font-bold" value={cpf} onChange={e=>setCpf(mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} />
@@ -1841,14 +1854,16 @@ const ProAuth = ({onAuth, onBack}) => {
 // Dashboard Profissional
 const ProDash = ({user, onLogout}) => {
   useEffect(() => { sessionStorage.setItem('profissional', JSON.stringify(user)); }, [user]);
+  const tipoLabel = (user.tipo || 'acs') === 'telessaude' ? 'Telessaúde' : 'ACS';
+  const tipoCor = (user.tipo || 'acs') === 'telessaude' ? {bg:'#e0e7ff', color:'#4338ca'} : {bg:'#dcfce7', color:'#166534'};
   const abrirMonitoramento = () => { window.location.href = '../monitoramento/monitoramento.html'; };
   const abrirNovoCadastro = () => { window.location.href = '../profissionais/profissionais.html'; };
   return (
     <div className="p-6 fade-in">
-      <div className="flex justify-between items-center mb-8"><div><h2 className="text-xl font-bold flex items-center gap-2" style={{color:'var(--primary)'}}><img src="../img/logo.png" alt="Tecendo Saúde" className="w-6 h-6" style={{objectFit:'contain'}} />{user.enfermeira || user.nome}</h2><p className="text-gray-500 text-sm">{user.ubs} • {user.municipio}</p></div><button onClick={onLogout} className="text-red-500 font-bold text-sm">SAIR</button></div>
+      <div className="flex justify-between items-center mb-8"><div><h2 className="text-xl font-bold flex items-center gap-2" style={{color:'var(--primary)'}}><img src="../img/logo.png" alt="Tecendo Saúde" className="w-6 h-6" style={{objectFit:'contain'}} />{user.enfermeira || user.nome}</h2><p className="text-gray-500 text-sm">{user.ubs} • {user.municipio}</p><span style={{display:'inline-block', marginTop:'4px', padding:'3px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:800, background: tipoCor.bg, color: tipoCor.color}}>Profissional {tipoLabel}</span></div><button onClick={onLogout} className="text-red-500 font-bold text-sm">SAIR</button></div>
       <div className="grid gap-4">
         <button className="big-btn" onClick={abrirNovoCadastro}><div className="big-btn-icon bg-emerald-100">📝</div><div className="font-bold text-lg">Novo Cadastro</div><div className="text-gray-400 text-sm">Cadastrar novo usuário do SUS</div></button>
-        <button className="big-btn" onClick={abrirMonitoramento}><div className="big-btn-icon bg-blue-100">📊</div><div className="font-bold text-lg">Monitoramento</div><div className="text-gray-400 text-sm">Dashboard de acompanhamento</div></button>
+        <button className="big-btn" onClick={abrirMonitoramento}><div className="big-btn-icon bg-blue-100">📊</div><div className="font-bold text-lg">Monitoramento</div><div className="text-gray-400 text-sm">{(user.tipo || 'acs') === 'telessaude' ? 'Dashboard completo — todos os pacientes' : 'Dashboard de acompanhamento'}</div></button>
       </div>
     </div>
   );
@@ -1995,7 +2010,7 @@ const App = () => {
       {route === 'gestacao' && user && <AcompanhamentoGestacao user={user} onBack={() => setRoute('menu')} />}
       {route === 'crianca' && user && <AcompanhamentoCrianca user={user} onBack={() => setRoute('menu')} />}
       {route === 'chat' && user && <ConverseConosco user={user} onBack={() => setRoute('menu')} />}
-      {route === 'pro_login' && <ProAuth onAuth={proLogin} onBack={() => window.location.href = '../index.html'} />}
+      {route === 'pro_login' && <ProAuth onAuth={proLogin} onBack={() => window.location.href = '../index.html'} tipo={PRO_TIPO} />}
       {route === 'pro_dash' && user && <ProDash user={user} onLogout={logout} />}
     </>
   );
