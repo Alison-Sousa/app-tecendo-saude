@@ -70,7 +70,8 @@ jobs:
               <allow-intent href="http://*/*" />
               <allow-intent href="https://*/*" />
               <preference name="android-minSdkVersion" value="24" />
-              <preference name="android-targetSdkVersion" value="33" />
+              <preference name="android-targetSdkVersion" value="34" />
+              <preference name="android-compileSdkVersion" value="34" />
               <platform name="android">
                   <icon src="www/img/logo.png" />
                   <config-file target="AndroidManifest.xml" parent="/*">
@@ -91,6 +92,26 @@ jobs:
           </widget>
           XMLEOF
           cordova platform add android
+
+      - name: Fix compileSdk for Android 34
+        run: |
+          GRADLE_FILE="cordova-build/app/platforms/android/app/build.gradle"
+          if [ -f "$GRADLE_FILE" ]; then
+            sed -i 's/compileSdk\s*=\s*[0-9]*/compileSdk = 34/g' "$GRADLE_FILE"
+            sed -i 's/compileSdkVersion\s*[0-9]*/compileSdkVersion 34/g' "$GRADLE_FILE"
+            sed -i 's/targetSdkVersion\s*[0-9]*/targetSdkVersion 34/g' "$GRADLE_FILE"
+          fi
+          # Also fix the project-level build.gradle if needed
+          PROJ_GRADLE="cordova-build/app/platforms/android/build.gradle"
+          if [ -f "$PROJ_GRADLE" ]; then
+            sed -i 's/compileSdk\s*=\s*[0-9]*/compileSdk = 34/g' "$PROJ_GRADLE"
+          fi
+          # Also fix CordovaLib
+          CORDOVA_GRADLE="cordova-build/app/platforms/android/CordovaLib/build.gradle"
+          if [ -f "$CORDOVA_GRADLE" ]; then
+            sed -i 's/compileSdk\s*=\s*[0-9]*/compileSdk = 34/g' "$CORDOVA_GRADLE"
+            sed -i 's/compileSdkVersion\s*[0-9]*/compileSdkVersion 34/g' "$CORDOVA_GRADLE"
+          fi
 
       - name: Build APK
         working-directory: cordova-build/app
