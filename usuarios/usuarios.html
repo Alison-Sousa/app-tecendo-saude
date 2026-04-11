@@ -82,7 +82,7 @@ document.addEventListener('deviceready', () => {
   const plugin = _cordovaNotifPlugin();
   if (!plugin) { console.warn('Local notification plugin not found'); return; }
 
-  // Create notification channel EXPLICITLY (required Android 8+ / API 26+)
+  // Create notification channels EXPLICITLY (required Android 8+ / API 26+)
   // Without this, notifications are silently dropped on modern Android
   try {
     plugin.createChannel && plugin.createChannel({
@@ -93,7 +93,25 @@ document.addEventListener('deviceready', () => {
       vibration: true,
       importance: 4,
       visibility: 1
-    }, () => console.log('Channel created'), (e) => console.warn('Channel error:', e));
+    }, () => console.log('Medication channel created'), (e) => console.warn('Channel error:', e));
+    plugin.createChannel && plugin.createChannel({
+      id: 'mensagens-channel',
+      name: 'Mensagens',
+      description: 'Notificações de novas mensagens da equipe de saúde',
+      sound: true,
+      vibration: true,
+      importance: 4,
+      visibility: 1
+    }, () => console.log('Messages channel created'), (e) => console.warn('Channel error:', e));
+    plugin.createChannel && plugin.createChannel({
+      id: 'saude-channel',
+      name: 'Alertas de Saúde',
+      description: 'Alertas de saúde e lembretes do Tecendo Saúde',
+      sound: true,
+      vibration: true,
+      importance: 4,
+      visibility: 1
+    }, () => console.log('Health channel created'), (e) => console.warn('Channel error:', e));
   } catch (e) { console.warn('createChannel error:', e); }
 
   try {
@@ -103,10 +121,14 @@ document.addEventListener('deviceready', () => {
       vibrate: true,
       sound: true,
       smallIcon: 'res://icon',
-      icon: 'res://icon',
+      icon: 'file://img/logo.png',
+      color: '#2f6b3f',
       priority: 2,
       wakeup: true,
-      led: true
+      led: { color: '#2f6b3f', on: 500, off: 500 },
+      lockscreen: true,
+      badge: 1,
+      group: 'tecendo-saude'
     });
   } catch (e) { console.warn('setDefaults error:', e); }
 
@@ -134,21 +156,25 @@ document.addEventListener('deviceready', () => {
   }
 
   // Test notification on install/update — fires to confirm notifications work
-  const testKey = 'cordova_notif_test_v3';
+  const testKey = 'cordova_notif_test_v4';
   if (!localStorage.getItem(testKey)) {
     setTimeout(() => {
       plugin.schedule({
         id: 1,
         title: '✅ Tecendo Saúde',
-        text: 'Notificações ativadas! Você receberá lembretes de medicação no horário.',
-        channel: 'medicacao-channel',
+        text: 'Notificações ativadas! Você receberá lembretes de medicação e mensagens.',
+        channel: 'saude-channel',
         foreground: true,
         vibrate: true,
         sound: true,
         smallIcon: 'res://icon',
-        icon: 'res://icon',
+        icon: 'file://img/logo.png',
+        attachments: ['file://img/logo.png'],
+        color: '#2f6b3f',
         priority: 2,
-        wakeup: true
+        wakeup: true,
+        lockscreen: true,
+        group: 'tecendo-saude'
       });
       localStorage.setItem(testKey, '1');
       console.log('Test notification scheduled');
@@ -156,39 +182,7 @@ document.addEventListener('deviceready', () => {
   }
 }, false);
 
-// Auto-update: check GitHub releases for newer APK version
-const APP_VERSION = '1.0.22';
-const checkForUpdate = async () => {
-  if (!window.cordova) return;
-  try {
-    const lastCheck = localStorage.getItem('update_check_ts');
-    if (lastCheck && (Date.now() - Number(lastCheck)) < 3600000) return; // Max once per hour
-    localStorage.setItem('update_check_ts', String(Date.now()));
-
-    const resp = await fetch('https://api.github.com/repos/Alison-Sousa/app-tecendo-saude/releases/latest');
-    if (!resp.ok) return;
-    const release = await resp.json();
-    const latestTag = (release.tag_name || '').replace('v', '');
-    const current = APP_VERSION.split('.').map(Number);
-    const latest = latestTag.split('.').map(Number);
-    let isNewer = false;
-    for (let i = 0; i < 3; i++) {
-      if ((latest[i] || 0) > (current[i] || 0)) { isNewer = true; break; }
-      if ((latest[i] || 0) < (current[i] || 0)) break;
-    }
-    if (isNewer) {
-      const dismissed = localStorage.getItem('update_dismissed_' + latestTag);
-      if (dismissed) return; // User already said no to this version
-      const apk = (release.assets || []).find(a => a.name && a.name.endsWith('.apk'));
-      if (apk && confirm(`Nova versão ${release.tag_name} disponível!\n\nDeseja atualizar agora?`)) {
-        window.open(apk.browser_download_url, '_system');
-      } else {
-        localStorage.setItem('update_dismissed_' + latestTag, '1');
-      }
-    }
-  } catch {}
-};
-setTimeout(checkForUpdate, 10000);
+// OTA: content is loaded from Netlify, no APK download needed for updates
 
 // Listen for SW messages (background medication check)
 if ('serviceWorker' in navigator) {
@@ -223,22 +217,31 @@ const notifyUser = async (title, body, tag) => {
   if (cordovaPlugin) {
     try {
       const id = Math.abs(tag.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 2147483647;
+      // Choose channel based on notification type
+      let channel = 'saude-channel';
+      if (tag.startsWith('med_') || title.includes('Medicação') || title.includes('medicação')) channel = 'medicacao-channel';
+      else if (tag.startsWith('chat_') || title.includes('mensagem') || title.includes('Mensagem')) channel = 'mensagens-channel';
       cordovaPlugin.schedule({
         id: id,
         title: title,
         text: body,
-        channel: 'medicacao-channel',
+        channel: channel,
         foreground: true,
         vibrate: true,
         sound: true,
         smallIcon: 'res://icon',
-        icon: 'res://icon',
+        icon: 'file://img/logo.png',
+        attachments: ['file://img/logo.png'],
+        color: '#2f6b3f',
         priority: 2,
         wakeup: true,
-        led: true
+        led: { color: '#2f6b3f', on: 500, off: 500 },
+        lockscreen: true,
+        badge: 1,
+        group: 'tecendo-saude'
       });
       localStorage.setItem(dedupKey, String(Date.now()));
-      console.log('Cordova notification scheduled, id:', id, 'title:', title);
+      console.log('Cordova notification scheduled, id:', id, 'channel:', channel, 'title:', title);
       return;
     } catch (e) { console.warn('Cordova notification error:', e); }
   }
@@ -318,10 +321,15 @@ const agendarNotificacoesCordova = (user) => {
         vibrate: true,
         sound: true,
         smallIcon: 'res://icon',
-        icon: 'res://icon',
+        icon: 'file://img/logo.png',
+        attachments: ['file://img/logo.png'],
+        color: '#2f6b3f',
         priority: 2,
         wakeup: true,
-        led: true,
+        led: { color: '#2f6b3f', on: 500, off: 500 },
+        lockscreen: true,
+        badge: 1,
+        group: 'tecendo-saude',
         trigger: { at: triggerDate }
       });
     });
@@ -2379,6 +2387,48 @@ const App = () => {
     const syncTimer = setInterval(() => pullAutomatico(), 30000);
     return () => clearInterval(syncTimer);
   }, [user, pullAutomatico]);
+
+  // Background message check — notify even when NOT on chat screen
+  useEffect(() => {
+    if (!user || IS_PROFISSIONAL) return;
+    const patientKey = user.patient_id || 'cpf-' + user.cpf;
+    if (!patientKey) return;
+
+    const checkNewMessages = async () => {
+      if (!navigator.onLine || !supabase) return;
+      try {
+        const { data } = await supabase.from('registros')
+          .select('registro_id, texto, replies_json, pro_name, updated_at')
+          .eq('patient_id', patientKey)
+          .in('tipo', ['midia', 'texto', 'monitoramento']);
+        if (!data || !data.length) return;
+
+        data.forEach(r => {
+          let replies = [];
+          if (Array.isArray(r.replies_json)) replies = r.replies_json;
+          else if (typeof r.replies_json === 'string') {
+            try { const p = JSON.parse(r.replies_json); if (Array.isArray(p)) replies = p; } catch {}
+          }
+          if (!replies.length) return;
+          const lastReply = replies[replies.length - 1];
+          if (!lastReply || !lastReply.pro_name) return; // Only pro replies
+          const replyKey = `msg_notified_${r.registro_id}_${lastReply.at || r.updated_at}`;
+          if (localStorage.getItem(replyKey)) return;
+          const readKey = `read_${r.registro_id}_${lastReply.at || r.updated_at}`;
+          if (localStorage.getItem(readKey) === '1') return;
+          localStorage.setItem(replyKey, '1');
+          const proName = lastReply.pro_name || r.pro_name || 'Equipe de Saúde';
+          const text = lastReply.text || 'Você recebeu uma nova mensagem.';
+          notifyUser(`💬 Nova mensagem de ${proName}`, text.substring(0, 100), `chat_bg_${r.registro_id}_${lastReply.at || ''}`);
+        });
+      } catch {}
+    };
+
+    // Check immediately on login, then every 60s
+    checkNewMessages();
+    const msgTimer = setInterval(checkNewMessages, 60000);
+    return () => clearInterval(msgTimer);
+  }, [user]);
 
   // Medication reminder state for in-app banner
   const [medAlertaBanner, setMedAlertaBanner] = useState(null);
