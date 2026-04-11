@@ -81,13 +81,27 @@ document.addEventListener('deviceready', () => {
   const plugin = _cordovaNotifPlugin();
   if (!plugin) { console.warn('Local notification plugin not found'); return; }
 
-  // Create notification channel (required Android 8+ / API 26+)
+  // Create notification channel EXPLICITLY (required Android 8+ / API 26+)
+  // Without this, notifications are silently dropped on modern Android
+  try {
+    plugin.createChannel && plugin.createChannel({
+      id: 'medicacao-channel',
+      name: 'Lembretes de Medicação',
+      description: 'Notificações de horário de medicação',
+      sound: true,
+      vibration: true,
+      importance: 4,
+      visibility: 1
+    }, () => console.log('Channel created'), (e) => console.warn('Channel error:', e));
+  } catch (e) { console.warn('createChannel error:', e); }
+
   try {
     plugin.setDefaults({
       channel: 'medicacao-channel',
       foreground: true,
       vibrate: true,
       sound: true,
+      smallIcon: 'res://ic_popup_reminder',
       priority: 2,
       wakeup: true,
       led: true
@@ -117,20 +131,24 @@ document.addEventListener('deviceready', () => {
     }, () => {});
   }
 
-  // Test notification on first install
-  const testKey = 'cordova_notif_test_done';
+  // Test notification on install/update — fires to confirm notifications work
+  const testKey = 'cordova_notif_test_v2';
   if (!localStorage.getItem(testKey)) {
     setTimeout(() => {
       plugin.schedule({
         id: 1,
         title: '✅ Tecendo Saúde',
         text: 'Notificações ativadas! Você receberá lembretes de medicação.',
+        channel: 'medicacao-channel',
         foreground: true,
         vibrate: true,
         sound: true,
-        priority: 2
+        smallIcon: 'res://ic_popup_reminder',
+        priority: 2,
+        wakeup: true
       });
       localStorage.setItem(testKey, '1');
+      console.log('Test notification scheduled');
     }, 3000);
   }
 }, false);
@@ -167,19 +185,21 @@ const notifyUser = async (title, body, tag) => {
         id: id,
         title: title,
         text: body,
+        channel: 'medicacao-channel',
         foreground: true,
         vibrate: true,
         sound: true,
+        smallIcon: 'res://ic_popup_reminder',
         priority: 2,
         wakeup: true,
-        led: true,
-        channel: 'medicacao-channel'
+        led: true
       });
+      console.log('Cordova notification scheduled, id:', id, 'title:', title);
       return;
     } catch (e) { console.warn('Cordova notification error:', e); }
   }
 
-  // Web/PWA: System notification via Service Worker (appears in notification bar like Instagram)
+  // Web Notification API (browser / PWA)
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch { return; }
@@ -189,38 +209,14 @@ const notifyUser = async (title, body, tag) => {
   const last = Number(localStorage.getItem(key) || 0);
   if (last && (Date.now() - last) < 60000) return;
   try {
-    // Always use Service Worker registration for system-level notification
-    if ('serviceWorker' in navigator) {
-      let reg = await navigator.serviceWorker.getRegistration('../sw.js');
-      if (!reg) reg = await navigator.serviceWorker.register('../sw.js');
-      // Wait for SW to be active
-      if (reg.installing || reg.waiting) {
-        const sw = reg.installing || reg.waiting;
-        await new Promise(resolve => {
-          sw.addEventListener('statechange', () => { if (sw.state === 'activated') resolve(); });
-          setTimeout(resolve, 3000); // timeout fallback
-        });
-      }
-      await reg.showNotification(title, {
-        body: body,
-        icon: '../img/logo.png',
-        badge: '../img/logo.png',
-        tag: tag || 'tecendo-saude',
-        requireInteraction: true,
-        vibrate: [300, 200, 300, 200, 500],
-        silent: false,
-        renotify: true,
-        actions: [
-          { action: 'open', title: 'Abrir' },
-          { action: 'dismiss', title: 'Dispensar' }
-        ]
-      });
+    // Try Service Worker notification first (works better on mobile)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag, icon: '../img/logo.png' });
     } else {
       new Notification(title, { body, icon: '../img/logo.png', tag, requireInteraction: true, silent: false });
     }
     localStorage.setItem(key, String(Date.now()));
-  } catch (e) {
-    console.warn('Notification error:', e);
+  } catch {
     try { new Notification(title, { body, icon: '../img/logo.png', tag }); localStorage.setItem(key, String(Date.now())); } catch {}
   }
 };
@@ -276,13 +272,14 @@ const agendarNotificacoesCordova = (user) => {
         id: notifId,
         title: '💊 Hora da Medicação',
         text: nomes ? `Horário ${h} — ${nomes}` : `Está na hora da medicação (${h})`,
+        channel: 'medicacao-channel',
         foreground: true,
         vibrate: true,
         sound: true,
+        smallIcon: 'res://ic_popup_reminder',
         priority: 2,
         wakeup: true,
         led: true,
-        channel: 'medicacao-channel',
         trigger: { at: triggerDate }
       });
     });
