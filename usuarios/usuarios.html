@@ -101,7 +101,8 @@ document.addEventListener('deviceready', () => {
       foreground: true,
       vibrate: true,
       sound: true,
-      smallIcon: 'res://ic_popup_reminder',
+      smallIcon: 'res://icon',
+      icon: 'res://icon',
       priority: 2,
       wakeup: true,
       led: true
@@ -132,18 +133,19 @@ document.addEventListener('deviceready', () => {
   }
 
   // Test notification on install/update — fires to confirm notifications work
-  const testKey = 'cordova_notif_test_v2';
+  const testKey = 'cordova_notif_test_v3';
   if (!localStorage.getItem(testKey)) {
     setTimeout(() => {
       plugin.schedule({
         id: 1,
         title: '✅ Tecendo Saúde',
-        text: 'Notificações ativadas! Você receberá lembretes de medicação.',
+        text: 'Notificações ativadas! Você receberá lembretes de medicação no horário.',
         channel: 'medicacao-channel',
         foreground: true,
         vibrate: true,
         sound: true,
-        smallIcon: 'res://ic_popup_reminder',
+        smallIcon: 'res://icon',
+        icon: 'res://icon',
         priority: 2,
         wakeup: true
       });
@@ -189,7 +191,8 @@ const notifyUser = async (title, body, tag) => {
         foreground: true,
         vibrate: true,
         sound: true,
-        smallIcon: 'res://ic_popup_reminder',
+        smallIcon: 'res://icon',
+        icon: 'res://icon',
         priority: 2,
         wakeup: true,
         led: true
@@ -276,7 +279,8 @@ const agendarNotificacoesCordova = (user) => {
         foreground: true,
         vibrate: true,
         sound: true,
-        smallIcon: 'res://ic_popup_reminder',
+        smallIcon: 'res://icon',
+        icon: 'res://icon',
         priority: 2,
         wakeup: true,
         led: true,
