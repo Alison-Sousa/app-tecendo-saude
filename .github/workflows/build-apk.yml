@@ -69,6 +69,8 @@ jobs:
               <access origin="*" />
               <allow-intent href="http://*/*" />
               <allow-intent href="https://*/*" />
+              <preference name="android-minSdkVersion" value="24" />
+              <preference name="android-targetSdkVersion" value="33" />
               <platform name="android">
                   <icon src="www/img/logo.png" />
                   <config-file target="AndroidManifest.xml" parent="/*">
@@ -78,7 +80,10 @@ jobs:
                       <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
                       <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
                       <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+                      <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
                       <uses-permission android:name="android.permission.WAKE_LOCK" />
+                      <uses-permission android:name="android.permission.VIBRATE" />
+                      <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
                   </config-file>
                   <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/img/logo.png" />
                   <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />

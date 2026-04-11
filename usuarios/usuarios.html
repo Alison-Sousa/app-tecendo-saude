@@ -73,16 +73,65 @@ if ('serviceWorker' in navigator && !window.cordova) {
   }).catch(err => console.warn('SW registration failed:', err));
 }
 
-// Cordova: request POST_NOTIFICATIONS permission (Android 13+)
+// Cordova: setup notification channel + request permission (all Android)
+const _cordovaNotifPlugin = () => window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local;
+
 document.addEventListener('deviceready', () => {
-  if (window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local) {
-    window.cordova.plugins.notification.local.hasPermission((granted) => {
-      if (!granted) {
-        window.cordova.plugins.notification.local.requestPermission((granted2) => {
-          console.log('Notification permission:', granted2 ? 'granted' : 'denied');
-        });
-      }
+  console.log('deviceready fired. Cordova:', !!window.cordova);
+  const plugin = _cordovaNotifPlugin();
+  if (!plugin) { console.warn('Local notification plugin not found'); return; }
+
+  // Create notification channel (required Android 8+ / API 26+)
+  try {
+    plugin.setDefaults({
+      channel: 'medicacao-channel',
+      foreground: true,
+      vibrate: true,
+      sound: true,
+      priority: 2,
+      wakeup: true,
+      led: true
     });
+  } catch (e) { console.warn('setDefaults error:', e); }
+
+  // Request permission (Android 13+ needs explicit POST_NOTIFICATIONS)
+  plugin.hasPermission((granted) => {
+    console.log('Notification permission status:', granted);
+    if (!granted) {
+      plugin.requestPermission((granted2) => {
+        console.log('Notification permission after request:', granted2);
+        if (!granted2) {
+          alert('⚠️ Para receber lembretes de medicação, ative as notificações nas Configurações do celular > Aplicativos > Tecendo Saude > Notificações.');
+        }
+      });
+    }
+  });
+
+  // Also request via Android permissions plugin if available
+  if (window.cordova.plugins.permissions) {
+    const perms = window.cordova.plugins.permissions;
+    perms.checkPermission('android.permission.POST_NOTIFICATIONS', (status) => {
+      if (!status.hasPermission) {
+        perms.requestPermission('android.permission.POST_NOTIFICATIONS', () => {}, () => {});
+      }
+    }, () => {});
+  }
+
+  // Test notification on first install
+  const testKey = 'cordova_notif_test_done';
+  if (!localStorage.getItem(testKey)) {
+    setTimeout(() => {
+      plugin.schedule({
+        id: 1,
+        title: '✅ Tecendo Saúde',
+        text: 'Notificações ativadas! Você receberá lembretes de medicação.',
+        foreground: true,
+        vibrate: true,
+        sound: true,
+        priority: 2
+      });
+      localStorage.setItem(testKey, '1');
+    }, 3000);
   }
 }, false);
 
@@ -109,21 +158,22 @@ const notifyUser = async (title, body, tag) => {
     try { navigator.vibrate([200, 100, 200, 100, 300]); } catch {}
   }
 
-  // Cordova local notification (APK)
-  if (window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local) {
+  // Cordova local notification (APK - all Android)
+  const cordovaPlugin = _cordovaNotifPlugin();
+  if (cordovaPlugin) {
     try {
       const id = Math.abs(tag.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 2147483647;
-      window.cordova.plugins.notification.local.schedule({
+      cordovaPlugin.schedule({
         id: id,
         title: title,
         text: body,
-        icon: 'res://icon',
-        smallIcon: 'res://ic_popup_reminder',
         foreground: true,
         vibrate: true,
         sound: true,
         priority: 2,
-        wakeup: true
+        wakeup: true,
+        led: true,
+        channel: 'medicacao-channel'
       });
       return;
     } catch (e) { console.warn('Cordova notification error:', e); }
@@ -173,14 +223,14 @@ const extrairHorariosMedicacao = (raw) => {
 // Schedule Cordova local notifications for all medication times today + tomorrow
 // These fire even when the app is closed (Android alarm system)
 const agendarNotificacoesCordova = (user) => {
-  if (!window.cordova || !window.cordova.plugins || !window.cordova.plugins.notification || !window.cordova.plugins.notification.local) return;
+  const plugin = _cordovaNotifPlugin();
+  if (!plugin) return;
   if (!user || !patientUsesMedication(user.uso_medicacoes)) return;
 
   const horarios = extrairHorariosMedicacao(user.posologia_horario);
   if (!horarios.length) return;
 
   const nomes = String(user.nomes_medicacoes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
-  const plugin = window.cordova.plugins.notification.local;
 
   // Cancel previous scheduled medication notifications (IDs 9000-9099 range)
   const idsToCancel = [];
@@ -190,7 +240,7 @@ const agendarNotificacoesCordova = (user) => {
   const notifications = [];
   const now = new Date();
 
-  // Schedule for today and tomorrow
+  // Schedule for today and tomorrow (covers 48h)
   for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
     horarios.forEach((h, idx) => {
       const [hh, mm] = h.split(':').map(Number);
@@ -202,13 +252,13 @@ const agendarNotificacoesCordova = (user) => {
         id: notifId,
         title: '💊 Hora da Medicação',
         text: nomes ? `Horário ${h} — ${nomes}` : `Está na hora da medicação (${h})`,
-        icon: 'res://icon',
-        smallIcon: 'res://ic_popup_reminder',
         foreground: true,
         vibrate: true,
         sound: true,
         priority: 2,
         wakeup: true,
+        led: true,
+        channel: 'medicacao-channel',
         trigger: { at: triggerDate }
       });
     });
@@ -216,7 +266,7 @@ const agendarNotificacoesCordova = (user) => {
 
   if (notifications.length > 0) {
     plugin.schedule(notifications);
-    console.log(`Scheduled ${notifications.length} medication notifications`);
+    console.log('Scheduled', notifications.length, 'medication notifications for', horarios.join(', '));
   }
 };
 

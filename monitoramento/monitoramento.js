@@ -1180,10 +1180,10 @@ function ativarEdicaoFicha() {
     <div class="grid grid-2">
       ${inputCampo('edit_nome', 'Nome completo', p.nome)}
       ${renderCampo('CPF', p.cpf)}
-      ${inputCampo('edit_nascimento', 'Nascimento', p.nascimento)}
-      ${inputCampo('edit_genero', 'Gênero', p.genero)}
-      ${inputCampo('edit_raca', 'Raça/Cor', p.raca)}
-      ${inputCampo('edit_escolaridade', 'Escolaridade', p.escolaridade)}
+      ${dateCampo('edit_nascimento', 'Nascimento', p.nascimento)}
+      ${selectCampo('edit_genero', 'Gênero', p.genero, ['Masculino','Feminino','Outro','Prefiro não informar'])}
+      ${selectCampo('edit_raca', 'Raça/Cor', p.raca, ['Branca','Preta','Parda','Amarela','Indígena','Não informada'])}
+      ${selectCampo('edit_escolaridade', 'Escolaridade', p.escolaridade, ['Não alfabetizado','Fundamental incompleto','Fundamental completo','Médio incompleto','Médio completo','Superior incompleto','Superior completo','Pós-graduação'])}
       ${inputCampo('edit_profissao', 'Profissão', p.profissao)}
     </div>
     <div class="section-title">Contato e Território</div>
@@ -1208,50 +1208,51 @@ function ativarEdicaoFicha() {
     </div>
     <div class="section-title">Condições e Diagnósticos</div>
     <div class="grid grid-2">
-      ${inputCampo('edit_hipertensao', 'Hipertensão', p.hipertensao)}
-      ${inputCampo('edit_tempo_diag_has', 'Tempo diagnóstico - HAS', p.tempo_diag_has)}
-      ${inputCampo('edit_diabetes', 'Diabetes', p.diabetes)}
-      ${inputCampo('edit_tempo_diag_dm', 'Tempo diagnóstico - DM', p.tempo_diag_dm)}
-      ${inputCampo('edit_dependencias', 'Dependências', p.dependencias)}
-      ${inputCampo('edit_tempo_dependencia', 'Tempo de vício', p.tempo_dependencia || p.tempo_vicio)}
+      ${selectCampo('edit_hipertensao', 'Hipertensão', p.hipertensao, ['Sim','Não'])}
+      ${selectCampo('edit_tempo_diag_has', 'Tempo diagnóstico - HAS', p.tempo_diag_has, ['Menos de 1 ano','1 a 3 anos','3 a 5 anos','5 a 10 anos','Mais de 10 anos','Não se aplica'])}
+      ${selectCampo('edit_diabetes', 'Diabetes', p.diabetes, ['Sim','Não'])}
+      ${selectCampo('edit_tempo_diag_dm', 'Tempo diagnóstico - DM', p.tempo_diag_dm, ['Menos de 1 ano','1 a 3 anos','3 a 5 anos','5 a 10 anos','Mais de 10 anos','Não se aplica'])}
+      ${selectCampo('edit_dependencias', 'Dependências', p.dependencias, ['Nenhuma','Álcool','Tabaco','Álcool e Tabaco','Outras'])}
+      ${selectCampo('edit_tempo_dependencia', 'Tempo de vício', p.tempo_dependencia || p.tempo_vicio, ['Menos de 1 ano','1 a 3 anos','3 a 5 anos','5 a 10 anos','Mais de 10 anos','Não se aplica'])}
     </div>
     <div class="section-title">Antropometria</div>
     <div class="grid grid-2">
-      ${inputCampo('edit_altura', 'Altura', p.altura)}
-      ${inputCampo('edit_peso_inicial', 'Peso inicial', p.peso_inicial)}
-      ${inputCampo('edit_peso_atual', 'Peso atual', p.peso_atual)}
-      ${inputCampo('edit_peso_primeira_consulta', 'Peso 1ª consulta pré-natal', p.peso_primeira_consulta)}
+      ${inputCampo('edit_altura', 'Altura (m)', p.altura)}
+      ${inputCampo('edit_peso_inicial', 'Peso inicial (kg)', p.peso_inicial)}
+      ${inputCampo('edit_peso_atual', 'Peso atual (kg)', p.peso_atual)}
+      ${inputCampo('edit_peso_primeira_consulta', 'Peso 1ª consulta pré-natal (kg)', p.peso_primeira_consulta)}
     </div>
     <div class="section-title">Gestação</div>
     <div class="grid grid-2">
-      ${inputCampo('edit_dum', 'DUM', p.dum)}
-      ${inputCampo('edit_faz_pre_natal', 'Faz pré-natal?', p.faz_pre_natal)}
-      ${inputCampo('edit_inicio_pre_natal', 'Início do pré-natal', p.inicio_pre_natal)}
+      ${dateCampo('edit_dum', 'DUM (Data Última Menstruação)', p.dum)}
+      ${selectCampo('edit_faz_pre_natal', 'Faz pré-natal?', p.faz_pre_natal, ['Sim','Não','Não se aplica'])}
+      ${dateCampo('edit_inicio_pre_natal', 'Início do pré-natal', p.inicio_pre_natal)}
     </div>
     <div class="section-title">Visão e Saúde Bucal</div>
     <div class="grid grid-2">
-      ${inputCampo('edit_enxerga_bem', 'Enxerga bem?', p.enxerga_bem)}
-      ${inputCampo('edit_consulta_oftalmo', 'Consulta com oftalmologista', p.consulta_oftalmo)}
-      ${inputCampo('edit_dificuldade_mastigar_falar_engolir', 'Dificuldade mastigar/falar/engolir', p.dificuldade_mastigar_falar_engolir)}
+      ${selectCampo('edit_enxerga_bem', 'Enxerga bem?', p.enxerga_bem, ['Sim','Não'])}
+      ${selectCampo('edit_consulta_oftalmo', 'Consulta com oftalmologista', p.consulta_oftalmo, ['Sim','Não'])}
+      ${selectCampo('edit_dificuldade_mastigar_falar_engolir', 'Dificuldade mastigar/falar/engolir', p.dificuldade_mastigar_falar_engolir, ['Sim','Não'])}
     </div>
     <div class="section-title">Medicações</div>
     <div class="grid grid-2">
-      ${inputCampo('edit_uso_medicacoes', 'Faz uso de medicações?', p.uso_medicacoes)}
-      ${inputCampo('edit_nomes_medicacoes', 'Nomes', p.nomes_medicacoes)}
+      ${selectCampo('edit_uso_medicacoes', 'Faz uso de medicações?', p.uso_medicacoes, ['Sim','Não'])}
+      ${inputCampo('edit_nomes_medicacoes', 'Nomes dos medicamentos', p.nomes_medicacoes)}
       ${inputCampo('edit_posologia_dosagem', 'Posologia - Dosagem', p.posologia_dosagem)}
-      ${inputCampo('edit_posologia_horario', 'Posologia - Horário', p.posologia_horario)}
+      ${timeCampo('edit_posologia_horario', 'Posologia - Horário'  , p.posologia_horario)}
     </div>
     <div class="section-title">Atividade Física</div>
     <div class="grid grid-2">
-      ${inputCampo('edit_freq_atividade', 'Frequência', p.freq_atividade)}
-      ${inputCampo('edit_tipo_atividade', 'Tipo de atividade', p.tipo_atividade)}
+      ${selectCampo('edit_atividade_fisica', 'Pratica atividade física?', p.atividade_fisica, ['Sim','Não'])}
+      ${selectCampo('edit_freq_atividade', 'Frequência', p.freq_atividade, ['1x por semana','2x por semana','3x por semana','4x ou mais por semana','Diariamente','Não pratica'])}
+      ${selectCampo('edit_tipo_atividade', 'Tipo de atividade', p.tipo_atividade, ['Caminhada','Corrida','Musculação','Natação','Ciclismo','Dança','Outro','Não pratica'])}
     </div>
     <div class="section-title">Metas de Saúde</div>
     <div class="grid grid-2">
-      ${inputCampo('edit_meta_peso', 'Meta de peso', p.meta_peso, 'number')}
-      ${inputCampo('edit_meta_glicemia', 'Meta de glicemia', p.meta_glicemia, 'number')}
-      ${inputCampo('edit_meta_pa_min', 'Meta PA mínima', p.meta_pa_min, 'number')}
-      ${inputCampo('edit_meta_pa_max', 'Meta PA máxima', p.meta_pa_max, 'number')}
+      ${inputCampo('edit_meta_peso', 'Meta de peso (kg)', p.meta_peso, 'number')}
+      ${inputCampo('edit_meta_glicemia', 'Meta de glicemia (mg/dL)', p.meta_glicemia, 'number')}
+      ${inputCampo('edit_meta_pa_min', 'Meta PA mínima (mmHg)', p.meta_pa_min, 'number')}
+      ${inputCampo('edit_meta_pa_max', 'Meta PA máxima (mmHg)', p.meta_pa_max, 'number')}
     </div>
     <div class="flex gap-3 mt-4" style="justify-content:flex-end;">
       <button class="btn btn-ghost" onclick="cancelarEdicaoFicha()">Cancelar</button>
@@ -1316,6 +1317,7 @@ async function salvarEdicaoFicha() {
     nomes_medicacoes: get('edit_nomes_medicacoes'),
     posologia_dosagem: get('edit_posologia_dosagem'),
     posologia_horario: get('edit_posologia_horario'),
+    atividade_fisica: get('edit_atividade_fisica'),
     freq_atividade: get('edit_freq_atividade'),
     tipo_atividade: get('edit_tipo_atividade'),
     meta_peso: getNum('edit_meta_peso'),
@@ -1381,6 +1383,107 @@ function inputCampo(fieldId, label, value, type = 'text') {
       <input type="${type}" id="${fieldId}" class="input-box" style="margin-top:4px;" value="${safeVal}" placeholder="${escapeHtml(label)}">
     </div>
   `;
+}
+
+function selectCampo(fieldId, label, value, options) {
+  const safeVal = String(value || '').trim();
+  let optHtml = '<option value="">Escolha...</option>';
+  options.forEach(opt => {
+    const sel = (safeVal.toLowerCase() === opt.toLowerCase()) ? 'selected' : '';
+    optHtml += `<option value="${escapeHtml(opt)}" ${sel}>${escapeHtml(opt)}</option>`;
+  });
+  return `
+    <div class="card" style="padding:12px;">
+      <label class="text-xs text-muted" for="${fieldId}">${escapeHtml(label)}</label>
+      <select id="${fieldId}" class="input-box" style="margin-top:4px;">${optHtml}</select>
+    </div>
+  `;
+}
+
+function timeCampo(fieldId, label, value) {
+  const safeVal = escapeHtml(value != null ? String(value) : '');
+  return `
+    <div class="card" style="padding:12px;">
+      <label class="text-xs text-muted" for="${fieldId}">${escapeHtml(label)}</label>
+      <input type="text" id="${fieldId}" class="input-box" style="margin-top:4px;" value="${safeVal}" placeholder="Ex: 08:00 | 14:00" oninput="autoFormatHorario(this)" inputmode="numeric">
+    </div>
+  `;
+}
+
+function autoFormatHorario(input) {
+  // Strip all non-digit and non-pipe characters
+  let val = input.value.replace(/[^\d|]/g, '');
+  // Split by pipe
+  const parts = val.split('|').map(p => p.trim());
+  const formatted = [];
+  for (let i = 0; i < parts.length; i++) {
+    let digits = parts[i].replace(/\D/g, '');
+    if (i < parts.length - 1) {
+      // Already confirmed parts — format fully
+      digits = digits.substring(0, 4);
+      if (digits.length >= 4) {
+        const hh = parseInt(digits.substring(0, 2));
+        const mm = parseInt(digits.substring(2, 4));
+        if (hh <= 23 && mm <= 59) { formatted.push(digits.substring(0, 2) + ':' + digits.substring(2, 4)); continue; }
+      }
+      if (digits.length >= 3) {
+        const h = '0' + digits[0];
+        const m = digits[1] + digits[2];
+        if (parseInt(h) <= 23 && parseInt(m) <= 59) { formatted.push(h + ':' + m); continue; }
+      }
+      if (digits) formatted.push(digits);
+    } else {
+      // Last part — user is still typing, only format when 4 digits
+      digits = digits.substring(0, 4);
+      if (digits.length === 4) {
+        const hh = parseInt(digits.substring(0, 2));
+        const mm = parseInt(digits.substring(2, 4));
+        if (hh <= 23 && mm <= 59) { formatted.push(digits.substring(0, 2) + ':' + digits.substring(2, 4)); }
+        else { formatted.push(digits); }
+      } else {
+        formatted.push(digits);
+      }
+    }
+  }
+  input.value = formatted.join(' | ');
+}
+
+function dateCampo(fieldId, label, value) {
+  const raw = String(value || '').trim();
+  let dateVal = '';
+  if (raw) {
+    // Try YYYY-MM-DD
+    const m1 = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m1) {
+      const y = parseInt(m1[1]);
+      if (y >= 1900 && y <= 2100) dateVal = m1[1] + '-' + m1[2] + '-' + m1[3];
+    }
+    // Try DD/MM/YYYY
+    if (!dateVal) {
+      const m2 = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+      if (m2) {
+        const y = parseInt(m2[3]);
+        if (y >= 1900 && y <= 2100) dateVal = m2[3] + '-' + m2[2] + '-' + m2[1];
+      }
+    }
+  }
+  return `
+    <div class="card" style="padding:12px;">
+      <label class="text-xs text-muted" for="${fieldId}">${escapeHtml(label)}</label>
+      <input type="date" id="${fieldId}" class="input-box" style="margin-top:4px;" value="${escapeHtml(dateVal)}" min="1920-01-01" max="2100-12-31">
+    </div>
+  `;
+}
+
+function adicionarHorarioRapido(fieldId, hora) {
+  const input = document.getElementById(fieldId);
+  if (!input) return;
+  const atual = input.value.trim();
+  const horarios = atual ? atual.split(/[|,;]/).map(h => h.trim()).filter(Boolean) : [];
+  if (horarios.includes(hora)) return;
+  horarios.push(hora);
+  horarios.sort();
+  input.value = horarios.join(' | ');
 }
 
 async function obterFotosClinicasCadastro(p) {
