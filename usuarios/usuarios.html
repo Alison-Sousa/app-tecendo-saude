@@ -225,7 +225,7 @@ const extrairHorariosMedicacao = (raw) => {
 const agendarNotificacoesCordova = (user) => {
   const plugin = _cordovaNotifPlugin();
   if (!plugin) return;
-  if (!user || !patientUsesMedication(user.uso_medicacoes)) return;
+  if (!user) return;
 
   const horarios = extrairHorariosMedicacao(user.posologia_horario);
   if (!horarios.length) return;
@@ -2304,12 +2304,24 @@ const App = () => {
     return () => { window.removeEventListener('focus', onFocus); document.removeEventListener('visibilitychange', onVisibility); window.removeEventListener('online', onOnline); };
   }, [pullAutomatico]);
 
+  // Periodic sync every 30s to catch professional updates in real-time
+  useEffect(() => {
+    if (!user || IS_PROFISSIONAL) return;
+    const syncTimer = setInterval(() => pullAutomatico(), 30000);
+    return () => clearInterval(syncTimer);
+  }, [user, pullAutomatico]);
+
   // Medication reminder state for in-app banner
   const [medAlertaBanner, setMedAlertaBanner] = useState(null);
 
   useEffect(() => {
     if (!user || IS_PROFISSIONAL) return;
-    if (!patientUsesMedication(user.uso_medicacoes)) return;
+
+    // Check if patient has medication: either uso_medicacoes is set OR posologia_horario has times
+    const hasMedByField = patientUsesMedication(user.uso_medicacoes);
+    const hasMedByHorario = extrairHorariosMedicacao(user.posologia_horario).length > 0;
+    const hasMedByNomes = String(user.nomes_medicacoes || '').trim().length > 0;
+    if (!hasMedByField && !hasMedByHorario && !hasMedByNomes) return;
 
     const patientId = user.patient_id || user.patient_id || user.cpf || 'anon';
 
@@ -2322,8 +2334,30 @@ const App = () => {
     }
 
     const checkReminder = async () => {
-      const horarios = extrairHorariosMedicacao(user.posologia_horario);
-      if (!horarios.length) return;
+      // Always try to get fresh data from Supabase for medication times
+      let currentHorarios = extrairHorariosMedicacao(user.posologia_horario);
+      let currentNomes = user.nomes_medicacoes;
+      const pid = user.patient_id || '';
+      if (navigator.onLine && supabase && pid) {
+        try {
+          const { data } = await supabase.from('perfis').select('posologia_horario,nomes_medicacoes,uso_medicacoes').eq('patient_id', pid).maybeSingle();
+          if (data) {
+            const freshHorarios = extrairHorariosMedicacao(data.posologia_horario);
+            if (freshHorarios.length > 0) {
+              currentHorarios = freshHorarios;
+              currentNomes = data.nomes_medicacoes;
+              // Update local state if changed
+              if (data.posologia_horario !== user.posologia_horario) {
+                setUser(prev => ({ ...prev, posologia_horario: data.posologia_horario, nomes_medicacoes: data.nomes_medicacoes, uso_medicacoes: data.uso_medicacoes }));
+                await db.perfil.update(pid, { posologia_horario: data.posologia_horario, nomes_medicacoes: data.nomes_medicacoes, uso_medicacoes: data.uso_medicacoes });
+                // Re-schedule Cordova notifications with new times
+                agendarNotificacoesCordova({ ...user, posologia_horario: data.posologia_horario, nomes_medicacoes: data.nomes_medicacoes });
+              }
+            }
+          }
+        } catch {}
+      }
+      if (!currentHorarios.length) return;
 
       const now = new Date();
       const hh = String(now.getHours()).padStart(2, '0');
@@ -2332,7 +2366,7 @@ const App = () => {
 
       // Check exact match AND 1 minute before/after for tolerance
       const nowMins = now.getHours() * 60 + now.getMinutes();
-      const matchedHorario = horarios.find(h => {
+      const matchedHorario = currentHorarios.find(h => {
         const [hPart, mPart] = h.split(':').map(Number);
         const horMins = hPart * 60 + mPart;
         return Math.abs(nowMins - horMins) <= 1;
@@ -2344,7 +2378,7 @@ const App = () => {
       if (localStorage.getItem(firedKey) === '1') return;
       localStorage.setItem(firedKey, '1');
 
-      const nomes = String(user.nomes_medicacoes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
+      const nomes = String(currentNomes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
       const body = nomes
         ? `Está na hora da medicação (${matchedHorario}): ${nomes}.`
         : `Está na hora da medicação (${matchedHorario}).`;
