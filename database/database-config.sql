@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS profissionais (
 );
 CREATE INDEX IF NOT EXISTS profissionais_cpf_idx ON profissionais (cpf);
 
--- 1.1 Coluna tipo (acs ou telessaude)
+-- 1.1 Coluna tipo (acs, telessaude ou equipe_ubs)
 ALTER TABLE profissionais ADD COLUMN IF NOT EXISTS tipo text DEFAULT 'acs';
 CREATE INDEX IF NOT EXISTS profissionais_tipo_idx ON profissionais (tipo);
 
@@ -127,6 +127,9 @@ CREATE INDEX IF NOT EXISTS registros_status_idx ON registros (status);
 
 -- 3.1 Coluna de migração glicemia_jejum
 ALTER TABLE registros ADD COLUMN IF NOT EXISTS glicemia_jejum text;
+
+-- 3.2 Índice no tipo para consultas de satisfação e filtros por tipo (satisfacao, monitoramento, etc.)
+CREATE INDEX IF NOT EXISTS registros_tipo_idx ON registros (tipo);
 
 -- 4. MEDICAMENTOS
 CREATE TABLE IF NOT EXISTS medicamentos (

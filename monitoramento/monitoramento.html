@@ -231,6 +231,28 @@
         display: inline-flex !important;
         opacity: 1;
         visibility: visible;
+        right: 12px;
+        top: 12px;
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+        z-index: 10001;
+      }
+    }
+
+    /* Header responsive for vertical mobile */
+    @media (max-width: 640px) {
+      header.flex {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      header .flex.gap-3:last-child {
+        width: 100%;
+        justify-content: space-between;
+      }
+      header .flex.gap-3:last-child .btn {
+        min-width: unset;
+        white-space: nowrap;
       }
     }
     
@@ -627,10 +649,10 @@
           <p class="text-sm text-muted">Monitoramento de Usuários do SUS</p>
         </div>
       </div>
-      <div class="flex gap-3 items-center">
-        <span id="profName" class="text-sm font-semibold"></span>
+      <div class="flex gap-3 items-center" style="flex-shrink:0;">
+        <span id="profName" class="text-sm font-semibold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></span>
         <span id="profTipo"></span>
-        <a href="../profissionais/profissionais.html" class="btn btn-secondary btn-sm">← Voltar</a>
+        <a href="../profissionais/profissionais.html" class="btn btn-secondary btn-sm" style="white-space:nowrap;">← Voltar</a>
       </div>
     </header>
     
@@ -651,6 +673,10 @@
       <div class="stat-card">
         <div class="stat-value" id="statTotal">0</div>
             <div class="stat-label">📊 Total de Usuários do SUS</div>
+      </div>
+      <div class="stat-card" style="cursor:pointer;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:2px solid #c4b5fd;" onclick="abrirSatisfacaoModal()" title="Ver avaliações dos usuários">
+        <div class="stat-value" id="statSatisfacao" style="color:#7c3aed;">—</div>
+        <div class="stat-label">⭐ Satisfação APP</div>
       </div>
     </div>
     
@@ -706,6 +732,19 @@
     </div>
   </div>
   
+  <!-- Modal de Satisfação -->
+  <div class="modal-overlay" id="satisfacaoModal" style="display:none;">
+    <div class="modal" style="display:flex;flex-direction:column;max-width:560px;max-height:85vh;">
+      <div class="modal-header">
+        <h3 class="modal-title">⭐ Satisfação com o APP</h3>
+        <button class="modal-close" onclick="fecharSatisfacaoModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="satisfacaoBody" style="overflow-y:auto;padding:20px;">
+        <div class="empty-state"><p>Carregando avaliações...</p></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de Ficha Cadastral -->
   <div class="modal-overlay" id="fichaModal" style="display: none;">
     <div class="modal modal-lg" style="display:flex;flex-direction:column;">

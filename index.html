@@ -262,9 +262,11 @@ const App = () => {
     <>
       <OfflineBanner online={online} />
       
-      <div className="fixed top-4 right-4 z-[60]">
-        <DownloadAppButton />
-      </div>
+      {route === 'welcome' && (
+        <div className="fixed top-4 right-4 z-[60]">
+          <DownloadAppButton />
+        </div>
+      )}
 
       {route === 'welcome' && (
         <WelcomeScreen onPatient={goToPatient} onProfessional={goToProfessional} />
@@ -293,6 +295,14 @@ const App = () => {
               <div style={{fontSize:'36px', background:'#e0e7ff', width:'64px', height:'64px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>📡</div>
               <div style={{fontWeight:800, fontSize:'18px', color:'#1f2a44'}}>Telessaúde</div>
               <div style={{color:'#94a3b8', fontSize:'13px'}}>Acesso completo ao monitoramento de todos os pacientes</div>
+            </button>
+            <button onClick={() => window.location.href = 'profissionais/profissionais.html#equipe_ubs'}
+              style={{width:'100%', padding:'24px', background:'#fff', borderRadius:'20px', border:'2px solid #e2e8f0', display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', boxShadow:'0 4px 12px rgba(0,0,0,0.04)', transition:'all 0.2s'}}
+              onMouseOver={e=>{e.currentTarget.style.borderColor='#ea580c'; e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 8px 20px rgba(234,88,12,0.15)';}}
+              onMouseOut={e=>{e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.04)';}}>
+              <div style={{fontSize:'36px', background:'#fff7ed', width:'64px', height:'64px', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center'}}>👩‍⚕️</div>
+              <div style={{fontWeight:800, fontSize:'18px', color:'#1f2a44'}}>Profissional de Saúde</div>
+              <div style={{color:'#94a3b8', fontSize:'13px'}}>Equipe da UBS e Coordenação da Atenção Básica</div>
             </button>
           </div>
           <button className="text-gray-500 font-bold text-sm mt-8 p-4" onClick={goToWelcome}>← VOLTAR</button>

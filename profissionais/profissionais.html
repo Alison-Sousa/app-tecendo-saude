@@ -47,10 +47,10 @@
 const ProAuth = ({onAuth, onBack}) => {
   const [step, setStep] = useState('cpf');
   const [cpf, setCpf] = useState('');
-  const [reg, setReg] = useState({nome:'', cpf:'', municipio:'', ubs:'', telefone:'', tipo:'acs'});
+  const [reg, setReg] = useState({nome:'', cpf:'', municipio:'', ubs:'', telefone:'', tipo: window.location.hash === '#equipe_ubs' ? 'equipe_ubs' : 'acs'});
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
-  const [tipoSelecionado, setTipoSelecionado] = useState('acs');
+  const [tipoSelecionado, setTipoSelecionado] = useState(window.location.hash === '#equipe_ubs' ? 'equipe_ubs' : 'acs');
   
   const checkCpf = async () => {
     if(!cpf) return alert('Digite o CPF');
@@ -93,7 +93,7 @@ const ProAuth = ({onAuth, onBack}) => {
   if(step==='register') return (
     <div className="p-6 fade-in">
       <h2 className="text-2xl font-bold mb-2">Cadastro Profissional</h2>
-      <div className="mb-4"><span style={{display:'inline-block', padding:'4px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:800, background: reg.tipo === 'telessaude' ? '#e0e7ff' : '#dcfce7', color: reg.tipo === 'telessaude' ? '#4338ca' : '#166534'}}>{reg.tipo === 'telessaude' ? 'Telessaúde' : 'ACS'}</span></div>
+      <div className="mb-4"><span style={{display:'inline-block', padding:'4px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:800, background: reg.tipo === 'telessaude' ? '#e0e7ff' : reg.tipo === 'equipe_ubs' ? '#fff7ed' : '#dcfce7', color: reg.tipo === 'telessaude' ? '#4338ca' : reg.tipo === 'equipe_ubs' ? '#c2410c' : '#166534'}}>{reg.tipo === 'telessaude' ? 'Telessaúde' : reg.tipo === 'equipe_ubs' ? 'Profissional de Saúde' : 'ACS'}</span></div>
       <p className="text-gray-500 mb-4">CPF <strong>{reg.cpf}</strong> não encontrado</p>
       {msg && <div className="text-xs font-bold mb-4 text-blue-700 bg-blue-50 p-3 rounded-lg border border-blue-200">{msg}</div>}
       <div className="section-title">CPF (já preenchido)</div>
@@ -102,6 +102,7 @@ const ProAuth = ({onAuth, onBack}) => {
       <select className="input-box" value={reg.tipo} onChange={e=>{setReg(prev=>({...prev, tipo:e.target.value})); setTipoSelecionado(e.target.value);}}>
         <option value="acs">Agente Comunitário de Saúde (ACS)</option>
         <option value="telessaude">Telessaúde</option>
+        <option value="equipe_ubs">Profissional de Saúde (Equipe UBS / Coordenação)</option>
       </select>
       <div className="section-title">Município</div>
       <select className="input-box" value={reg.municipio} onChange={e=>{
@@ -172,6 +173,18 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
   };
 
   const horarioValido = (value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '').trim());
+
+  const HORARIOS_TEXTO_VALIDOS = ['Manhã', 'Tarde', 'Noite', 'Manhã e Noite', 'Manhã, Tarde e Noite', 'Antes da refeição', 'Após a refeição', 'Não se aplica'];
+  const horarioAceito = (med) => {
+    const h = String(med.horario || '').trim();
+    if (!h) return false;
+    if (HORARIOS_TEXTO_VALIDOS.includes(h)) return true;
+    if (h === 'Horário específico') {
+      const esp = String(med.horario_especifico || '').trim();
+      return horarioValido(esp);
+    }
+    return horarioValido(h);
+  };
   
   useEffect(() => {
     const normalized = { ...defaultFicha, ...(initialData || {}) };
@@ -435,9 +448,10 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
       const cleaned = { ...form };
       const medsClean = medicacoes.filter(m => m.nome || m.dosagem || m.horario);
       if (cleaned.uso_medicacoes === 'Sim') {
-        const invalida = medsClean.find(m => !horarioValido(m.horario));
+        const invalida = medsClean.find(m => !horarioAceito(m));
         if (invalida) {
-          alert('Use o formato de horário HH:MM nas medicações (ex.: 08:00).');
+          alert('Preencha o horário de todas as medicações corretamente.');
+          setSaving(false);
           return;
         }
       }
@@ -995,8 +1009,8 @@ const ProDash = ({user, onLogout, initialMode, initialFormData}) => {
   const [mode, setMode] = React.useState(initialMode || 'menu');
   const [formData, setFormData] = useState(initialFormData || {});
   const [saving, setSaving] = useState(false);
-  const tipoLabel = (user.tipo || 'acs') === 'telessaude' ? 'Telessaúde' : 'ACS';
-  const tipoCor = (user.tipo || 'acs') === 'telessaude' ? {bg:'#e0e7ff', color:'#4338ca'} : {bg:'#dcfce7', color:'#166534'};
+  const tipoLabel = (user.tipo || 'acs') === 'telessaude' ? 'Telessaúde' : (user.tipo || 'acs') === 'equipe_ubs' ? 'Profissional de Saúde' : 'ACS';
+  const tipoCor = (user.tipo || 'acs') === 'telessaude' ? {bg:'#e0e7ff', color:'#4338ca'} : (user.tipo || 'acs') === 'equipe_ubs' ? {bg:'#fff7ed', color:'#c2410c'} : {bg:'#dcfce7', color:'#166534'};
   
   useEffect(() => { sessionStorage.setItem('profissional', JSON.stringify(user)); }, [user]);
   

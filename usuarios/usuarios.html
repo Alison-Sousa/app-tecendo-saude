@@ -63,9 +63,37 @@
 const IS_PROFISSIONAL = window.location.hash.startsWith('#profissional');
 const PRO_TIPO = window.location.hash === '#profissional-telessaude' ? 'telessaude' : 'acs';
 
-// Register Service Worker for mobile notifications
+// Register Service Worker for mobile notifications (web/PWA only, not Cordova)
+if ('serviceWorker' in navigator && !window.cordova) {
+  navigator.serviceWorker.register('../sw.js').then(reg => {
+    console.log('SW registered:', reg.scope);
+    if ('periodicSync' in reg) {
+      reg.periodicSync.register('medication-check', { minInterval: 60000 }).catch(() => {});
+    }
+  }).catch(err => console.warn('SW registration failed:', err));
+}
+
+// Cordova: request POST_NOTIFICATIONS permission (Android 13+)
+document.addEventListener('deviceready', () => {
+  if (window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local) {
+    window.cordova.plugins.notification.local.hasPermission((granted) => {
+      if (!granted) {
+        window.cordova.plugins.notification.local.requestPermission((granted2) => {
+          console.log('Notification permission:', granted2 ? 'granted' : 'denied');
+        });
+      }
+    });
+  }
+}, false);
+
+// Listen for SW messages (background medication check)
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('../sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'CHECK_MEDICATIONS') {
+      // Trigger medication check from main thread
+      window.dispatchEvent(new CustomEvent('checkMedications'));
+    }
+  });
 }
 
 const AUTO_REPLY_TEXT = 'Olá! 😊 Recebemos sua solicitação e estamos acompanhando suas informações. Em breve, um profissional da UBS entrará em contato para prestar o atendimento necessário 🩺';
@@ -80,6 +108,28 @@ const notifyUser = async (title, body, tag) => {
   if ('vibrate' in navigator) {
     try { navigator.vibrate([200, 100, 200, 100, 300]); } catch {}
   }
+
+  // Cordova local notification (APK)
+  if (window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local) {
+    try {
+      const id = Math.abs(tag.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 2147483647;
+      window.cordova.plugins.notification.local.schedule({
+        id: id,
+        title: title,
+        text: body,
+        icon: 'res://icon',
+        smallIcon: 'res://ic_popup_reminder',
+        foreground: true,
+        vibrate: true,
+        sound: true,
+        priority: 2,
+        wakeup: true
+      });
+      return;
+    } catch (e) { console.warn('Cordova notification error:', e); }
+  }
+
+  // Web Notification API (browser / PWA)
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch { return; }
@@ -118,6 +168,56 @@ const extrairHorariosMedicacao = (raw) => {
     .map(m => m.replace(/[^0-9:]/g, ''))
     .filter(Boolean);
   return Array.from(new Set(horarios));
+};
+
+// Schedule Cordova local notifications for all medication times today + tomorrow
+// These fire even when the app is closed (Android alarm system)
+const agendarNotificacoesCordova = (user) => {
+  if (!window.cordova || !window.cordova.plugins || !window.cordova.plugins.notification || !window.cordova.plugins.notification.local) return;
+  if (!user || !patientUsesMedication(user.uso_medicacoes)) return;
+
+  const horarios = extrairHorariosMedicacao(user.posologia_horario);
+  if (!horarios.length) return;
+
+  const nomes = String(user.nomes_medicacoes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
+  const plugin = window.cordova.plugins.notification.local;
+
+  // Cancel previous scheduled medication notifications (IDs 9000-9099 range)
+  const idsToCancel = [];
+  for (let i = 9000; i < 9100; i++) idsToCancel.push(i);
+  try { plugin.cancel(idsToCancel); } catch {}
+
+  const notifications = [];
+  const now = new Date();
+
+  // Schedule for today and tomorrow
+  for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
+    horarios.forEach((h, idx) => {
+      const [hh, mm] = h.split(':').map(Number);
+      const triggerDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hh, mm, 0);
+      if (triggerDate <= now) return; // Skip past times
+
+      const notifId = 9000 + (dayOffset * 50) + idx;
+      notifications.push({
+        id: notifId,
+        title: '💊 Hora da Medicação',
+        text: nomes ? `Horário ${h} — ${nomes}` : `Está na hora da medicação (${h})`,
+        icon: 'res://icon',
+        smallIcon: 'res://ic_popup_reminder',
+        foreground: true,
+        vibrate: true,
+        sound: true,
+        priority: 2,
+        wakeup: true,
+        trigger: { at: triggerDate }
+      });
+    });
+  }
+
+  if (notifications.length > 0) {
+    plugin.schedule(notifications);
+    console.log(`Scheduled ${notifications.length} medication notifications`);
+  }
 };
 
 const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
@@ -428,6 +528,11 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
           <div className="big-btn-icon bg-amber-100">💬</div>
           <div className="font-bold text-lg text-slate-800">Converse Conosco</div>
           <div className="text-gray-400 text-sm">Mensagens para a equipe de saúde</div>
+        </button>
+        <button className="big-btn" onClick={() => onSelect('satisfacao')}>
+          <div className="big-btn-icon bg-violet-100">⭐</div>
+          <div className="font-bold text-lg text-slate-800">Satisfação com o APP</div>
+          <div className="text-gray-400 text-sm">Avalie sua experiência com o aplicativo</div>
         </button>
       </div>
     </div>
@@ -874,6 +979,13 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
   const [pesoRecemNascido, setPesoRecemNascido] = useState(user.peso_recem_nascido || '');
   const [alturaBebe, setAlturaBebe] = useState(user.altura_recem_nascido || '');
   const [amamentando, setAmamentando] = useState(user.amamentando || '');
+  const [localNascimento, setLocalNascimento] = useState('');
+  const [vacinasMaternidade, setVacinasMaternidade] = useState({ bcg: false, hepatiteB: false, vitamK: false });
+  const [testePezinho, setTestePezinho] = useState('');
+  const [dataTestePezinho, setDataTestePezinho] = useState('');
+  const [consultaPuerperal, setConsultaPuerperal] = useState('');
+  const [dataConsultaPuerperal, setDataConsultaPuerperal] = useState('');
+  const [showInfoParto, setShowInfoParto] = useState(false);
   const [humorMae, setHumorMae] = useState('');
   const [notasPuerpero, setNotasPuerpero] = useState('');
   const [salvandoPuerpero, setSalvandoPuerpero] = useState(false);
@@ -914,6 +1026,12 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
               setPesoRecemNascido(partoInfo.peso_bebe || '');
               setAlturaBebe(partoInfo.altura_bebe || '');
               setAmamentando(partoInfo.amamentando || '');
+              setLocalNascimento(partoInfo.local_nascimento || '');
+              if (partoInfo.vacinas_maternidade) setVacinasMaternidade(partoInfo.vacinas_maternidade);
+              setTestePezinho(partoInfo.teste_pezinho || '');
+              setDataTestePezinho(partoInfo.data_teste_pezinho || '');
+              setConsultaPuerperal(partoInfo.consulta_puerperal || '');
+              setDataConsultaPuerperal(partoInfo.data_consulta_puerperal || '');
               const dpMs = new Date(partoInfo.data_parto || 0).getTime();
               if (dpMs > 0) setDiasPosParto(Math.floor((Date.now() - dpMs) / 86400000));
             }
@@ -952,12 +1070,19 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
         data_parto: dataParto,
         peso_bebe: pesoRecemNascido,
         altura_bebe: alturaBebe,
-        amamentando: amamentando
+        amamentando: amamentando,
+        local_nascimento: localNascimento,
+        vacinas_maternidade: vacinasMaternidade,
+        teste_pezinho: testePezinho,
+        data_teste_pezinho: dataTestePezinho,
+        consulta_puerperal: consultaPuerperal,
+        data_consulta_puerperal: dataConsultaPuerperal
       };
       localStorage.setItem(`parto_${patientKey}`, JSON.stringify(info));
 
+      const vacinasStr = [vacinasMaternidade.bcg && 'BCG', vacinasMaternidade.hepatiteB && 'Hepatite B', vacinasMaternidade.vitamK && 'Vitamina K'].filter(Boolean).join(', ') || 'Nenhuma informada';
       const rid = uuidv4(), now = new Date().toISOString();
-      const texto = `Parto registrado em ${dataParto}. Peso bebê: ${pesoRecemNascido || 'N/I'}g, Altura: ${alturaBebe || 'N/I'}cm. Amamentando: ${amamentando || 'N/I'}`;
+      const texto = `Parto registrado em ${dataParto}. Local: ${localNascimento || 'N/I'}. Peso bebê: ${pesoRecemNascido || 'N/I'}g, Altura: ${alturaBebe || 'N/I'}cm. Amamentando: ${amamentando || 'N/I'}. Vacinas maternidade: ${vacinasStr}. Teste do pezinho: ${testePezinho || 'N/I'}. Consulta puerperal: ${consultaPuerperal || 'N/I'}`;
       await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0 });
       await enviarRegistroSupabase({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now });
 
@@ -1009,6 +1134,8 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
               <input type="number" className="input-box" inputMode="numeric" placeholder="Ex: 3200" value={pesoRecemNascido} onChange={e => setPesoRecemNascido(e.target.value)} />
               <label className="text-xs text-slate-500 font-semibold">Altura do bebê (cm)</label>
               <input type="number" className="input-box" inputMode="numeric" placeholder="Ex: 49" value={alturaBebe} onChange={e => setAlturaBebe(e.target.value)} />
+              <label className="text-xs text-slate-500 font-semibold">Local do nascimento</label>
+              <input className="input-box" placeholder="Ex: Hospital Municipal de Rurópolis" value={localNascimento} onChange={e => setLocalNascimento(e.target.value)} />
               <label className="text-xs text-slate-500 font-semibold">Está amamentando?</label>
               <div className="flex gap-3 mb-3">
                 <label className={`flex-1 text-center py-2 rounded-xl border-2 font-bold text-sm cursor-pointer ${amamentando === 'sim' ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 text-slate-500'}`}>
@@ -1018,7 +1145,43 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
                   <input type="radio" name="amament" className="hidden" checked={amamentando === 'nao'} onChange={() => setAmamentando('nao')} /> Não
                 </label>
               </div>
-              <button className="btn-primary" style={{background: 'linear-gradient(135deg, #ec4899, #be185d)'}} disabled={salvandoPuerpero} onClick={registrarParto}>
+              <div className="section-title" style={{fontSize:'12px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', margin:'16px 0 8px'}}>Vacinas na Maternidade</div>
+              <div className="flex flex-col gap-2 mb-3">
+                {[{key:'bcg', label:'BCG (tuberculose)'}, {key:'hepatiteB', label:'Hepatite B'}, {key:'vitamK', label:'Vitamina K'}].map(v => (
+                  <label key={v.key} className="flex items-center gap-3 bg-white border border-pink-100 rounded-xl p-3 cursor-pointer">
+                    <input type="checkbox" className="h-5 w-5 accent-pink-500" checked={vacinasMaternidade[v.key]} onChange={e => setVacinasMaternidade(prev => ({...prev, [v.key]: e.target.checked}))} />
+                    <span className="text-sm font-semibold text-slate-700">{v.label}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="section-title" style={{fontSize:'12px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', margin:'16px 0 8px'}}>Volta à UBS</div>
+              <label className="text-xs text-slate-500 font-semibold">Teste do Pezinho</label>
+              <select className="input-box" value={testePezinho} onChange={e => setTestePezinho(e.target.value)}>
+                <option value="">Selecione...</option>
+                <option value="realizado">✅ Realizado</option>
+                <option value="agendado">📅 Agendado</option>
+                <option value="pendente">⏳ Pendente</option>
+              </select>
+              {testePezinho === 'agendado' && (
+                <>
+                  <label className="text-xs text-slate-500 font-semibold">Data do teste do pezinho</label>
+                  <input type="date" className="input-box" value={dataTestePezinho} onChange={e => setDataTestePezinho(e.target.value)} />
+                </>
+              )}
+              <label className="text-xs text-slate-500 font-semibold">Consulta Puerperal</label>
+              <select className="input-box" value={consultaPuerperal} onChange={e => setConsultaPuerperal(e.target.value)}>
+                <option value="">Selecione...</option>
+                <option value="realizada">✅ Realizada</option>
+                <option value="agendada">📅 Agendada</option>
+                <option value="pendente">⏳ Pendente</option>
+              </select>
+              {consultaPuerperal === 'agendada' && (
+                <>
+                  <label className="text-xs text-slate-500 font-semibold">Data da consulta puerperal</label>
+                  <input type="date" className="input-box" value={dataConsultaPuerperal} onChange={e => setDataConsultaPuerperal(e.target.value)} />
+                </>
+              )}
+              <button className="btn-primary" style={{background: 'linear-gradient(135deg, #ec4899, #be185d)', marginTop:'12px'}} disabled={salvandoPuerpero} onClick={registrarParto}>
                 {salvandoPuerpero ? 'SALVANDO...' : '🎉 REGISTRAR PARTO'}
               </button>
             </div>
@@ -1054,8 +1217,76 @@ const AcompanhamentoGestacao = ({ user, onBack }) => {
                   <div className="metric-value">{alturaBebe}cm</div>
                 </div>
               )}
+              {localNascimento && (
+                <div className="metric-item" style={{gridColumn:'1 / -1'}}>
+                  <div className="metric-label">Local do Nascimento</div>
+                  <div className="metric-value text-base">{localNascimento}</div>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Birth/Baby Info Button */}
+          <button onClick={() => setShowInfoParto(!showInfoParto)} className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl p-4 mt-3 shadow-md" style={{border:'none', cursor:'pointer', fontWeight:800, fontSize:'15px', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px'}}>
+            🏥 {showInfoParto ? 'Ocultar' : 'Ver'} Informações do Parto e Bebê
+          </button>
+
+          {showInfoParto && (
+            <div className="bg-white border-2 border-pink-200 rounded-2xl p-5 mt-3 shadow-sm fade-in">
+              <h4 className="font-extrabold text-pink-800 mb-4 text-base">🏥 Informações do Parto e Nascimento</h4>
+              
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-pink-50 rounded-xl p-3">
+                  <div className="text-xs text-pink-400 font-bold uppercase">Data do Parto</div>
+                  <div className="font-bold text-pink-800">{dataParto ? new Date(dataParto + 'T12:00:00').toLocaleDateString('pt-BR') : '--'}</div>
+                </div>
+                <div className="bg-pink-50 rounded-xl p-3">
+                  <div className="text-xs text-pink-400 font-bold uppercase">Local</div>
+                  <div className="font-bold text-pink-800">{localNascimento || 'Não informado'}</div>
+                </div>
+                <div className="bg-pink-50 rounded-xl p-3">
+                  <div className="text-xs text-pink-400 font-bold uppercase">Peso Bebê</div>
+                  <div className="font-bold text-pink-800">{pesoRecemNascido ? `${pesoRecemNascido}g` : '--'}</div>
+                </div>
+                <div className="bg-pink-50 rounded-xl p-3">
+                  <div className="text-xs text-pink-400 font-bold uppercase">Altura Bebê</div>
+                  <div className="font-bold text-pink-800">{alturaBebe ? `${alturaBebe}cm` : '--'}</div>
+                </div>
+              </div>
+
+              <h5 className="font-bold text-slate-700 text-sm mb-2">💉 Vacinas na Maternidade</h5>
+              <div className="flex flex-col gap-2 mb-4">
+                {[{key:'bcg', label:'BCG (tuberculose)'}, {key:'hepatiteB', label:'Hepatite B'}, {key:'vitamK', label:'Vitamina K'}].map(v => (
+                  <div key={v.key} className="flex items-center gap-2 text-sm">
+                    <span className={`text-lg ${vacinasMaternidade[v.key] ? '✅' : '⬜'}`}>{vacinasMaternidade[v.key] ? '✅' : '⬜'}</span>
+                    <span className={vacinasMaternidade[v.key] ? 'text-emerald-700 font-bold' : 'text-slate-400'}>{v.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <h5 className="font-bold text-slate-700 text-sm mb-2">🏥 Volta à UBS</h5>
+              <div className="grid grid-cols-1 gap-3">
+                <div className={`rounded-xl p-3 border-2 ${testePezinho === 'realizado' ? 'bg-emerald-50 border-emerald-200' : testePezinho === 'agendado' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{testePezinho === 'realizado' ? '✅' : testePezinho === 'agendado' ? '📅' : '⏳'}</span>
+                    <div>
+                      <div className="font-bold text-sm">Teste do Pezinho</div>
+                      <div className="text-xs text-slate-500">{testePezinho === 'realizado' ? 'Realizado' : testePezinho === 'agendado' ? `Agendado${dataTestePezinho ? ' - ' + new Date(dataTestePezinho + 'T12:00:00').toLocaleDateString('pt-BR') : ''}` : 'Pendente'}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className={`rounded-xl p-3 border-2 ${consultaPuerperal === 'realizada' ? 'bg-emerald-50 border-emerald-200' : consultaPuerperal === 'agendada' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{consultaPuerperal === 'realizada' ? '✅' : consultaPuerperal === 'agendada' ? '📅' : '⏳'}</span>
+                    <div>
+                      <div className="font-bold text-sm">Consulta Puerperal</div>
+                      <div className="text-xs text-slate-500">{consultaPuerperal === 'realizada' ? 'Realizada' : consultaPuerperal === 'agendada' ? `Agendada${dataConsultaPuerperal ? ' - ' + new Date(dataConsultaPuerperal + 'T12:00:00').toLocaleDateString('pt-BR') : ''}` : 'Pendente'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Puerpério alerts */}
           {diasPosParto <= 42 && (
@@ -1869,6 +2100,121 @@ const ProDash = ({user, onLogout}) => {
   );
 };
 
+// Pesquisa de Satisfação
+const PesquisaSatisfacao = ({ user, onBack }) => {
+  const patientKey = user.patient_id || 'cpf-' + user.cpf;
+  const [nota, setNota] = useState(0);
+  const [facilidade, setFacilidade] = useState('');
+  const [utilidade, setUtilidade] = useState('');
+  const [sugestao, setSugestao] = useState('');
+  const [enviado, setEnviado] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`satisfacao_${patientKey}`);
+    if (saved) setEnviado(true);
+  }, [patientKey]);
+
+  const enviar = async () => {
+    if (!nota) return alert('Selecione uma nota de 1 a 5.');
+    setSalvando(true);
+    try {
+      const rid = uuidv4(), now = new Date().toISOString();
+      const texto = `Pesquisa de Satisfação: Nota ${nota}/5. Facilidade: ${facilidade || 'N/I'}. Utilidade: ${utilidade || 'N/I'}. Sugestão: ${sugestao || 'Nenhuma'}`;
+      await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'satisfacao', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0 });
+      await enviarRegistroSupabase({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'satisfacao', status: 'pendente', created_at: now, updated_at: now });
+      localStorage.setItem(`satisfacao_${patientKey}`, JSON.stringify({ nota, facilidade, utilidade, sugestao, data: now }));
+      setEnviado(true);
+      alert('✅ Obrigado pela sua avaliação!');
+    } catch { alert('Erro ao enviar. Tente novamente.'); }
+    setSalvando(false);
+  };
+
+  return (
+    <div className="p-5 fade-in min-h-screen">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <h2 className="text-xl font-bold">Satisfação com o APP</h2>
+      </div>
+
+      {enviado ? (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">🎉</div>
+          <h3 className="text-2xl font-extrabold text-emerald-700 mb-2">Obrigado!</h3>
+          <p className="text-slate-500">Sua avaliação foi registrada com sucesso.</p>
+          <button className="btn-sec mt-6" onClick={onBack}>← Voltar ao Menu</button>
+        </div>
+      ) : (
+        <>
+          <div className="bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-200 rounded-2xl p-6 mb-4">
+            <h3 className="font-extrabold text-violet-800 text-lg mb-2">⭐ Como você avalia o aplicativo Tecendo Saúde?</h3>
+            <p className="text-sm text-violet-600 mb-4">Sua opinião é muito importante para melhorarmos o atendimento.</p>
+            <div className="flex justify-center gap-3 mb-4">
+              {[1,2,3,4,5].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setNota(n)}
+                  className="transition-all"
+                  style={{
+                    fontSize: nota >= n ? '40px' : '32px',
+                    filter: nota >= n ? 'none' : 'grayscale(1) opacity(0.4)',
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    transform: nota >= n ? 'scale(1.1)' : 'scale(1)'
+                  }}>
+                  ⭐
+                </button>
+              ))}
+            </div>
+            {nota > 0 && <div className="text-center font-bold text-violet-700 text-sm">{['','Muito insatisfeito','Insatisfeito','Regular','Satisfeito','Muito satisfeito'][nota]}</div>}
+          </div>
+
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-4">
+            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">O aplicativo é fácil de usar?</label>
+            <div className="flex gap-2 flex-wrap mb-4">
+              {['Muito fácil', 'Fácil', 'Regular', 'Difícil', 'Muito difícil'].map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => setFacilidade(opt)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${facilidade === opt ? 'bg-violet-500 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  style={{border: 'none', cursor: 'pointer'}}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+
+            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">O aplicativo ajuda no cuidado da sua saúde?</label>
+            <div className="flex gap-2 flex-wrap mb-4">
+              {['Sim, muito', 'Sim, um pouco', 'Indiferente', 'Não muito', 'Não'].map(opt => (
+                <button
+                  key={opt}
+                  onClick={() => setUtilidade(opt)}
+                  className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${utilidade === opt ? 'bg-violet-500 text-white' : 'bg-slate-100 text-slate-600'}`}
+                  style={{border: 'none', cursor: 'pointer'}}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+
+            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">Sugestões ou comentários</label>
+            <textarea
+              className="input-box"
+              placeholder="Deixe sua sugestão para melhorarmos o aplicativo..."
+              value={sugestao}
+              onChange={e => setSugestao(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <button className="btn-primary" style={{background: 'linear-gradient(135deg, #7c3aed, #5b21b6)'}} disabled={salvando} onClick={enviar}>
+            {salvando ? 'ENVIANDO...' : '📨 ENVIAR AVALIAÇÃO'}
+          </button>
+          <button className="btn-sec mt-3" onClick={onBack}>← Voltar</button>
+        </>
+      )}
+    </div>
+  );
+};
+
 // App Principal
 const App = () => {
   const [route, setRoute] = useState(IS_PROFISSIONAL ? 'pro_login' : 'login');
@@ -1916,6 +2262,9 @@ const App = () => {
     if (!patientUsesMedication(user.uso_medicacoes)) return;
 
     const patientId = user.patient_id || user.patient_id || user.cpf || 'anon';
+
+    // Schedule Cordova native notifications (survive app close, work offline)
+    agendarNotificacoesCordova(user);
 
     // Request notification permission proactively on first load
     if ('Notification' in window && Notification.permission === 'default') {
@@ -2010,6 +2359,7 @@ const App = () => {
       {route === 'gestacao' && user && <AcompanhamentoGestacao user={user} onBack={() => setRoute('menu')} />}
       {route === 'crianca' && user && <AcompanhamentoCrianca user={user} onBack={() => setRoute('menu')} />}
       {route === 'chat' && user && <ConverseConosco user={user} onBack={() => setRoute('menu')} />}
+      {route === 'satisfacao' && user && <PesquisaSatisfacao user={user} onBack={() => setRoute('menu')} />}
       {route === 'pro_login' && <ProAuth onAuth={proLogin} onBack={() => window.location.href = '../index.html'} tipo={PRO_TIPO} />}
       {route === 'pro_dash' && user && <ProDash user={user} onLogout={logout} />}
     </>

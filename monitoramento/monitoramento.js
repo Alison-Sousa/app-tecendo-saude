@@ -262,7 +262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tipoProfissional = (prof.tipo || 'acs').toLowerCase();
   const tipoEl = document.getElementById('profTipo');
   if (tipoEl) {
-    const label = tipoProfissional === 'telessaude' ? 'Telessaúde' : 'ACS';
+    const label = tipoProfissional === 'telessaude' ? 'Telessaúde' : tipoProfissional === 'equipe_ubs' ? 'Profissional de Saúde' : 'ACS';
     tipoEl.textContent = 'Profissional ' + label;
     tipoEl.style.display = 'inline-block';
     tipoEl.style.padding = '3px 10px';
@@ -273,6 +273,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (tipoProfissional === 'telessaude') {
       tipoEl.style.background = '#e0e7ff';
       tipoEl.style.color = '#4338ca';
+    } else if (tipoProfissional === 'equipe_ubs') {
+      tipoEl.style.background = '#fff7ed';
+      tipoEl.style.color = '#c2410c';
     } else {
       tipoEl.style.background = '#dcfce7';
       tipoEl.style.color = '#166534';
@@ -692,6 +695,9 @@ function atualizarEstatisticas() {
   document.getElementById('statAtencao').textContent = atencao;
   document.getElementById('statEstaveis').textContent = estaveis;
   document.getElementById('statTotal').textContent = pacientes.length;
+
+  // Load satisfaction stats in background
+  carregarSatisfacao();
 }
 
 function normalizarTextoFiltro(value) {
@@ -1319,6 +1325,7 @@ async function salvarEdicaoFicha() {
   };
   // Remove keys where the DOM element was not found
   Object.keys(campos).forEach(k => { if (campos[k] === undefined) delete campos[k]; });
+  campos.updated_at = new Date().toISOString();
   const btn = document.getElementById('btnSalvarEdicaoFicha');
   if (btn) { btn.disabled = true; btn.textContent = 'A guardar...'; }
   try {
@@ -3017,6 +3024,120 @@ async function gerarRelatorioPDF() {
 
   const nomeArquivo = `relatorio_${(p.nome || 'paciente').replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.pdf`;
   doc.save(nomeArquivo);
+}
+
+// ============================================
+// SATISFAÇÃO COM O APP
+// ============================================
+let _satisfacaoData = [];
+
+async function carregarSatisfacao() {
+  try {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from('registros')
+      .select('registro_id, patient_id, texto, created_at')
+      .eq('tipo', 'satisfacao')
+      .order('created_at', { ascending: false })
+      .range(0, 499);
+    if (error) { console.error('Erro satisfação:', error); return; }
+    _satisfacaoData = data || [];
+    const el = document.getElementById('statSatisfacao');
+    if (!el) return;
+    if (_satisfacaoData.length === 0) { el.textContent = '—'; return; }
+    const notas = _satisfacaoData.map(r => {
+      const m = (r.texto || '').match(/Nota\s+(\d)\/5/);
+      return m ? parseInt(m[1]) : null;
+    }).filter(n => n !== null);
+    if (notas.length === 0) { el.textContent = '—'; return; }
+    const media = (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1);
+    el.textContent = `${media} ⭐`;
+    el.title = `${notas.length} avaliação(ões)`;
+  } catch (e) { console.error('Erro ao carregar satisfação:', e); }
+}
+
+function abrirSatisfacaoModal() {
+  const modal = document.getElementById('satisfacaoModal');
+  const body = document.getElementById('satisfacaoBody');
+  if (!modal || !body) return;
+  modal.style.display = 'flex';
+
+  if (_satisfacaoData.length === 0) {
+    body.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Nenhuma avaliação recebida ainda.</p></div>';
+    return;
+  }
+
+  // Parse all entries
+  const entries = _satisfacaoData.map(r => {
+    const t = r.texto || '';
+    const notaM = t.match(/Nota\s+(\d)\/5/);
+    const facM = t.match(/Facilidade:\s*([^.]+)/);
+    const utiM = t.match(/Utilidade:\s*([^.]+)/);
+    const sugM = t.match(/Sugestão:\s*(.+)$/);
+    return {
+      patient_id: r.patient_id,
+      nota: notaM ? parseInt(notaM[1]) : null,
+      facilidade: facM ? facM[1].trim() : '',
+      utilidade: utiM ? utiM[1].trim() : '',
+      sugestao: sugM ? sugM[1].trim() : '',
+      data: r.created_at
+    };
+  });
+
+  const notas = entries.map(e => e.nota).filter(n => n !== null);
+  const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1) : '—';
+  const dist = [0, 0, 0, 0, 0];
+  notas.forEach(n => { if (n >= 1 && n <= 5) dist[n - 1]++; });
+  const labels = ['Muito insatisfeito', 'Insatisfeito', 'Regular', 'Satisfeito', 'Muito satisfeito'];
+  const barColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#16a34a'];
+
+  let html = `
+    <div style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;">
+      <div style="font-size:48px;font-weight:900;color:#7c3aed;">${media} <span style="font-size:28px;">⭐</span></div>
+      <div style="color:#6d28d9;font-size:14px;font-weight:600;">${notas.length} avaliação(ões) recebida(s)</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0;margin-bottom:16px;">
+      <h4 style="font-weight:700;font-size:14px;margin-bottom:12px;color:#334155;">Distribuição das Notas</h4>
+      ${dist.map((count, i) => {
+        const pct = notas.length ? Math.round((count / notas.length) * 100) : 0;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span style="width:130px;font-size:12px;color:#64748b;">${labels[i]}</span>
+          <div style="flex:1;height:18px;background:#f1f5f9;border-radius:9px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${barColors[i]};border-radius:9px;transition:width 0.5s;"></div>
+          </div>
+          <span style="font-size:12px;font-weight:700;color:#334155;min-width:32px;text-align:right;">${count}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <h4 style="font-weight:700;font-size:14px;margin-bottom:8px;color:#334155;">Respostas individuais</h4>
+    <div style="max-height:300px;overflow-y:auto;">
+  `;
+
+  for (const e of entries) {
+    const paciente = pacientes.find(p => p.patient_id === e.patient_id);
+    const nome = paciente ? paciente.nome : (e.patient_id || 'Anônimo');
+    const stars = e.nota ? '⭐'.repeat(e.nota) + '☆'.repeat(5 - e.nota) : '—';
+    const dataF = e.data ? new Date(e.data).toLocaleDateString('pt-BR') : '';
+    html += `
+      <div style="background:#fafafa;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-weight:700;font-size:13px;color:#334155;">${nome.length > 25 ? nome.substring(0, 25) + '…' : nome}</span>
+          <span style="font-size:11px;color:#94a3b8;">${dataF}</span>
+        </div>
+        <div style="font-size:16px;margin-bottom:4px;">${stars}</div>
+        ${e.facilidade && e.facilidade !== 'N/I' ? `<div style="font-size:12px;color:#64748b;"><b>Facilidade:</b> ${e.facilidade}</div>` : ''}
+        ${e.utilidade && e.utilidade !== 'N/I' ? `<div style="font-size:12px;color:#64748b;"><b>Utilidade:</b> ${e.utilidade}</div>` : ''}
+        ${e.sugestao && e.sugestao !== 'Nenhuma' ? `<div style="font-size:12px;color:#7c3aed;margin-top:4px;"><b>💬</b> ${e.sugestao}</div>` : ''}
+      </div>`;
+  }
+
+  html += '</div>';
+  body.innerHTML = html;
+}
+
+function fecharSatisfacaoModal() {
+  const modal = document.getElementById('satisfacaoModal');
+  if (modal) modal.style.display = 'none';
 }
 
 // ============================================
