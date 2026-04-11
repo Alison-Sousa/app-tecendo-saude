@@ -32,7 +32,7 @@ jobs:
 
       - name: Create Cordova project structure
         run: |
-          npm install -g cordova
+          npm install -g cordova@12.0.0
           mkdir -p cordova-build
           cd cordova-build
           cordova create app br.com.tecendosaude "Tecendo Saude"
@@ -91,27 +91,46 @@ jobs:
               </platform>
           </widget>
           XMLEOF
-          cordova platform add android
+          cordova platform add android@13.0.0
 
-      - name: Fix compileSdk for Android 34
+      - name: Fix Gradle build for Android 34
         run: |
-          GRADLE_FILE="cordova-build/app/platforms/android/app/build.gradle"
-          if [ -f "$GRADLE_FILE" ]; then
-            sed -i 's/compileSdk\s*=\s*[0-9]*/compileSdk = 34/g' "$GRADLE_FILE"
-            sed -i 's/compileSdkVersion\s*[0-9]*/compileSdkVersion 34/g' "$GRADLE_FILE"
-            sed -i 's/targetSdkVersion\s*[0-9]*/targetSdkVersion 34/g' "$GRADLE_FILE"
-          fi
-          # Also fix the project-level build.gradle if needed
-          PROJ_GRADLE="cordova-build/app/platforms/android/build.gradle"
-          if [ -f "$PROJ_GRADLE" ]; then
-            sed -i 's/compileSdk\s*=\s*[0-9]*/compileSdk = 34/g' "$PROJ_GRADLE"
-          fi
-          # Also fix CordovaLib
-          CORDOVA_GRADLE="cordova-build/app/platforms/android/CordovaLib/build.gradle"
-          if [ -f "$CORDOVA_GRADLE" ]; then
-            sed -i 's/compileSdk\s*=\s*[0-9]*/compileSdk = 34/g' "$CORDOVA_GRADLE"
-            sed -i 's/compileSdkVersion\s*[0-9]*/compileSdkVersion 34/g' "$CORDOVA_GRADLE"
-          fi
+          ANDROID_DIR="cordova-build/app/platforms/android"
+
+          # Ensure cdv-gradle-config.json has correct SDK values
+          echo '{
+            "MIN_SDK_VERSION": 24,
+            "SDK_VERSION": 34,
+            "COMPILE_SDK_VERSION": 34,
+            "TARGET_SDK_VERSION": 34,
+            "IS_GRADLE_PLUGIN_KOTLIN_ENABLED": false,
+            "PACKAGE_NAMESPACE": "br.com.tecendosaude"
+          }' > "$ANDROID_DIR/cdv-gradle-config.json"
+
+          # Fix compileSdk in all gradle files (handles both old and new syntax)
+          for f in "$ANDROID_DIR/app/build.gradle" "$ANDROID_DIR/CordovaLib/build.gradle" "$ANDROID_DIR/build.gradle"; do
+            if [ -f "$f" ]; then
+              # Replace cordovaConfig property references with literal values
+              sed -i 's/cordovaConfig\.SDK_VERSION/34/g' "$f"
+              sed -i 's/cordovaConfig\.COMPILE_SDK_VERSION/34/g' "$f"
+              sed -i 's/cordovaConfig\.TARGET_SDK_VERSION/34/g' "$f"
+              sed -i 's/cordovaConfig\.MIN_SDK_VERSION/24/g' "$f"
+              sed -i 's/cordovaConfig\.MAX_SDK_VERSION/34/g' "$f"
+              sed -i "s/cordovaConfig\.PACKAGE_NAMESPACE/'br.com.tecendosaude'/g" "$f"
+              sed -i 's/cordovaConfig\.IS_GRADLE_PLUGIN_KOTLIN_ENABLED/false/g' "$f"
+              # Replace literal SDK numbers
+              sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' "$f"
+              sed -i 's/compileSdk [0-9]*/compileSdk 34/g' "$f"
+              sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' "$f"
+              sed -i 's/minSdkVersion [0-9]*/minSdkVersion 24/g' "$f"
+            fi
+          done
+
+          # Debug: show key lines of app/build.gradle
+          echo "=== app/build.gradle (first 40 lines) ==="
+          head -40 "$ANDROID_DIR/app/build.gradle" || true
+          echo "=== cdv-gradle-config.json ==="
+          cat "$ANDROID_DIR/cdv-gradle-config.json" || true
 
       - name: Build APK
         working-directory: cordova-build/app
