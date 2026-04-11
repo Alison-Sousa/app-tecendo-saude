@@ -30,6 +30,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Gradle 8.7
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
+          sudo mkdir -p /opt/gradle
+          sudo unzip -q /tmp/gradle.zip -d /opt/gradle
+          echo "/opt/gradle/gradle-8.7/bin" >> $GITHUB_PATH
+
       - name: Create Cordova project structure
         run: |
           npm install -g cordova@12.0.0
@@ -71,8 +78,6 @@ jobs:
               <preference name="android-minSdkVersion" value="24" />
               <preference name="android-targetSdkVersion" value="34" />
               <preference name="android-compileSdkVersion" value="34" />
-              <preference name="GradleVersion" value="8.7" />
-              <preference name="AndroidGradlePluginVersion" value="8.3.0" />
               <platform name="android">
                   <icon src="www/img/logo.png" />
                   <config-file target="AndroidManifest.xml" parent="/*">
@@ -94,31 +99,27 @@ jobs:
           XMLEOF
           cordova platform add android@12.0.1
 
-      - name: Fix Gradle compatibility
+      - name: Verify Gradle and fix SDK versions
         run: |
+          echo "=== System Gradle ==="
+          gradle --version | head -3
+
           ANDROID_DIR="cordova-build/app/platforms/android"
 
-          # Pin Gradle wrapper to 8.7 (compatible with AGP 8.3.0)
-          WRAPPER="$ANDROID_DIR/gradle/wrapper/gradle-wrapper.properties"
-          if [ -f "$WRAPPER" ]; then
-            sed -i 's|distributionUrl=.*|distributionUrl=https\\://services.gradle.org/distributions/gradle-8.7-bin.zip|' "$WRAPPER"
-            echo "=== Gradle wrapper pinned to 8.7 ==="
-            cat "$WRAPPER"
-          fi
+          # Show what Cordova generated
+          echo "=== cdv-gradle-config.json ==="
+          cat "$ANDROID_DIR/cdv-gradle-config.json" 2>/dev/null || echo "(not found)"
 
-          # Ensure compileSdk 34 in build files
+          echo "=== gradle-wrapper.properties ==="
+          cat "$ANDROID_DIR/gradle/wrapper/gradle-wrapper.properties" 2>/dev/null || echo "(not found)"
+
+          # Ensure compileSdk 34 in build files as safety net
           for f in "$ANDROID_DIR/app/build.gradle" "$ANDROID_DIR/CordovaLib/build.gradle"; do
             if [ -f "$f" ]; then
               sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' "$f"
               sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' "$f"
             fi
           done
-
-          # Debug info
-          echo "=== cdv-gradle-config.json ==="
-          cat "$ANDROID_DIR/cdv-gradle-config.json" 2>/dev/null || echo "(not found)"
-          echo "=== app/build.gradle (first 50 lines) ==="
-          head -50 "$ANDROID_DIR/app/build.gradle" || true
 
       - name: Build APK
         working-directory: cordova-build/app
