@@ -179,7 +179,7 @@ const notifyUser = async (title, body, tag) => {
     } catch (e) { console.warn('Cordova notification error:', e); }
   }
 
-  // Web Notification API (browser / PWA)
+  // Web/PWA: System notification via Service Worker (appears in notification bar like Instagram)
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch { return; }
@@ -189,14 +189,38 @@ const notifyUser = async (title, body, tag) => {
   const last = Number(localStorage.getItem(key) || 0);
   if (last && (Date.now() - last) < 60000) return;
   try {
-    // Try Service Worker notification first (works better on mobile)
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag, icon: '../img/logo.png' });
+    // Always use Service Worker registration for system-level notification
+    if ('serviceWorker' in navigator) {
+      let reg = await navigator.serviceWorker.getRegistration('../sw.js');
+      if (!reg) reg = await navigator.serviceWorker.register('../sw.js');
+      // Wait for SW to be active
+      if (reg.installing || reg.waiting) {
+        const sw = reg.installing || reg.waiting;
+        await new Promise(resolve => {
+          sw.addEventListener('statechange', () => { if (sw.state === 'activated') resolve(); });
+          setTimeout(resolve, 3000); // timeout fallback
+        });
+      }
+      await reg.showNotification(title, {
+        body: body,
+        icon: '../img/logo.png',
+        badge: '../img/logo.png',
+        tag: tag || 'tecendo-saude',
+        requireInteraction: true,
+        vibrate: [300, 200, 300, 200, 500],
+        silent: false,
+        renotify: true,
+        actions: [
+          { action: 'open', title: 'Abrir' },
+          { action: 'dismiss', title: 'Dispensar' }
+        ]
+      });
     } else {
       new Notification(title, { body, icon: '../img/logo.png', tag, requireInteraction: true, silent: false });
     }
     localStorage.setItem(key, String(Date.now()));
-  } catch {
+  } catch (e) {
+    console.warn('Notification error:', e);
     try { new Notification(title, { body, icon: '../img/logo.png', tag }); localStorage.setItem(key, String(Date.now())); } catch {}
   }
 };
