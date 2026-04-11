@@ -40,6 +40,7 @@ jobs:
           cordova plugin add cordova-plugin-local-notification --variable ANDROIDX_CORE_VERSION=1.12.0
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-dialogs
+          cordova plugin add cordova-plugin-remote-injection
 
       - name: Copy web files into Cordova www
         run: |
@@ -64,10 +65,14 @@ jobs:
               <name>Tecendo Saude</name>
               <description>Aplicativo de Saúde</description>
               <author email="seu-email@dominio.com">Tecendo Saude</author>
-              <content src="index.html" />
+              <content src="https://app-tecendo.netlify.app/" />
               <access origin="*" />
+              <allow-navigation href="https://app-tecendo.netlify.app/*" />
+              <allow-navigation href="https://*.supabase.co/*" />
               <allow-intent href="http://*/*" />
               <allow-intent href="https://*/*" />
+              <preference name="CRIPageLoadPromptInterval" value="15" />
+              <preference name="ErrorUrl" value="file:///android_asset/www/index.html" />
               <platform name="android">
                   <icon src="www/img/logo.png" />
                   <config-file target="AndroidManifest.xml" parent="/*">
