@@ -30,25 +30,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install required Android build tools
-        run: |
-          sdkmanager "build-tools;33.0.2" "build-tools;34.0.0" "platforms;android-34"
-
-      - name: Install Gradle 8.7
-        run: |
-          wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O /tmp/gradle.zip
-          sudo mkdir -p /opt/gradle
-          sudo unzip -q /tmp/gradle.zip -d /opt/gradle
-          echo "/opt/gradle/gradle-8.7/bin" >> $GITHUB_PATH
-
       - name: Create Cordova project structure
         run: |
-          npm install -g cordova@12.0.0
+          npm install -g cordova
           mkdir -p cordova-build
           cd cordova-build
           cordova create app br.com.tecendosaude "Tecendo Saude"
           cd app
-          cordova plugin add cordova-plugin-local-notification
+          cordova plugin add cordova-plugin-local-notification --variable ANDROIDX_CORE_VERSION=1.12.0
           cordova plugin add cordova-plugin-android-permissions
           cordova plugin add cordova-plugin-dialogs
 
@@ -79,9 +68,6 @@ jobs:
               <access origin="*" />
               <allow-intent href="http://*/*" />
               <allow-intent href="https://*/*" />
-              <preference name="android-minSdkVersion" value="24" />
-              <preference name="android-targetSdkVersion" value="34" />
-              <preference name="android-compileSdkVersion" value="34" />
               <platform name="android">
                   <icon src="www/img/logo.png" />
                   <config-file target="AndroidManifest.xml" parent="/*">
@@ -101,29 +87,7 @@ jobs:
               </platform>
           </widget>
           XMLEOF
-          cordova platform add android@12.0.1
-
-      - name: Verify Gradle and fix SDK versions
-        run: |
-          echo "=== System Gradle ==="
-          gradle --version | head -3
-
-          ANDROID_DIR="cordova-build/app/platforms/android"
-
-          # Show what Cordova generated
-          echo "=== cdv-gradle-config.json ==="
-          cat "$ANDROID_DIR/cdv-gradle-config.json" 2>/dev/null || echo "(not found)"
-
-          echo "=== gradle-wrapper.properties ==="
-          cat "$ANDROID_DIR/gradle/wrapper/gradle-wrapper.properties" 2>/dev/null || echo "(not found)"
-
-          # Ensure compileSdk 34 in build files as safety net
-          for f in "$ANDROID_DIR/app/build.gradle" "$ANDROID_DIR/CordovaLib/build.gradle"; do
-            if [ -f "$f" ]; then
-              sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 34/g' "$f"
-              sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 34/g' "$f"
-            fi
-          done
+          cordova platform add android
 
       - name: Build APK
         working-directory: cordova-build/app
@@ -131,14 +95,7 @@ jobs:
 
       - name: Prepare APK for release
         run: |
-          echo "=== Searching for APK files ==="
-          find cordova-build/ -name "*.apk" -type f 2>/dev/null
-          APK=$(find cordova-build/ -name "*.apk" -type f | head -1)
-          if [ -z "$APK" ]; then
-            echo "ERROR: No APK found!"
-            exit 1
-          fi
-          echo "Found APK: $APK"
+          APK=$(find cordova-build/app/platforms/android -name "*.apk" | head -1)
           cp "$APK" tecendo-saude.apk
           echo "APK_SIZE=$(du -h tecendo-saude.apk | cut -f1)" >> $GITHUB_ENV
 
