@@ -122,11 +122,18 @@ jobs:
 
       - name: Build APK
         working-directory: cordova-build/app
-        run: cordova build android --stacktrace 2>&1 | tail -100
+        run: cordova build android
 
       - name: Prepare APK for release
         run: |
-          APK=$(find cordova-build/app/platforms/android -name "*.apk" | head -1)
+          echo "=== Searching for APK files ==="
+          find cordova-build/ -name "*.apk" -type f 2>/dev/null
+          APK=$(find cordova-build/ -name "*.apk" -type f | head -1)
+          if [ -z "$APK" ]; then
+            echo "ERROR: No APK found!"
+            exit 1
+          fi
+          echo "Found APK: $APK"
           cp "$APK" tecendo-saude.apk
           echo "APK_SIZE=$(du -h tecendo-saude.apk | cut -f1)" >> $GITHUB_ENV
 
