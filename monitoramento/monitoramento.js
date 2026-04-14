@@ -257,19 +257,55 @@ function montarTextoPadrao(reg) {
 // ============================================
 // NOTIFICAÇÕES
 // ============================================
-async function notifyProfissional(title, body, tag, minIntervalMs = 60000) {
+async function notifyProfissional(title, body, tag, minIntervalMs = 300000) {
+  // Dedup: skip if same tag was notified recently (5 min default)
+  const dedupKey = 'notify_' + tag;
+  const lastNotif = Number(localStorage.getItem(dedupKey) || 0);
+  if (lastNotif && (Date.now() - lastNotif) < minIntervalMs) return;
+
+  // Vibrate on mobile
+  if ('vibrate' in navigator) {
+    try { navigator.vibrate([200, 100, 200]); } catch {}
+  }
+
+  // 1) Cordova local notification (APK)
+  const cordovaPlugin = window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local;
+  if (cordovaPlugin) {
+    try {
+      const id = Math.abs(tag.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 2147483647;
+      cordovaPlugin.schedule({
+        id: id,
+        title: title,
+        text: body,
+        channel: 'profissional-channel',
+        foreground: true, vibrate: true, sound: true,
+        smallIcon: 'res://icon', icon: 'file://img/logo.png',
+        attachments: ['file://img/logo.png'],
+        color: '#2f6b3f', priority: 2, wakeup: true,
+        led: { color: '#2f6b3f', on: 500, off: 500 },
+        lockscreen: true, badge: 1, group: 'tecendo-saude-pro'
+      });
+      localStorage.setItem(dedupKey, String(Date.now()));
+      return;
+    } catch (e) { console.warn('Cordova notification error:', e); }
+  }
+
+  // 2) Web Notification API (browser / PWA)
   if (!('Notification' in window)) return;
   if (Notification.permission === 'default') {
     try { await Notification.requestPermission(); } catch { return; }
   }
   if (Notification.permission !== 'granted') return;
-  const key = `notify_${tag}`;
-  const last = Number(localStorage.getItem(key) || 0);
-  if (last && (Date.now() - last) < minIntervalMs) return;
   try {
-    new Notification(title, { body, icon: '../img/logo.png', tag });
-    localStorage.setItem(key, String(Date.now()));
-  } catch { }
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'SHOW_NOTIFICATION', title, body, tag, icon: '../img/logo.png' });
+    } else {
+      new Notification(title, { body, icon: '../img/logo.png', tag, requireInteraction: true, silent: false });
+    }
+    localStorage.setItem(dedupKey, String(Date.now()));
+  } catch {
+    try { new Notification(title, { body, icon: '../img/logo.png', tag }); localStorage.setItem(dedupKey, String(Date.now())); } catch {}
+  }
 }
 
 // ============================================
@@ -478,16 +514,19 @@ async function carregarDadosCompletosBg() {
       _registrosIndex.get(r.patient_id).push(r);
     }
 
-    // Notificações
+    // Notificações — resumo (não individual por paciente)
     const totalNovas = registros.reduce((acc, reg) => acc + contarNovasMensagens(reg), 0);
+    const pacientesComNovas = new Set();
+    registros.forEach(reg => { if (contarNovasMensagens(reg) > 0 && reg.patient_id) pacientesComNovas.add(reg.patient_id); });
     const criticos = pacientes.filter(p => p.classificacao === 'critico').length;
     const lastMsgCount = Number(localStorage.getItem('pro_last_msg_count') || 0);
     const lastCritCount = Number(localStorage.getItem('pro_last_crit_count') || 0);
     if (totalNovas > lastMsgCount) {
-      notifyProfissional('Novas mensagens', `Você tem ${totalNovas} nova(s) mensagem(ns) de pacientes.`, 'pro_novas_mensagens');
+      const nPac = pacientesComNovas.size;
+      notifyProfissional('Tecendo Saude - Novas mensagens', nPac + ' usuario(s) enviaram ' + totalNovas + ' nova(s) mensagem(ns).', 'pro_novas_mensagens');
     }
     if (criticos > lastCritCount) {
-      notifyProfissional('Alerta de pacientes críticos', `Há ${criticos} paciente(s) em estado crítico.`, 'pro_criticos');
+      notifyProfissional('Tecendo Saude - Alerta', 'Ha ' + criticos + ' paciente(s) em estado critico que precisam de atencao.', 'pro_criticos');
     }
     localStorage.setItem('pro_last_msg_count', String(totalNovas));
     localStorage.setItem('pro_last_crit_count', String(criticos));
@@ -3364,7 +3403,7 @@ async function gerarRelatorioPDF() {
 // ============================================
 // SATISFAÇÃO COM O APP
 // ============================================
-let _satisfacaoData = [];
+var _satisfacaoData = [];
 
 async function carregarSatisfacao() {
   try {

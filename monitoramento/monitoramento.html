@@ -44,7 +44,7 @@
     
     .search-input {
       flex: 1.6 1 390px;
-      min-width: 330px;
+      min-width: 200px;
       padding: 12px 16px 12px 44px;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
@@ -187,6 +187,13 @@
       .search-bar {
         flex-direction: column;
         align-items: stretch;
+      }
+
+      .search-input {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 10px 14px 10px 40px;
+        font-size: 14px;
       }
 
       .filter-btn {
@@ -853,6 +860,86 @@
 </div>
 
 
+
+<script>
+// ============================================
+// NOTIFICAÇÕES PROFISSIONAL (SW + Cordova)
+// ============================================
+
+// Register Service Worker (PWA only, not Cordova)
+if ('serviceWorker' in navigator && !window.cordova) {
+  navigator.serviceWorker.register('../sw.js').then(function(reg) {
+    console.log('SW registered (profissional):', reg.scope);
+  }).catch(function(err) { console.warn('SW registration failed:', err); });
+}
+
+// Cordova: notification channels + permission
+var _cordovaNotifPluginPro = function() {
+  return window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local;
+};
+
+document.addEventListener('deviceready', function() {
+  var plugin = _cordovaNotifPluginPro();
+  if (!plugin) return;
+
+  try {
+    plugin.createChannel && plugin.createChannel({
+      id: 'profissional-channel',
+      name: 'Alertas Profissional',
+      description: 'Notificações de mensagens de pacientes e alertas críticos',
+      sound: true, vibration: true, importance: 4, visibility: 1
+    }, function(){}, function(){});
+  } catch(e) {}
+
+  try {
+    plugin.setDefaults({
+      channel: 'profissional-channel',
+      foreground: true, vibrate: true, sound: true,
+      smallIcon: 'res://icon', icon: 'file://img/logo.png',
+      color: '#2f6b3f', priority: 2, wakeup: true,
+      led: { color: '#2f6b3f', on: 500, off: 500 },
+      lockscreen: true, badge: 1, group: 'tecendo-saude-pro'
+    });
+  } catch(e) {}
+
+  plugin.hasPermission(function(granted) {
+    if (!granted) {
+      plugin.requestPermission(function(granted2) {
+        if (!granted2) {
+          alert('Para receber alertas de pacientes, ative as notificações nas Configurações do celular > Aplicativos > Tecendo Saude > Notificações.');
+        }
+      });
+    }
+  });
+
+  if (window.cordova && window.cordova.plugins && window.cordova.plugins.permissions) {
+    var perms = window.cordova.plugins.permissions;
+    perms.checkPermission('android.permission.POST_NOTIFICATIONS', function(status) {
+      if (!status.hasPermission) {
+        perms.requestPermission('android.permission.POST_NOTIFICATIONS', function(){}, function(){});
+      }
+    }, function(){});
+  }
+
+  // Test notification on first professional access
+  var testKey = 'cordova_notif_test_pro_v1';
+  if (!localStorage.getItem(testKey)) {
+    setTimeout(function() {
+      plugin.schedule({
+        id: 8000,
+        title: 'Tecendo Saude - Profissional',
+        text: 'Notificacoes ativadas! Voce recebera alertas de pacientes e mensagens.',
+        channel: 'profissional-channel',
+        foreground: true, vibrate: true, sound: true,
+        smallIcon: 'res://icon', icon: 'file://img/logo.png',
+        color: '#2f6b3f', priority: 2, wakeup: true, lockscreen: true,
+        group: 'tecendo-saude-pro'
+      });
+      localStorage.setItem(testKey, '1');
+    }, 3000);
+  }
+}, false);
+</script>
 
 </body>
 </html>
