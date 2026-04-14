@@ -4,18 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>Monitoramento</title>
-  <script src="../cordova.js"></script>
   <link rel="icon" href="../img/logo.png" />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../styles/styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="../env/env.js"></script>
-  <script src="../js/utils.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/9.0.0/uuidv4.min.js"></script>
 
   <style>
     /* Estilos específicos do monitoramento */
@@ -656,6 +647,18 @@
     <div style="font-family:'Plus Jakarta Sans',sans-serif;font-size:0.85rem;color:#558b2f;margin-top:4px;">Monitoramento</div>
     <style>@keyframes splashPulseM{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}</style>
   </div>
+
+  <!-- Scripts moved from head so splash renders instantly -->
+  <script src="../cordova.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../env/env.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/9.0.0/uuidv4.min.js"></script>
+
   <div class="container-fluid" style="max-width: 1600px; margin: 0 auto;">
     <!-- Header -->
     <header class="flex items-center justify-between py-4 mb-4">
