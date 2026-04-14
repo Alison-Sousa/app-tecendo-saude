@@ -30,11 +30,90 @@
   .loading { position: fixed; inset: 0; background: rgba(255,255,255,0.9); z-index: 99; display: flex; align-items: center; justify-content: center; flex-direction: column; font-weight: 700; color: var(--primary); }
   @keyframes slideDownFade { from { opacity: 0; transform: translateY(-8px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
   @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  /* Splash Screen */
+  #splashScreen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(160deg, #f0f9f2 0%, #e0f3e5 40%, #d5f0dc 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.5s ease-out, visibility 0.5s;
+  }
+  #splashScreen.splash-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+  .splash-logo {
+    width: 120px; height: 120px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff 0%, #e8f5e9 100%);
+    box-shadow: 0 8px 40px rgba(47,107,63,0.18), 0 0 0 8px rgba(47,107,63,0.06);
+    display: flex; align-items: center; justify-content: center;
+    animation: splashPulse 2s ease-in-out infinite;
+    overflow: hidden;
+  }
+  .splash-logo img { width: 90px; height: 90px; object-fit: contain; }
+  @keyframes splashPulse {
+    0%,100% { transform: scale(1); box-shadow: 0 8px 40px rgba(47,107,63,0.18), 0 0 0 8px rgba(47,107,63,0.06); }
+    50% { transform: scale(1.04); box-shadow: 0 12px 50px rgba(47,107,63,0.25), 0 0 0 14px rgba(47,107,63,0.04); }
+  }
+  .splash-title {
+    margin-top: 28px; font-size: 28px; font-weight: 800; color: #2f6b3f;
+    letter-spacing: 3px; animation: splashFadeUp 0.8s ease-out 0.2s both;
+  }
+  .splash-subtitle {
+    margin-top: 8px; font-size: 13px; font-weight: 500; color: #64856e;
+    letter-spacing: 0.5px; animation: splashFadeUp 0.8s ease-out 0.5s both;
+  }
+  .splash-dots {
+    margin-top: 36px; display: flex; gap: 8px;
+    animation: splashFadeUp 0.8s ease-out 0.8s both;
+  }
+  .splash-dots span {
+    width: 8px; height: 8px; border-radius: 50%; background: #2f6b3f;
+    animation: splashBounce 1.4s ease-in-out infinite;
+  }
+  .splash-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .splash-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes splashFadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes splashBounce {
+    0%,80%,100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1.2); opacity: 1; }
+  }
 </style>
 </head>
 <body>
 
+<!-- Splash Screen -->
+<div id="splashScreen">
+  <div class="splash-logo">
+    <img src="img/logo.png" alt="Tecendo Saúde" />
+  </div>
+  <div class="splash-title">TECENDO SAÚDE</div>
+  <div class="splash-subtitle">Cuidado Integral à Saúde na Amazônia</div>
+  <div class="splash-dots">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
 <div id="root"></div>
+
+<script>
+// Hide splash screen once React renders
+var _splashCheck = setInterval(function() {
+  var root = document.getElementById('root');
+  if (root && root.children.length > 0) {
+    clearInterval(_splashCheck);
+    var splash = document.getElementById('splashScreen');
+    if (splash) splash.classList.add('splash-hide');
+    setTimeout(function() { if (splash) splash.remove(); }, 600);
+  }
+}, 100);
+// Fallback: hide splash after 6 seconds no matter what
+setTimeout(function() {
+  clearInterval(_splashCheck);
+  var splash = document.getElementById('splashScreen');
+  if (splash) { splash.classList.add('splash-hide'); setTimeout(function() { splash.remove(); }, 600); }
+}, 6000);
+</script>
 
 <script type="text/babel" src="./js/components.js"></script>
 <script type="text/babel">

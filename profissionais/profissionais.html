@@ -46,7 +46,15 @@
 </style>
 </head>
 <body>
+
+<div id="appSplash" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#f0f9f2,#d5f0dc);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s;">
+  <div style="width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#e8f5e9);box-shadow:0 6px 30px rgba(47,107,63,0.15);display:flex;align-items:center;justify-content:center;"><img src="../img/logo.png" style="width:65px;height:65px;object-fit:contain;" /></div>
+  <div style="margin-top:18px;font-size:20px;font-weight:800;color:#2f6b3f;letter-spacing:2px;">TECENDO SAÚDE</div>
+  <div style="margin-top:6px;font-size:12px;color:#64856e;">Área Profissional</div>
+</div>
+
 <div id="root"></div>
+<script>var _sp=setInterval(function(){var r=document.getElementById('root');if(r&&r.children.length>0){clearInterval(_sp);var s=document.getElementById('appSplash');if(s){s.style.opacity='0';setTimeout(function(){s.remove();},500);}}},100);setTimeout(function(){clearInterval(_sp);var s=document.getElementById('appSplash');if(s){s.style.opacity='0';setTimeout(function(){s.remove();},500);}},6000);</script>
 <script type="text/babel" src="../js/components.js"></script>
 <script type="text/babel">
 // ================================================

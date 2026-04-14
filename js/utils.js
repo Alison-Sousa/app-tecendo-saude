@@ -174,24 +174,32 @@ async function syncManager() {
 }
 
 // ================================================
-// OTA UPDATE CHECKER
+// OTA UPDATE CHECKER (only for Cordova APK)
 // ================================================
-var APP_CURRENT_VERSION = localStorage.getItem('app_version') || '0.0.0';
 
 async function verificarAtualizacao(silencioso) {
   try {
+    // Only check for updates inside Cordova APK, NOT in web browser
+    if (!window.cordova) return null;
+
     var resp = await fetch('../version.json?t=' + Date.now(), { cache: 'no-store' });
     if (!resp.ok) {
-      // Try root path (for pages at root level)
       resp = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
     }
     if (!resp.ok) return null;
     var data = await resp.json();
     var remoteVersion = data.version || '0.0.0';
-    var localVersion = localStorage.getItem('app_version') || '0.0.0';
+    var localVersion = localStorage.getItem('app_version');
+
+    // First time ever: save current version silently, no banner
+    if (!localVersion) {
+      localStorage.setItem('app_version', remoteVersion);
+      return { disponivel: false, versao: remoteVersion };
+    }
+
+    // Version changed since last check: show update
     if (remoteVersion !== localVersion) {
       if (!silencioso) mostrarBannerAtualizacao(remoteVersion, data.build);
-      // Send push notification for update (once per version, 24h dedup)
       notificarAtualizacao(remoteVersion);
       return { disponivel: true, versao: remoteVersion, build: data.build };
     }
