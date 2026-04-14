@@ -11,6 +11,34 @@ const SUPABASE_URL = env.SUPABASE_URL || env.VITE_SUPABASE_URL || '';
 const SUPABASE_KEY = env.SUPABASE_KEY || env.VITE_SUPABASE_KEY || '';
 var supabase = window.__supabaseClient || null;
 
+// ============================================
+// LISTAS DE REFERÊNCIA (espelho de config.js)
+// ============================================
+var LISTA_UBS = ["UBS Antônio Evangelista","UBS Boa Esperança","UBS Divinópolis","UBS Enf Márcio Marinho","UBS Haroldo Martins","UBS Maria Bibiana da Silva","UBS Nadime Miranda","UBS Neli Loeblein","UBS Vicente Alves da Silva","UBS São Sebastião","UBS Santa Maria do Uruará","UBS São Francisco","UBS Alto Tapajós","UBS Arapixuna"];
+var LISTA_REGIOES = ["Santarém","Belterra","Mojuí dos Campos","Alenquer","Curuá","Óbidos","Oriximiná","Terra Santa","Faro","Juruti","Monte Alegre","Almeirim","Prainha","Rurópolis","Trairão","Jacareacanga"];
+var LISTA_ACS = ["Acsa Kelly Gelio de Sá Lucena","Adriana Pedroso Marques","Adriano Grings de Abreu","Albanira dos Santos","Alcione Castilho Magno dos Santos","Alcione Pereira dos Santos","Aldely de Andrade Benicio","Aline de Souza Braga","Alzilene Braga","Ana Célia de Oliveira","Ana Cristina dos Santos Cerqueira","Andrea de Souza Fernandes","Andrelina Fernandes da Silva","Angélica Carneiro Rocha","Antonio Benigno de Freita","Antonio Marques de Araújo Neto","Antonio Pereira Correa","Ariane do Nascimento da Silva","Aucineia Moreira Galvão","Auzenira Carvalho Cunha","Benedito Neris dos Santos","Carlos Alves Cardoso","Celina de Sousa","Célia Alves Cruz","Cícera Maria da Silva","Cirlea Batista Nogueira","Claudenira Pena Viegas","Claudiane Nayara da Costa Guedes","Claudiléia de Sousa Castro","Cláudio José Gonçalves Marques","Clebson da Silva Freitas","Cleonice Fabiano","Cleudes Meireles do Prado","Cristiane Palheta da Cruz","Cristine Reichembak Campos","Daniel Araújo Borges","Daniel Carlos de Jesus Lopes","Daniella de Almeida Santos","Daniele da Silva e Silva","Darliene da Silva Sanches","Dineia da Paixão Perna","Dirley Souza","Edi Alves de Barros","Edicínia Rabelo Lourido","Edirrone Pereira da Silva","Edu da Silva Queiroz","Edvânia Barbosa Sousa","Elaine Soares de Sousa","Eliana Carvalho da Silva","Eliane Palhano","Eliane Sousa Matos","Elinete Cunha de Sousa","Eliselma Alves Barreto","Elizabel Silva Pinho","Elizângela Guedes Moura","Elmazia das Graças Amorim Esquerdo","Elzana Lopes de Castro","Érica Sousa Scalabrim","Erika Sousa Duarte","Eudilene Vitor Gomes Matos","Evando Oliveira Santos","Fabiana Gomes Peixoto","Francisca Deneide França da Silva","Gabrielle Pinheiro Serrão","Geizeane Maria das G. Sales","Gelciane Moraes Corrêa","Genival Rodrigues Marinho","Geonara Xavier da Silva Matos","Glaucione Santos Brito","Hiltamara Ribeiro Lima","Hiranildes Ramos Pereira","Hosana Lopes de Castro","Iranete da Paixão Silva de Souza","Ivanete Teixeira Silva","Ivonete Henz","Jackeline Paiva Batista","Jacilene da Silva Oliveira","Jacymar Silva de Brito","Janete Cardoso Sousa","Jarlison Alvarenga da Rocha","Jessica Aparecida Frederico de Souza","Joelma Costa Castro","Joelma Miranda Lima","Jonefa Perna da Silva","José Antonio Sousa de Menezes","Josiane da Silva Macuyama","Josias Martins de Oliveira","Jucinalda Coelho da Fonseca","Jucineide da Silva Farias","Juliana Lisboa","Juliana Magno de Souza","Katya Cruz de Sousa","Kelmira Ferreira dos Santos","Larissa Dos Santos Pinto","Laydiane Miranda do Nascimento","Leidaiane da Silva Bentes","Léia de Souza Alves","Lourdes Dallabrida Rech","Lucia de Fátima Farias","Luciana da Silva Santos","Luciene da Silva Santos","Luzineide Brito dos Santos","Mábrison Sobrinho da Silva","Manoel Edinaldo Rodrigues Oliveira","Manoel Messias da Silva","Márcio José Oliveira Figueira","Maria da Conceição dos Santos Ribeiro","Maria da Conceição Serra Sarges","Maria das Graças Pereira Cruz","Maria de Andrade Lima","Maria de Lourdes Pinto Costa","Maria de Nazaré Rodrigues da Silva","Maria do Socorro da Silva","Maria Edileuza Aragão Ferreira","Maria Elismar Bezerra Barbosa","Maria Gracinete Lima Fróes","Maria Ivanete Sarraff dos Santos","Maria Liduina de Sousa","Maria Selma Figueira Costa","Maria Sofia Ferreira Lacerda","Mariane Ferreira Castro","Marilene de Sousa Santos","Marisane Aparecida Facioni","Mariza Damião Lopes","Meire Luci dos Santos Oliveira","Mikelle Silva Ferreira","Mirian dos Santos Oliveira","Natividade Pereira de Aguiar","Nelma Isabel Marinho Figueira","Neuza de Fátima Alves da Silva","Noelma Santos de Sousa","Odomaria Pires dos Anjos","Orlandino Manoel dos Santos Costa","Paulo Afonso Borges da Silva","Paulo Anderson Munduruku Bastos","Raimunda de Souza Brandão","Raisa das Graças Castro","Rana Pinheiro Santos","Regiane Lira da Silva","Regilene Hecki da Costa","Rita Delmondes Ferreira","Robson Lima de Oliveira","Rosangela Maria da Silva","Rosinete da Silva Santos","Rudilene Pantoja de Araujo","Sabrina Gonzaga de Jesus","Sandra da Silva Rebelo","Sediney Dias Marques","Silvana Cardoso Ott","Silvana de Sousa Silva","Silvana Ferreira de Almeida","Silvana Pena Medeiros","Silvia Helena de Oliveira","Simone Araújo de Oliveira Bizerril","Simone da Silva Bentes","Suely Silva Bastos","Telma Perna Costa","Valdemir Machado de Alegor","Valdenice da Silva dos Santos","Valdete da Silva Costa","Vaneila de Siqueira Gamboa","Vânea Pereira Scalabrin","Vera Lúcia de Sousa Castro","Wandra Jame Pereira Torres","Wangela Paiva Batista","Zivanildo Rodrigues Castro"];
+var MAPA_ACS_MUNICIPIO = {"Ana Célia de Oliveira":"Almeirim","Claudenira Pena Viegas":"Almeirim","Cristiane Palheta da Cruz":"Almeirim","Daniel Araújo Borges":"Almeirim","Dineia da Paixão Perna":"Almeirim","Dirley Souza":"Almeirim","Gabrielle Pinheiro Serrão":"Almeirim","Jacymar Silva de Brito":"Almeirim","Jucinalda Coelho da Fonseca":"Almeirim","Maria da Conceição Serra Sarges":"Almeirim","Maria das Graças Pereira Cruz":"Almeirim","Maria Gracinete Lima Fróes":"Almeirim","Maria Ivanete Sarraff dos Santos":"Almeirim","Maria Sofia Ferreira Lacerda":"Almeirim","Mariza Damião Lopes":"Almeirim","Noelma Santos de Sousa":"Almeirim","Raisa das Graças Castro":"Almeirim","Sabrina Gonzaga de Jesus":"Almeirim","Sediney Dias Marques":"Almeirim","Silvana Pena Medeiros":"Almeirim","Suely Silva Bastos":"Almeirim","Wangela Paiva Batista":"Almeirim","Zivanildo Rodrigues Castro":"Almeirim","Albanira dos Santos":"Jacareacanga","Aline de Souza Braga":"Jacareacanga","Angélica Carneiro Rocha":"Jacareacanga","Carlos Alves Cardoso":"Jacareacanga","Cirlea Batista Nogueira":"Jacareacanga","Cristine Reichembak Campos":"Jacareacanga","Daniel Carlos de Jesus Lopes":"Jacareacanga","Eliane Palhano":"Jacareacanga","Geonara Xavier da Silva Matos":"Jacareacanga","Hiltamara Ribeiro Lima":"Jacareacanga","Iranete da Paixão Silva de Souza":"Jacareacanga","Janete Cardoso Sousa":"Jacareacanga","Jessica Aparecida Frederico de Souza":"Jacareacanga","Josiane da Silva Macuyama":"Jacareacanga","Laydiane Miranda do Nascimento":"Jacareacanga","Mábrison Sobrinho da Silva":"Jacareacanga","Mikelle Silva Ferreira":"Jacareacanga","Paulo Anderson Munduruku Bastos":"Jacareacanga","Simone Araújo de Oliveira Bizerril":"Jacareacanga","Adriana Pedroso Marques":"Prainha","Alcione Castilho Magno dos Santos":"Prainha","Alcione Pereira dos Santos":"Prainha","Aldely de Andrade Benicio":"Prainha","Ana Cristina dos Santos Cerqueira":"Prainha","Andrea de Souza Fernandes":"Prainha","Andrelina Fernandes da Silva":"Prainha","Antonio Marques de Araújo Neto":"Prainha","Claudiane Nayara da Costa Guedes":"Prainha","Clebson da Silva Freitas":"Prainha","Daniele da Silva e Silva":"Prainha","Darliene da Silva Sanches":"Prainha","Edirrone Pereira da Silva":"Prainha","Edu da Silva Queiroz":"Prainha","Elizabel Silva Pinho":"Prainha","Elmazia das Graças Amorim Esquerdo":"Prainha","Gelciane Moraes Corrêa":"Prainha","Jarlison Alvarenga da Rocha":"Prainha","Joelma Miranda Lima":"Prainha","Jonefa Perna da Silva":"Prainha","Juliana Magno de Souza":"Prainha","Kelmira Ferreira dos Santos":"Prainha","Larissa Dos Santos Pinto":"Prainha","Maria Edileuza Aragão Ferreira":"Prainha","Odomaria Pires dos Anjos":"Prainha","Rana Pinheiro Santos":"Prainha","Rudilene Pantoja de Araujo":"Prainha","Telma Perna Costa":"Prainha","Wandra Jame Pereira Torres":"Prainha","Acsa Kelly Gelio de Sá Lucena":"Rurópolis","Adriano Grings de Abreu":"Rurópolis","Antonio Benigno de Freita":"Rurópolis","Auzenira Carvalho Cunha":"Rurópolis","Célia Alves Cruz":"Rurópolis","Cleudes Meireles do Prado":"Rurópolis","Cleonice Fabiano":"Rurópolis","Daniella de Almeida Santos":"Rurópolis","Edvânia Barbosa Sousa":"Rurópolis","Eliane Sousa Matos":"Rurópolis","Eliselma Alves Barreto":"Rurópolis","Elizângela Guedes Moura":"Rurópolis","Elzana Lopes de Castro":"Rurópolis","Érica Sousa Scalabrim":"Rurópolis","Erika Sousa Duarte":"Rurópolis","Eudilene Vitor Gomes Matos":"Rurópolis","Evando Oliveira Santos":"Rurópolis","Fabiana Gomes Peixoto":"Rurópolis","Francisca Deneide França da Silva":"Rurópolis","Geizeane Maria das G. Sales":"Rurópolis","Genival Rodrigues Marinho":"Rurópolis","Glaucione Santos Brito":"Rurópolis","Hosana Lopes de Castro":"Rurópolis","Josias Martins de Oliveira":"Rurópolis","Léia de Souza Alves":"Rurópolis","Lourdes Dallabrida Rech":"Rurópolis","Luzineide Brito dos Santos":"Rurópolis","Maria da Conceição dos Santos Ribeiro":"Rurópolis","Maria de Andrade Lima":"Rurópolis","Maria Elismar Bezerra Barbosa":"Rurópolis","Marisane Aparecida Facioni":"Rurópolis","Paulo Afonso Borges da Silva":"Rurópolis","Raimunda de Souza Brandão":"Rurópolis","Rita Delmondes Ferreira":"Rurópolis","Robson Lima de Oliveira":"Rurópolis","Silvana Cardoso Ott":"Rurópolis","Silvana de Sousa Silva":"Rurópolis","Silvana Ferreira de Almeida":"Rurópolis","Valdemir Machado de Alegor":"Rurópolis","Vânea Pereira Scalabrin":"Rurópolis","Aucineia Moreira Galvão":"Santarém","Cláudio José Gonçalves Marques":"Santarém","Edicínia Rabelo Lourido":"Santarém","Elinete Cunha de Sousa":"Santarém","Hiranildes Ramos Pereira":"Santarém","Joelma Costa Castro":"Santarém","José Antonio Sousa de Menezes":"Santarém","Katya Cruz de Sousa":"Santarém","Manoel Edinaldo Rodrigues Oliveira":"Santarém","Márcio José Oliveira Figueira":"Santarém","Maria de Lourdes Pinto Costa":"Santarém","Maria Selma Figueira Costa":"Santarém","Mariane Ferreira Castro":"Santarém","Nelma Isabel Marinho Figueira":"Santarém","Orlandino Manoel dos Santos Costa":"Santarém","Regiane Lira da Silva":"Santarém","Vaneila de Siqueira Gamboa":"Santarém","Ariane do Nascimento da Silva":"Trairão","Claudiléia de Sousa Castro":"Trairão","Edi Alves de Barros":"Trairão","Elaine Soares de Sousa":"Trairão","Ivanete Teixeira Silva":"Trairão","Ivonete Henz":"Trairão","Jackeline Paiva Batista":"Trairão","Juliana Lisboa":"Trairão","Natividade Pereira de Aguiar":"Trairão","Regilene Hecki da Costa":"Trairão"};
+var PROFISSIONAL_ROSTER = [
+  {municipio:'Almeirim',ubs:'Coordenador(a)',enfermeira:'Jennifer Santos (coord)'},
+  {municipio:'Almeirim',ubs:'UBS Enf Márcio Marinho',enfermeira:'Odineth Serrao de Souza'},
+  {municipio:'Almeirim',ubs:'UBS Nadime',enfermeira:'Mayare Freitas'},
+  {municipio:'Jacareacanga',ubs:'UBS São Francisco',enfermeira:'Cássia Rayana Queiroz Lauer'},
+  {municipio:'Jacareacanga',ubs:'UBS Alto Tapajos',enfermeira:'Laís Akai Barbosa'},
+  {municipio:'Prainha',ubs:'Coordenador(a)',enfermeira:'Eliziane Moraes Nascimento (coord)'},
+  {municipio:'Prainha',ubs:'UBS São Sebastião',enfermeira:'Benezaidi Furtado Magno'},
+  {municipio:'Prainha',ubs:'UBS Santa Maria do Uruará',enfermeira:'Naziane Oliveira Lira'},
+  {municipio:'Rurópolis',ubs:'Coordenador(a)',enfermeira:'Elenilde Ferreira da Silva'},
+  {municipio:'Rurópolis',ubs:'UBS Divinópolis',enfermeira:'Jarliene Cruz'},
+  {municipio:'Rurópolis',ubs:'UBS Neli Loeblein',enfermeira:'Géssica Cristine de Oliveira Hermer'},
+  {municipio:'Santarém',ubs:'Coordenador(a)',enfermeira:'Ivana Pimentel da Silva (coord)'},
+  {municipio:'Santarém',ubs:'UBS Arapixuna',enfermeira:'Elenilza Soares Borges'},
+  {municipio:'Santarém',ubs:'UBS Boa Esperança',enfermeira:'Izadora Fernandes de Sousa Mendes'},
+  {municipio:'Trairão',ubs:'UBS Vicente Alves da Silva',enfermeira:'Ana Roberta de Almeida'},
+  {municipio:'Trairão',ubs:'UBS Maria Bibiana da Silva',enfermeira:'Maria Aparecida Santos Oliveira'}
+];
+var getUbsByMunicipio = function(municipio) { return Array.from(new Set(PROFISSIONAL_ROSTER.filter(function(i){return i.municipio===municipio;}).map(function(i){return i.ubs;}))); };
+var getAcsByMunicipio = function(municipio) { if(!municipio) return LISTA_ACS; return LISTA_ACS.filter(function(nome){return MAPA_ACS_MUNICIPIO[nome]===municipio;}); };
+
 function uuidv4() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0;
@@ -1190,10 +1218,10 @@ function ativarEdicaoFicha() {
     <div class="grid grid-2">
       ${inputCampo('edit_telefone', 'Telefone', p.telefone)}
       ${inputCampo('edit_endereco', 'Endereço', p.endereco)}
-      ${inputCampo('edit_regiao', 'Região', p.regiao)}
-      ${inputCampo('edit_ubs_referencia', 'UBS de referência', p.ubs_referencia)}
-      ${inputCampo('edit_equipe_ubs', 'Equipe UBS', p.equipe_ubs)}
-      ${inputCampo('edit_acs_responsavel', 'ACS responsável', p.acs_responsavel)}
+      ${selectCampo('edit_regiao', 'Região', p.regiao, LISTA_REGIOES)}
+      ${selectCampo('edit_ubs_referencia', 'UBS de referência', p.ubs_referencia, LISTA_UBS)}
+      ${selectCampo('edit_equipe_ubs', 'Equipe UBS', p.equipe_ubs, ['ESF','ESFR'])}
+      ${selectCampo('edit_acs_responsavel', 'ACS responsável', p.acs_responsavel, LISTA_ACS)}
       <div class="card" style="padding:12px;">
         <label class="text-xs text-muted" for="edit_mora_sozinho">Mora sozinho?</label>
         <select id="edit_mora_sozinho" class="input-box" style="margin-top:4px;">
@@ -2926,206 +2954,410 @@ async function gerarRelatorioPDF() {
 
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageW = doc.internal.pageSize.getWidth();
-  let y = 15;
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 14;
+  const contentW = pageW - margin * 2;
+  let y = 0;
 
+  // ---- Helpers ----
   const addText = (text, x, size, style, color) => {
-    doc.setFontSize(size || 12);
+    doc.setFontSize(size || 10);
     doc.setFont('helvetica', style || 'normal');
     doc.setTextColor(...(color || [30, 30, 30]));
-    doc.text(text, x || 14, y);
+    doc.text(String(text || ''), x || margin, y);
   };
 
-  const addLine = () => { doc.setDrawColor(200, 200, 200); doc.line(14, y, pageW - 14, y); y += 4; };
-  const checkPage = (need) => { if (y + need > 275) { doc.addPage(); y = 15; } };
-
-  // Header
-  doc.setFillColor(22, 101, 52);
-  doc.rect(0, 0, pageW, 30, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Tecendo Saúde - Relatório do Paciente', 14, 12);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 20);
-  doc.text(`Profissional: ${profissionalAtual?.nome || profissionalAtual?.enfermeira || '-'}`, 14, 26);
-  y = 40;
-
-  // Patient info
-  addText(p.nome || 'Sem nome', 14, 16, 'bold');
-  y += 8;
-  const idade = calcularIdade(p.nascimento);
-  addText(`CPF: ${p.cpf || '-'}  |  Nascimento: ${p.nascimento || '-'}  |  ${idade}`, 14, 10, 'normal', [80, 80, 80]);
-  y += 5;
-  addText(`Gênero: ${p.genero || '-'}  |  UBS: ${p.ubs_referencia || '-'}  |  Equipe: ${p.equipe_ubs || '-'}`, 14, 10, 'normal', [80, 80, 80]);
-  y += 5;
-  addText(`Endereço: ${p.endereco || '-'}  |  Telefone: ${p.telefone || '-'}`, 14, 10, 'normal', [80, 80, 80]);
-  y += 7;
-  addLine();
-
-  // Classification
-  const classLabel = { critico: 'CRÍTICO', atencao: 'ATENÇÃO', estavel: 'ESTÁVEL', sem_dados: 'SEM DADOS' };
-  const classColor = { critico: [220, 38, 38], atencao: [217, 119, 6], estavel: [22, 163, 74], sem_dados: [100, 100, 100] };
-  checkPage(15);
-  addText('Classificação: ', 14, 12, 'bold');
-  doc.setTextColor(...(classColor[p.classificacao] || [100, 100, 100]));
-  doc.text(classLabel[p.classificacao] || 'SEM DADOS', 50, y);
-  y += 7;
-
-  // Alerts
-  if (p.alertas && p.alertas.length > 0) {
-    addText('Alertas:', 14, 11, 'bold', [180, 50, 50]);
+  const addLine = () => {
+    doc.setDrawColor(220, 225, 220);
+    doc.setLineWidth(0.2);
+    doc.line(margin, y, pageW - margin, y);
     y += 5;
+  };
+
+  const checkPage = (need) => {
+    if (y + need > pageH - 20) {
+      doc.addPage();
+      y = 20;
+    }
+  };
+
+  const sectionTitle = (title) => {
+    checkPage(14);
+    y += 2;
+    doc.setFillColor(47, 107, 63);
+    doc.roundedRect(margin, y - 4, contentW, 9, 2, 2, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text(title.toUpperCase(), margin + 4, y + 2);
+    y += 10;
+  };
+
+  const labelValue = (label, val, x, width) => {
+    const xPos = x || margin + 2;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 110, 125);
+    doc.text(label, xPos, y);
+    y += 4;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 35, 50);
+    const lines = doc.splitTextToSize(String(val || '-'), width || (contentW - 6));
+    doc.text(lines, xPos, y);
+    y += lines.length * 4.5 + 1;
+  };
+
+  const labelValueInline = (label, val, x) => {
+    const xPos = x || margin + 2;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 110, 125);
+    doc.text(label + ': ', xPos, y);
+    const labelW = doc.getTextWidth(label + ': ');
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 35, 50);
+    doc.text(String(val || '-'), xPos + labelW, y);
+  };
+
+  // ---- Load logo image ----
+  let logoData = null;
+  try {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    logoImg.src = '../img/logo.png';
+    await new Promise((res, rej) => { logoImg.onload = res; logoImg.onerror = rej; setTimeout(rej, 3000); });
+    const c = document.createElement('canvas');
+    c.width = logoImg.naturalWidth; c.height = logoImg.naturalHeight;
+    c.getContext('2d').drawImage(logoImg, 0, 0);
+    logoData = c.toDataURL('image/png');
+  } catch(e) { /* logo not available */ }
+
+  // ---- Load patient photo ----
+  let fotoData = null;
+  const fotoUrl = p.foto_url || '';
+  if (fotoUrl) {
+    try {
+      const fotoImg = new Image();
+      fotoImg.crossOrigin = 'anonymous';
+      fotoImg.src = fotoUrl;
+      await new Promise((res, rej) => { fotoImg.onload = res; fotoImg.onerror = rej; setTimeout(rej, 5000); });
+      const c = document.createElement('canvas');
+      c.width = fotoImg.naturalWidth; c.height = fotoImg.naturalHeight;
+      c.getContext('2d').drawImage(fotoImg, 0, 0);
+      fotoData = c.toDataURL('image/jpeg', 0.85);
+    } catch(e) { /* photo not available */ }
+  }
+
+  // ===============================================
+  // HEADER — green bar with logo + info
+  // ===============================================
+  doc.setFillColor(47, 107, 63);
+  doc.rect(0, 0, pageW, 34, 'F');
+  doc.setFillColor(30, 74, 42);
+  doc.rect(0, 30, pageW, 4, 'F');
+
+  let headerTextX = margin + 2;
+  if (logoData) {
+    doc.addImage(logoData, 'PNG', margin, 3, 26, 26);
+    headerTextX = margin + 30;
+  }
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TECENDO SAÚDE', headerTextX, 12);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(187, 247, 208);
+  doc.text('Linhas do Cuidado Integral à Saúde na Amazônia', headerTextX, 18);
+
+  doc.setFontSize(8);
+  doc.setTextColor(200, 240, 210);
+  doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), headerTextX, 24);
+  doc.text('Profissional: ' + (profissionalAtual?.nome || profissionalAtual?.enfermeira || '-'), headerTextX, 29);
+
+  y = 42;
+
+  // ===============================================
+  // PATIENT CARD — photo + basic info
+  // ===============================================
+  const cardH = fotoData ? 38 : 28;
+  doc.setFillColor(248, 250, 249);
+  doc.setDrawColor(220, 225, 220);
+  doc.roundedRect(margin, y - 2, contentW, cardH, 3, 3, 'FD');
+
+  let infoX = margin + 6;
+
+  if (fotoData) {
+    // Circular clip - draw photo
+    const photoSize = 26;
+    const photoX = margin + 6;
+    const photoY = y + (cardH - photoSize) / 2 - 2;
+    doc.addImage(fotoData, 'JPEG', photoX, photoY, photoSize, photoSize);
+    // Border around photo
+    doc.setDrawColor(47, 107, 63);
+    doc.setLineWidth(0.6);
+    doc.rect(photoX, photoY, photoSize, photoSize, 'S');
+    doc.setLineWidth(0.2);
+    infoX = margin + 38;
+  }
+
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26, 35, 50);
+  doc.text(p.nome || 'Sem nome', infoX, y + 6);
+
+  const idade = calcularIdade(p.nascimento);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(90, 106, 126);
+  doc.text('CPF: ' + (p.cpf || '-') + '   |   ' + (p.nascimento || '-') + '   |   ' + idade, infoX, y + 12);
+  doc.text('Gênero: ' + (p.genero || '-') + '   |   UBS: ' + (p.ubs_referencia || '-') + '   |   Equipe: ' + (p.equipe_ubs || '-'), infoX, y + 17);
+  doc.text('Endereço: ' + (p.endereco || '-') + '   |   Tel: ' + (p.telefone || '-'), infoX, y + 22);
+
+  // Classification badge
+  const classLabel = { critico: 'CRÍTICO', atencao: 'ATENÇÃO', estavel: 'ESTÁVEL', sem_dados: 'SEM DADOS' };
+  const classColor = { critico: [220, 38, 38], atencao: [217, 119, 6], estavel: [22, 163, 74], sem_dados: [140, 140, 140] };
+  const classBg = { critico: [254, 226, 226], atencao: [254, 243, 199], estavel: [220, 252, 231], sem_dados: [241, 245, 249] };
+  const cls = p.classificacao || 'sem_dados';
+  const badgeText = classLabel[cls] || 'SEM DADOS';
+  const badgeW = doc.getTextWidth(badgeText) * 0.8 + 8;
+  doc.setFillColor(...(classBg[cls] || [241, 245, 249]));
+  doc.roundedRect(infoX, y + 24, badgeW + 2, 6, 1.5, 1.5, 'F');
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...(classColor[cls] || [140, 140, 140]));
+  doc.text(badgeText, infoX + 2, y + 28.5);
+
+  y += cardH + 6;
+
+  // ===============================================
+  // ALERTS
+  // ===============================================
+  if (p.alertas && p.alertas.length > 0) {
+    checkPage(12 + p.alertas.length * 5);
+    doc.setFillColor(254, 242, 242);
+    doc.setDrawColor(252, 165, 165);
+    const alertH = 6 + p.alertas.length * 5;
+    doc.roundedRect(margin, y - 2, contentW, alertH, 2, 2, 'FD');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(185, 28, 28);
+    doc.text('ALERTAS', margin + 4, y + 3);
+    y += 7;
     p.alertas.forEach(a => {
-      checkPage(6);
-      addText(`  • ${a}`, 14, 9, 'normal', [120, 50, 50]);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(153, 27, 27);
+      const alertText = String(a).replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, '').trim();
+      doc.text('•  ' + alertText, margin + 6, y);
       y += 5;
     });
     y += 3;
   }
 
-  addLine();
+  // ===============================================
+  // VITAL SIGNS
+  // ===============================================
+  sectionTitle('Dados Vitais — Último Registro');
 
-  // Vital signs
-  checkPage(20);
-  addText('Dados Vitais (último registro)', 14, 13, 'bold');
-  y += 7;
   const v = p.dadosVitais || {};
   const vitals = [
-    ['Pressão Arterial', v.pa_sistolica ? `${v.pa_sistolica}/${v.pa_diastolica || '-'} mmHg` : '-'],
-    ['Glicemia', v.glicemia ? `${v.glicemia} mg/dL` : '-'],
-    ['Peso', v.peso ? `${v.peso} kg` : '-'],
+    ['Pressão Arterial', v.pa_sistolica ? v.pa_sistolica + '/' + (v.pa_diastolica || '-') + ' mmHg' : '-'],
+    ['Glicemia', v.glicemia ? v.glicemia + ' mg/dL' : '-'],
+    ['Peso', v.peso ? v.peso + ' kg' : '-'],
     ['Atividade Física', v.atividade_fisica || '-'],
     ['Último Registro', v.data ? formatarData(v.data) : '-']
   ];
-  vitals.forEach(([label, val]) => {
-    checkPage(6);
-    addText(`${label}: `, 14, 10, 'bold', [50, 50, 50]);
-    doc.setFont('helvetica', 'normal');
-    doc.text(val, 60, y);
-    y += 5;
-  });
-  y += 3;
-  addLine();
 
-  // Conditions
-  checkPage(20);
-  addText('Condições de Saúde', 14, 13, 'bold');
-  y += 7;
+  // Two-column layout for vitals
+  const colW = contentW / 2 - 4;
+  vitals.forEach(([label, val], i) => {
+    checkPage(10);
+    const col = i % 2;
+    const xBase = margin + 2 + col * (colW + 8);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 110, 125);
+    doc.text(label, xBase, y);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(30, 35, 50);
+    doc.text(val, xBase, y + 5);
+    if (col === 1 || i === vitals.length - 1) y += 11;
+  });
+  y += 2;
+
+  // ===============================================
+  // HEALTH CONDITIONS
+  // ===============================================
+  sectionTitle('Condições de Saúde');
+
   const conditions = [
     ['Hipertensão', p.hipertensao || 'Não informado'],
     ['Diabetes', p.diabetes || 'Não informado'],
     ['Dependências', p.dependencias || 'Nenhum relato'],
     ['Gestante', normalizarSim(p.gestante) ? 'Sim' : 'Não']
   ];
-  conditions.forEach(([label, val]) => {
+  conditions.forEach(([label, val], i) => {
     checkPage(6);
-    addText(`${label}: ${val}`, 14, 10, 'normal', [50, 50, 50]);
-    y += 5;
+    const col = i % 2;
+    const xBase = margin + 2 + col * (colW + 8);
+    labelValueInline(label, val, xBase);
+    if (col === 1 || i === conditions.length - 1) y += 6;
   });
-  y += 3;
-  addLine();
+  y += 2;
 
-  // Gestational data
+  // ===============================================
+  // GESTATIONAL DATA
+  // ===============================================
   if (p.dadosGestacionais) {
-    checkPage(25);
+    sectionTitle('Acompanhamento Gestacional');
     const g = p.dadosGestacionais;
-    addText('Acompanhamento Gestacional', 14, 13, 'bold');
-    y += 7;
-    addText(`Semanas: ${g.semanas || '-'}  |  Ganho: ${g.ganho} kg  |  IMC inicial: ${g.imc}`, 14, 10, 'normal', [50, 50, 50]);
-    y += 5;
-    addText(`Faixa esperada: ${g.ganhoMin} - ${g.ganhoMax} kg  |  Status: ${g.mensagem}`, 14, 10, 'normal', [50, 50, 50]);
-    y += 7;
-    addLine();
+    labelValueInline('Semanas', g.semanas || '-', margin + 2);
+    const sw = doc.getTextWidth('Semanas: ' + (g.semanas || '-') + '    ');
+    labelValueInline('Ganho', (g.ganho || '-') + ' kg', margin + 2 + sw);
+    y += 6;
+    labelValueInline('IMC inicial', g.imc || '-', margin + 2);
+    y += 6;
+    labelValueInline('Faixa esperada', (g.ganhoMin || '-') + ' – ' + (g.ganhoMax || '-') + ' kg', margin + 2);
+    y += 6;
+    if (g.mensagem) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(47, 107, 63);
+      doc.text(g.mensagem, margin + 2, y);
+      y += 6;
+    }
+    y += 2;
   }
 
-  // History table
+  // ===============================================
+  // HISTORY TABLE
+  // ===============================================
   const historico = (p.historico || []).slice(0, 30);
   if (historico.length > 0) {
-    checkPage(20);
-    addText('Histórico de Registros (últimos 30)', 14, 13, 'bold');
-    y += 7;
+    sectionTitle('Histórico de Registros (últimos 30)');
 
     // Table header
-    doc.setFillColor(240, 242, 245);
-    doc.rect(14, y - 3, pageW - 28, 7, 'F');
-    doc.setFontSize(8);
+    const cols = [
+      { label: 'Data',      x: margin + 2,  w: 30 },
+      { label: 'PA',        x: margin + 34,  w: 28 },
+      { label: 'Glicemia',  x: margin + 64,  w: 28 },
+      { label: 'Peso',      x: margin + 94,  w: 24 },
+      { label: 'Atividade', x: margin + 120, w: 40 }
+    ];
+
+    doc.setFillColor(240, 245, 241);
+    doc.rect(margin, y - 3, contentW, 7, 'F');
+    doc.setFontSize(7);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(60, 60, 60);
-    doc.text('Data', 16, y + 1);
-    doc.text('PA', 50, y + 1);
-    doc.text('Glicemia', 80, y + 1);
-    doc.text('Peso', 110, y + 1);
-    doc.text('Atividade', 135, y + 1);
-    y += 8;
+    doc.setTextColor(47, 107, 63);
+    cols.forEach(c => doc.text(c.label, c.x, y + 1));
+    y += 7;
 
     historico.forEach((r, i) => {
       checkPage(6);
-      if (i % 2 === 0) { doc.setFillColor(248, 250, 252); doc.rect(14, y - 3, pageW - 28, 6, 'F'); }
+      if (i % 2 === 0) {
+        doc.setFillColor(248, 250, 249);
+        doc.rect(margin, y - 3, contentW, 6, 'F');
+      }
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(70, 70, 70);
-      doc.text(r.created_at ? formatarDataCurta(r.created_at) : '-', 16, y);
-      doc.text(r.pa_sistolica ? `${r.pa_sistolica}/${r.pa_diastolica || '-'}` : '-', 50, y);
-      doc.text(r.glicemia_mg ? `${r.glicemia_mg}` : '-', 80, y);
-      doc.text(r.peso_kg ? `${r.peso_kg} kg` : '-', 110, y);
-      doc.text(r.atividade_fisica || '-', 135, y);
+      doc.setTextColor(60, 65, 75);
+      doc.text(r.created_at ? formatarDataCurta(r.created_at) : '-', cols[0].x, y);
+      doc.text(r.pa_sistolica ? r.pa_sistolica + '/' + (r.pa_diastolica || '-') : '-', cols[1].x, y);
+      doc.text(r.glicemia_mg ? String(r.glicemia_mg) : '-', cols[2].x, y);
+      doc.text(r.peso_kg ? r.peso_kg + ' kg' : '-', cols[3].x, y);
+      doc.text(r.atividade_fisica || '-', cols[4].x, y);
       y += 6;
     });
-    y += 3;
+    y += 4;
   }
 
-  // Capture chart as image
+  // ===============================================
+  // CHARTS
+  // ===============================================
   const chartCanvas = document.getElementById('healthChart');
   if (chartCanvas) {
-    checkPage(80);
-    addText('Gráfico de Indicadores', 14, 13, 'bold');
-    y += 5;
+    checkPage(85);
+    sectionTitle('Gráfico de Indicadores');
     try {
       const imgData = chartCanvas.toDataURL('image/png');
       const ratio = chartCanvas.width / chartCanvas.height;
-      const imgW = pageW - 28;
-      const imgH = imgW / ratio;
-      doc.addImage(imgData, 'PNG', 14, y, imgW, Math.min(imgH, 70));
-      y += Math.min(imgH, 70) + 5;
-    } catch { }
+      const imgW = contentW;
+      const imgH = Math.min(imgW / ratio, 75);
+      doc.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+      y += imgH + 6;
+    } catch(e) { /* chart capture failed */ }
   } else {
-    // Sem gráfico — informar no PDF
-    checkPage(20);
-    addText('Gráfico de Indicadores', 14, 13, 'bold');
-    y += 7;
-    addText('Gráficos precisam de pelo menos 2 registros para serem gerados.', 14, 10, 'italic', [120, 120, 120]);
+    sectionTitle('Gráfico de Indicadores');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(140, 140, 140);
+    doc.text('Gráficos precisam de pelo menos 2 registros para serem gerados.', margin + 2, y);
     y += 5;
-    addText('Continue alimentando os dados do paciente para visualizar a evolução.', 14, 10, 'italic', [120, 120, 120]);
-    y += 7;
+    doc.text('Continue alimentando os dados do paciente para visualizar a evolução.', margin + 2, y);
+    y += 8;
+  }
+
+  // Activity calendar (HTML-based, captured via html2canvas)
+  const activityContainer = document.getElementById('activityChartContainer');
+  if (activityContainer && activityContainer.innerHTML.trim() && !activityContainer.querySelector('.empty-state')) {
+    checkPage(85);
+    sectionTitle('Atividade Fisica (Calendario)');
+    try {
+      const actCanvas = await html2canvas(activityContainer, { backgroundColor: '#ffffff', scale: 2 });
+      const actImgData = actCanvas.toDataURL('image/png');
+      const actRatio = actCanvas.width / actCanvas.height;
+      const actImgW = contentW;
+      const actImgH = Math.min(actImgW / actRatio, 75);
+      doc.addImage(actImgData, 'PNG', margin, y, actImgW, actImgH);
+      y += actImgH + 6;
+    } catch(e) { /* activity calendar capture failed */ }
   }
 
   // Gestational chart
   const gestCanvas = document.getElementById('gestChart');
   if (gestCanvas) {
-    checkPage(80);
-    addText('Curva de Peso Gestacional', 14, 13, 'bold');
-    y += 5;
+    checkPage(85);
+    sectionTitle('Curva de Peso Gestacional');
     try {
       const imgData = gestCanvas.toDataURL('image/png');
       const ratio = gestCanvas.width / gestCanvas.height;
-      const imgW = pageW - 28;
-      const imgH = imgW / ratio;
-      doc.addImage(imgData, 'PNG', 14, y, imgW, Math.min(imgH, 70));
-      y += Math.min(imgH, 70) + 5;
-    } catch { }
+      const imgW = contentW;
+      const imgH = Math.min(imgW / ratio, 75);
+      doc.addImage(imgData, 'PNG', margin, y, imgW, imgH);
+      y += imgH + 6;
+    } catch(e) { /* chart capture failed */ }
   }
 
-  // Footer on each page
+  // ===============================================
+  // FOOTER on every page
+  // ===============================================
   const totalPages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Tecendo Saúde - Página ${i}/${totalPages}`, pageW / 2, 290, { align: 'center' });
+    // Green thin line
+    doc.setDrawColor(47, 107, 63);
+    doc.setLineWidth(0.4);
+    doc.line(margin, pageH - 12, pageW - margin, pageH - 12);
+    // Left text
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(140, 150, 160);
+    doc.text('Tecendo Saúde — Cuidado Integral à Saúde na Amazônia', margin, pageH - 8);
+    // Right text
+    doc.text('Página ' + i + ' de ' + totalPages, pageW - margin, pageH - 8, { align: 'right' });
+    // Mini logo on footer
+    if (logoData) {
+      doc.addImage(logoData, 'PNG', pageW / 2 - 4, pageH - 13, 8, 8);
+    }
   }
 
-  const nomeArquivo = `relatorio_${(p.nome || 'paciente').replace(/\s+/g, '_')}_${new Date().toISOString().substring(0, 10)}.pdf`;
+  const nomeArquivo = 'relatorio_' + (p.nome || 'paciente').replace(/\s+/g, '_') + '_' + new Date().toISOString().substring(0, 10) + '.pdf';
   doc.save(nomeArquivo);
 }
 

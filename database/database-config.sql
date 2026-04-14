@@ -197,3 +197,36 @@ CREATE POLICY midias_delete ON storage.objects FOR DELETE USING (bucket_id = 'mi
 -- 8. VIEW - FICHAS CADASTRAIS COMPLETAS
 CREATE OR REPLACE VIEW fichas_cadastrais AS
 SELECT * FROM perfis;
+
+-- 9. REFERÊNCIA - Novos ACS a cadastrar (necessitam CPF para INSERT em profissionais)
+-- Município: Almeirim
+--   Cristiane Palheta da Cruz, Daniel Araújo Borges, Dineia da Paixão Perna,
+--   Dirley Souza, Gabrielle Pinheiro Serrão, Jucinalda Coelho da Fonseca,
+--   Maria da Conceição Serra Sarges, Maria das Graças Pereira Cruz,
+--   Maria Ivanete Sarraff dos Santos, Maria Sofia Ferreira Lacerda,
+--   Noelma Santos de Sousa, Raisa das Graças Castro, Sabrina Gonzaga de Jesus,
+--   Sediney Dias Marques, Silvana Pena Medeiros, Suely Silva Bastos,
+--   Wangela Paiva Batista, Zivanildo Rodrigues Castro
+-- Município: Jacareacanga
+--   Albanira dos Santos, Aline de Souza Braga, Angélica Carneiro Rocha,
+--   Carlos Alves Cardoso, Cirlea Batista Nogueira, Cristine Reichembak Campos,
+--   Daniel Carlos de Jesus Lopes, Eliane Palhano, Geonara Xavier da Silva Matos,
+--   Hiltamara Ribeiro Lima, Iranete da Paixão Silva de Souza, Janete Cardoso Sousa,
+--   Jessica Aparecida Frederico de Souza, Josiane da Silva Macuyama,
+--   Laydiane Miranda do Nascimento, Mábrison Sobrinho da Silva,
+--   Mikelle Silva Ferreira, Paulo Anderson Munduruku Bastos,
+--   Simone Araújo de Oliveira Bizerril
+-- Município: Prainha
+--   Adriana Pedroso Marques, Alcione Castilho Magno dos Santos,
+--   Alcione Pereira dos Santos, Aldely de Andrade Benicio,
+--   Ana Cristina dos Santos Cerqueira, Andrea de Souza Fernandes,
+--   Andrelina Fernandes da Silva, Antonio Marques de Araújo Neto,
+--   Claudiane Nayara da Costa Guedes, Clebson da Silva Freitas,
+--   Daniele da Silva e Silva, Darliene da Silva Sanches, Edirrone Pereira da Silva,
+--   Edu da Silva Queiroz, Elizabel Silva Pinho,
+--   Elmazia das Graças Amorim Esquerdo, Gelciane Moraes Corrêa,
+--   Jarlison Alvarenga da Rocha, Joelma Miranda Lima, Jonefa Perna da Silva,
+--   Juliana Magno de Souza, Kelmira Ferreira dos Santos, Larissa Dos Santos Pinto,
+--   Maria Edileuza Aragão Ferreira, Odomaria Pires dos Anjos,
+--   Rana Pinheiro Santos, Rudilene Pantoja de Araujo, Telma Perna Costa,
+--   Wandra Jame Pereira Torres
