@@ -73,6 +73,7 @@ jobs:
               <allow-intent href="https://*/*" />
               <preference name="CRIPageLoadPromptInterval" value="15" />
               <preference name="ErrorUrl" value="file:///android_asset/www/index.html" />
+              <preference name="BackgroundColor" value="0xFFF0F9F2" />
               <platform name="android">
                   <icon src="www/img/logo.png" />
                   <config-file target="AndroidManifest.xml" parent="/*">
@@ -88,7 +89,7 @@ jobs:
                       <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
                   </config-file>
                   <preference name="AndroidWindowSplashScreenAnimatedIcon" value="www/img/logo.png" />
-                  <preference name="AndroidWindowSplashScreenBackground" value="#FFFFFF" />
+                  <preference name="AndroidWindowSplashScreenBackground" value="#f0f9f2" />
               </platform>
           </widget>
           XMLEOF
