@@ -44,7 +44,10 @@
 </div>
 
 <div id="root"></div>
-<script>var _sp=setInterval(function(){var r=document.getElementById('root');if(r&&r.children.length>0){clearInterval(_sp);var s=document.getElementById('appSplash');if(s){s.style.opacity='0';setTimeout(function(){s.remove();},500);}}},100);setTimeout(function(){clearInterval(_sp);var s=document.getElementById('appSplash');if(s){s.style.opacity='0';setTimeout(function(){s.remove();},500);}},6000);</script>
+<script>
+function _hideSplashes(){var s=document.getElementById('appSplash');if(s){s.style.opacity='0';setTimeout(function(){s.remove();},500);}if(navigator.splashscreen)navigator.splashscreen.hide();}
+var _sp=setInterval(function(){var r=document.getElementById('root');if(r&&r.children.length>0){clearInterval(_sp);_hideSplashes();}},100);setTimeout(function(){clearInterval(_sp);_hideSplashes();},8000);
+</script>
 
 <!-- Scripts moved from head so splash renders instantly -->
 <script src="../cordova.js"></script>

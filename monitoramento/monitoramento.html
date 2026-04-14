@@ -955,16 +955,14 @@ document.addEventListener('deviceready', function() {
 
 <script>
 (function(){
-  var sp = document.getElementById('appSplash');
-  if (!sp) return;
+  function hideSplashes(){var sp=document.getElementById('appSplash');if(sp){sp.style.opacity='0';setTimeout(function(){sp.remove();},600);}if(navigator.splashscreen)navigator.splashscreen.hide();}
   var iv = setInterval(function(){
     if (document.getElementById('statsContainer') && document.getElementById('statsContainer').children.length > 0) {
-      sp.style.opacity = '0';
       clearInterval(iv);
-      setTimeout(function(){ sp.remove(); }, 600);
+      hideSplashes();
     }
   }, 200);
-  setTimeout(function(){ clearInterval(iv); sp.style.opacity='0'; setTimeout(function(){ sp.remove(); },600); }, 5000);
+  setTimeout(function(){ clearInterval(iv); hideSplashes(); }, 8000);
 })();
 </script>
 
