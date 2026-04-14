@@ -172,3 +172,141 @@ async function syncManager() {
     }
   } catch (e) { console.warn('Erro no syncManager:', e); }
 }
+
+// ================================================
+// OTA UPDATE CHECKER
+// ================================================
+var APP_CURRENT_VERSION = localStorage.getItem('app_version') || '0.0.0';
+
+async function verificarAtualizacao(silencioso) {
+  try {
+    var resp = await fetch('../version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!resp.ok) {
+      // Try root path (for pages at root level)
+      resp = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+    }
+    if (!resp.ok) return null;
+    var data = await resp.json();
+    var remoteVersion = data.version || '0.0.0';
+    var localVersion = localStorage.getItem('app_version') || '0.0.0';
+    if (remoteVersion !== localVersion) {
+      if (!silencioso) mostrarBannerAtualizacao(remoteVersion, data.build);
+      // Send push notification for update (once per version, 24h dedup)
+      notificarAtualizacao(remoteVersion);
+      return { disponivel: true, versao: remoteVersion, build: data.build };
+    }
+    return { disponivel: false, versao: remoteVersion };
+  } catch (e) {
+    console.warn('Erro ao verificar atualização:', e);
+    return null;
+  }
+}
+
+function notificarAtualizacao(versao) {
+  var dedupKey = 'notify_update_' + versao;
+  var last = Number(localStorage.getItem(dedupKey) || 0);
+  if (last && (Date.now() - last) < 86400000) return; // 24h dedup per version
+
+  // Cordova local notification
+  var cordovaPlugin = window.cordova && window.cordova.plugins && window.cordova.plugins.notification && window.cordova.plugins.notification.local;
+  if (cordovaPlugin) {
+    try {
+      cordovaPlugin.schedule({
+        id: 7777,
+        title: 'Tecendo Saude - Atualizacao disponivel',
+        text: 'Nova versao v' + versao + ' disponivel. Abra o app e toque em Atualizar.',
+        channel: 'saude-channel',
+        foreground: true, vibrate: true, sound: true,
+        smallIcon: 'res://icon', icon: 'file://img/logo.png',
+        color: '#2f6b3f', priority: 2, wakeup: true, lockscreen: true,
+        group: 'tecendo-saude'
+      });
+      localStorage.setItem(dedupKey, String(Date.now()));
+      return;
+    } catch(e) {}
+  }
+
+  // Web Notification
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SHOW_NOTIFICATION',
+          title: 'Tecendo Saude - Atualizacao disponivel',
+          body: 'Nova versao v' + versao + ' disponivel. Abra o app e toque em Atualizar.',
+          tag: 'app_update',
+          icon: '../img/logo.png'
+        });
+      } else {
+        new Notification('Tecendo Saude - Atualizacao', {
+          body: 'Nova versao v' + versao + ' disponivel!',
+          icon: '../img/logo.png', tag: 'app_update'
+        });
+      }
+      localStorage.setItem(dedupKey, String(Date.now()));
+    } catch(e) {}
+  }
+}
+
+function mostrarBannerAtualizacao(versao, build) {
+  if (document.getElementById('updateBanner')) return;
+  var banner = document.createElement('div');
+  banner.id = 'updateBanner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:linear-gradient(135deg,#2f6b3f,#1b4d28);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-family:Plus Jakarta Sans,sans-serif;box-shadow:0 4px 20px rgba(0,0,0,0.3);animation:slideDown 0.4s ease-out;';
+  banner.innerHTML = '<div style="flex:1;min-width:0;">' +
+    '<div style="font-weight:800;font-size:14px;margin-bottom:2px;">Nova versao disponivel! v' + versao + '</div>' +
+    '<div style="font-size:11px;opacity:0.85;">Atualizado em ' + (build || '') + '. Toque em Atualizar para aplicar.</div>' +
+    '</div>' +
+    '<button onclick="aplicarAtualizacao()" style="background:#fff;color:#2f6b3f;border:none;border-radius:20px;padding:10px 20px;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);">Atualizar</button>' +
+    '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:0 4px;opacity:0.7;">&times;</button>';
+  // Add animation keyframes
+  if (!document.getElementById('updateBannerStyle')) {
+    var style = document.createElement('style');
+    style.id = 'updateBannerStyle';
+    style.textContent = '@keyframes slideDown{from{transform:translateY(-100%);opacity:0;}to{transform:translateY(0);opacity:1;}}';
+    document.head.appendChild(style);
+  }
+  document.body.prepend(banner);
+}
+
+async function aplicarAtualizacao() {
+  var banner = document.getElementById('updateBanner');
+  if (banner) banner.innerHTML = '<div style="text-align:center;width:100%;font-weight:700;">Atualizando... aguarde</div>';
+  try {
+    // Clear SW cache
+    if ('caches' in window) {
+      var names = await caches.keys();
+      for (var i = 0; i < names.length; i++) {
+        await caches.delete(names[i]);
+      }
+    }
+    // Unregister and re-register SW
+    if ('serviceWorker' in navigator) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      for (var j = 0; j < regs.length; j++) {
+        await regs[j].unregister();
+      }
+    }
+    // Save new version
+    var resp = await fetch('../version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!resp.ok) resp = await fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (resp.ok) {
+      var data = await resp.json();
+      localStorage.setItem('app_version', data.version || '0.0.0');
+    }
+    // Cordova: clear WebView cache if available
+    if (window.cordova && window.cordova.InAppBrowser) {
+      try { window.cordova.InAppBrowser.clearCache(); } catch(e) {}
+    }
+    // Reload
+    window.location.reload(true);
+  } catch (e) {
+    console.warn('Erro ao atualizar:', e);
+    window.location.reload(true);
+  }
+}
+
+// Auto-check on page load (after 3 seconds)
+setTimeout(function() { verificarAtualizacao(false); }, 3000);
+// Re-check every 30 minutes
+setInterval(function() { verificarAtualizacao(false); }, 1800000);

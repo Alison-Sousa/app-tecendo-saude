@@ -1,4 +1,4 @@
-// Tecendo Saúde - Service Worker for push notifications
+// Tecendo Saúde - Service Worker for push notifications + OTA updates
 const CACHE_NAME = 'tecendo-saude-v1';
 
 self.addEventListener('install', (event) => {
@@ -6,11 +6,53 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then(function(names) {
+      return Promise.all(
+        names.filter(function(n) { return n !== CACHE_NAME; }).map(function(n) { return caches.delete(n); })
+      );
+    }).then(function() { return self.clients.claim(); })
+  );
 });
 
-// Listen for messages from the main thread
+// Network-first fetch for app files (HTML, JS, CSS) so OTA updates work immediately
+self.addEventListener('fetch', (event) => {
+  var url = event.request.url;
+  // Skip non-GET and external requests
+  if (event.request.method !== 'GET') return;
+  // Never cache version.json or env.js
+  if (url.includes('version.json') || url.includes('env.js')) return;
+  // Only cache same-origin app files
+  if (!url.includes('app-tecendo.netlify.app') && !url.includes('localhost')) return;
+
+  event.respondWith(
+    fetch(event.request).then(function(response) {
+      // Cache successful responses
+      if (response && response.status === 200) {
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, clone); });
+      }
+      return response;
+    }).catch(function() {
+      // Fallback to cache when offline
+      return caches.match(event.request);
+    })
+  );
+});
+
+// Listen for cache-clear message from update checker
 self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    caches.keys().then(function(names) {
+      return Promise.all(names.map(function(n) { return caches.delete(n); }));
+    }).then(function() {
+      self.clients.matchAll().then(function(clients) {
+        clients.forEach(function(client) { client.postMessage({ type: 'CACHE_CLEARED' }); });
+      });
+    });
+    return;
+  }
+
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, tag, icon } = event.data;
     self.registration.showNotification(title, {
