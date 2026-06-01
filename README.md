@@ -116,12 +116,32 @@ O APK é gerado automaticamente pelo **GitHub Actions** a cada push na branch `m
 - Ficha médica (comorbidades, metas, pré-natal)
 - Dashboard de monitoramento com gráficos e PDF
 - Fotos clínicas
+- ACS visualiza os usuários cadastrados pelo seu próprio CPF
+- Profissional de Saúde / gerente da UBS visualiza os usuários vinculados à mesma UBS
+- Telessaúde e coordenação mantêm visão ampliada do monitoramento
 
 ### Offline & Sync
 - Funciona 100% sem internet
 - Sincronização automática via Supabase
 - Armazenamento local via IndexedDB (Dexie.js)
 - Indicador visual de status de sync
+
+---
+
+## Teste do Perfil Gerente / Equipe UBS
+
+Use este roteiro para validar o acesso dos profissionais de ensino superior ou gerentes da UBS:
+
+1. Entre no app como ACS.
+2. Cadastre um usuário do SUS informando a UBS de referência.
+3. Confirme que o app sincronizou com internet.
+4. Saia do perfil ACS.
+5. Entre em **Profissionais de Saúde (nível superior)**.
+6. Cadastre ou acesse um profissional com o mesmo município e a mesma UBS do ACS.
+7. Abra **Monitoramento**.
+8. Verifique se os usuários cadastrados pelos ACS daquela UBS aparecem na lista.
+9. Entre com um profissional de outra UBS e confirme que esses usuários não aparecem para ele.
+10. Entre novamente como ACS e confirme que ele continua vendo apenas os usuários cadastrados por ele.
 
 ---
 

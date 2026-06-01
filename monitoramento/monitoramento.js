@@ -382,11 +382,15 @@ async function carregarDados() {
     // 1. Carregar perfis com colunas leves (sem medicação, endereço, etc.)
     let perfisQuery = supabase.from('perfis').select(PERFIS_COLS_LIST, { count: 'exact' }).order('nome').range(0, 4999);
     
-    const ubsPro = (profissionalAtual?.ubs || '').trim().toLowerCase();
+    const ubsProOriginal = (profissionalAtual?.ubs || '').trim();
+    const ubsPro = ubsProOriginal.toLowerCase();
     const tipoPro = (profissionalAtual?.tipo || 'acs').trim().toLowerCase();
     const isCoordenador = ubsPro.includes('coordenador');
     const isTelessaude = tipoPro === 'telessaude';
-    if (!isCoordenador && !isTelessaude && profissionalAtual?.cpf) {
+    const isEquipeUbs = tipoPro === 'equipe_ubs';
+    if (!isCoordenador && !isTelessaude && isEquipeUbs && ubsProOriginal) {
+      perfisQuery = perfisQuery.or(`ubs_referencia.eq.${ubsProOriginal},created_by_ubs.eq.${ubsProOriginal}`);
+    } else if (!isCoordenador && !isTelessaude && profissionalAtual?.cpf) {
       const cpfPro = String(profissionalAtual.cpf).replace(/\D/g, '');
       perfisQuery = perfisQuery.eq('created_by_cpf', cpfPro);
     }
