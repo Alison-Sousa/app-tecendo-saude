@@ -92,9 +92,9 @@ async function syncManager() {
     const PERFIL_SYNC_COLUMNS = [
       'patient_id','nome','cpf','nascimento','regiao','foto_url','ubs_referencia','genero','raca','endereco',
       'telefone','escolaridade','profissao','mora_sozinho','mora_companheiro','tem_filhos','qtd_filhos','filhos_json','acs_responsavel','equipe_ubs',
-      'hipertensao','tempo_diag_has','diabetes','tempo_diag_dm','infeccao_urinaria_gestacao','dependencias',
-      'tempo_dependencia','altura','peso_inicial','peso_atual','peso_primeira_consulta','imc_pre_gestacional','dum',
-      'gestacao_semanas','previsao_parto','faz_pre_natal','inicio_pre_natal','data_ultima_consulta_pre_natal',
+      'hipertensao','tempo_diag_has','diabetes','tempo_diag_dm','gestante','infeccao_urinaria_gestacao','dependencias',
+      'tempo_dependencia','condicoes','altura','peso_inicial','peso_atual','peso_primeira_consulta','imc_pre_gestacional','imc_atual','dum',
+      'gestacao_semanas','previsao_parto','faz_pre_natal','inicio_pre_natal','data_ultima_consulta_pre_natal','data_parto','peso_bebe','altura_bebe','amamentando','local_nascimento','vacinas_maternidade','teste_pezinho','data_teste_pezinho','consulta_puerperal','data_consulta_puerperal',
       'enxerga_bem','consulta_oftalmo','tempo_consulta_oftalmo','dificuldade_mastigar_falar_engolir',
       'uso_medicacoes','nomes_medicacoes','posologia_dosagem','posologia_horario','data_ultima_prescricao','data_ultima_dispensacao',
       'atividade_fisica','freq_atividade','tipo_atividade','meta_peso','meta_glicemia','meta_pa_min','meta_pa_max',
@@ -114,7 +114,13 @@ async function syncManager() {
       const nowIso = new Date().toISOString();
       if (!rest.created_at) base.created_at = nowIso;
       base.updated_at = nowIso;
-      await supabase.from('perfis').upsert(base, { onConflict: 'patient_id' });
+      let { error: perfilError } = await supabase.from('perfis').upsert(base, { onConflict: 'patient_id' });
+      if (perfilError) {
+        const fallback = { ...base };
+        ['data_parto','peso_bebe','altura_bebe','amamentando','local_nascimento','vacinas_maternidade','teste_pezinho','data_teste_pezinho','consulta_puerperal','data_consulta_puerperal'].forEach(k => delete fallback[k]);
+        const retry = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' });
+        if (retry.error) throw retry.error;
+      }
       await db.perfil.update(p.id, { synced: 1 });
     }
     const regs = await db.registros.where('synced').equals(0).toArray();

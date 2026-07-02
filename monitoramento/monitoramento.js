@@ -14,13 +14,13 @@ var supabase = window.__supabaseClient || null;
 // ============================================
 // LISTAS DE REFERÊNCIA (espelho de config.js)
 // ============================================
-var LISTA_UBS = ["UBS Antônio Evangelista","UBS Boa Esperança","UBS Divinópolis","UBS Enf Márcio Marinho","UBS Haroldo Martins","UBS Maria Bibiana da Silva","UBS Nadime Miranda","UBS Neli Loeblein","UBS Vicente Alves da Silva","UBS São Sebastião","UBS Santa Maria do Uruará","UBS São Francisco","UBS Alto Tapajós","UBS Arapixuna"];
+var LISTA_UBS = ["UBS Antônio Evangelista","UBS Boa Esperança","UBS Divinópolis","UBS Paranã das Velhas","UBS Haroldo Martins","UBS Maria Bibiana da Silva","UBS Nadime Miranda","UBS Neli Loeblein","UBS Vicente Alves da Silva","UBS São Sebastião","UBS Santa Maria do Uruará","UBS São Francisco","UBS Alto Tapajós","UBS Arapixuna"];
 var LISTA_REGIOES = ["Santarém","Belterra","Mojuí dos Campos","Alenquer","Curuá","Óbidos","Oriximiná","Terra Santa","Faro","Juruti","Monte Alegre","Almeirim","Prainha","Rurópolis","Trairão","Jacareacanga"];
 var LISTA_ACS = ["Acsa Kelly Gelio de Sá Lucena","Adriana Pedroso Marques","Adriano Grings de Abreu","Albanira dos Santos","Alcione Castilho Magno dos Santos","Alcione Pereira dos Santos","Aldely de Andrade Benicio","Aline de Souza Braga","Alzilene Braga","Ana Célia de Oliveira","Ana Cristina dos Santos Cerqueira","Andrea de Souza Fernandes","Andrelina Fernandes da Silva","Angélica Carneiro Rocha","Antonio Benigno de Freita","Antonio Marques de Araújo Neto","Antonio Pereira Correa","Ariane do Nascimento da Silva","Aucineia Moreira Galvão","Auzenira Carvalho Cunha","Benedito Neris dos Santos","Carlos Alves Cardoso","Celina de Sousa","Célia Alves Cruz","Cícera Maria da Silva","Cirlea Batista Nogueira","Claudenira Pena Viegas","Claudiane Nayara da Costa Guedes","Claudiléia de Sousa Castro","Cláudio José Gonçalves Marques","Clebson da Silva Freitas","Cleonice Fabiano","Cleudes Meireles do Prado","Cristiane Palheta da Cruz","Cristine Reichembak Campos","Daniel Araújo Borges","Daniel Carlos de Jesus Lopes","Daniella de Almeida Santos","Daniele da Silva e Silva","Darliene da Silva Sanches","Dineia da Paixão Perna","Dirley Souza","Edi Alves de Barros","Edicínia Rabelo Lourido","Edirrone Pereira da Silva","Edu da Silva Queiroz","Edvânia Barbosa Sousa","Elaine Soares de Sousa","Eliana Carvalho da Silva","Eliane Palhano","Eliane Sousa Matos","Elinete Cunha de Sousa","Eliselma Alves Barreto","Elizabel Silva Pinho","Elizângela Guedes Moura","Elmazia das Graças Amorim Esquerdo","Elzana Lopes de Castro","Érica Sousa Scalabrim","Erika Sousa Duarte","Eudilene Vitor Gomes Matos","Evando Oliveira Santos","Fabiana Gomes Peixoto","Francisca Deneide França da Silva","Gabrielle Pinheiro Serrão","Geizeane Maria das G. Sales","Gelciane Moraes Corrêa","Genival Rodrigues Marinho","Geonara Xavier da Silva Matos","Glaucione Santos Brito","Hiltamara Ribeiro Lima","Hiranildes Ramos Pereira","Hosana Lopes de Castro","Iranete da Paixão Silva de Souza","Ivanete Teixeira Silva","Ivonete Henz","Jackeline Paiva Batista","Jacilene da Silva Oliveira","Jacymar Silva de Brito","Janete Cardoso Sousa","Jarlison Alvarenga da Rocha","Jessica Aparecida Frederico de Souza","Joelma Costa Castro","Joelma Miranda Lima","Jonefa Perna da Silva","José Antonio Sousa de Menezes","Josiane da Silva Macuyama","Josias Martins de Oliveira","Jucinalda Coelho da Fonseca","Jucineide da Silva Farias","Juliana Lisboa","Juliana Magno de Souza","Katya Cruz de Sousa","Kelmira Ferreira dos Santos","Larissa Dos Santos Pinto","Laydiane Miranda do Nascimento","Leidaiane da Silva Bentes","Léia de Souza Alves","Lourdes Dallabrida Rech","Lucia de Fátima Farias","Luciana da Silva Santos","Luciene da Silva Santos","Luzineide Brito dos Santos","Mábrison Sobrinho da Silva","Manoel Edinaldo Rodrigues Oliveira","Manoel Messias da Silva","Márcio José Oliveira Figueira","Maria da Conceição dos Santos Ribeiro","Maria da Conceição Serra Sarges","Maria das Graças Pereira Cruz","Maria de Andrade Lima","Maria de Lourdes Pinto Costa","Maria de Nazaré Rodrigues da Silva","Maria do Socorro da Silva","Maria Edileuza Aragão Ferreira","Maria Elismar Bezerra Barbosa","Maria Gracinete Lima Fróes","Maria Ivanete Sarraff dos Santos","Maria Liduina de Sousa","Maria Selma Figueira Costa","Maria Sofia Ferreira Lacerda","Mariane Ferreira Castro","Marilene de Sousa Santos","Marisane Aparecida Facioni","Mariza Damião Lopes","Meire Luci dos Santos Oliveira","Mikelle Silva Ferreira","Mirian dos Santos Oliveira","Natividade Pereira de Aguiar","Nelma Isabel Marinho Figueira","Neuza de Fátima Alves da Silva","Noelma Santos de Sousa","Odomaria Pires dos Anjos","Orlandino Manoel dos Santos Costa","Paulo Afonso Borges da Silva","Paulo Anderson Munduruku Bastos","Raimunda de Souza Brandão","Raisa das Graças Castro","Rana Pinheiro Santos","Regiane Lira da Silva","Regilene Hecki da Costa","Rita Delmondes Ferreira","Robson Lima de Oliveira","Rosangela Maria da Silva","Rosinete da Silva Santos","Rudilene Pantoja de Araujo","Sabrina Gonzaga de Jesus","Sandra da Silva Rebelo","Sediney Dias Marques","Silvana Cardoso Ott","Silvana de Sousa Silva","Silvana Ferreira de Almeida","Silvana Pena Medeiros","Silvia Helena de Oliveira","Simone Araújo de Oliveira Bizerril","Simone da Silva Bentes","Suely Silva Bastos","Telma Perna Costa","Valdemir Machado de Alegor","Valdenice da Silva dos Santos","Valdete da Silva Costa","Vaneila de Siqueira Gamboa","Vânea Pereira Scalabrin","Vera Lúcia de Sousa Castro","Wandra Jame Pereira Torres","Wangela Paiva Batista","Zivanildo Rodrigues Castro"];
 var MAPA_ACS_MUNICIPIO = {"Ana Célia de Oliveira":"Almeirim","Claudenira Pena Viegas":"Almeirim","Cristiane Palheta da Cruz":"Almeirim","Daniel Araújo Borges":"Almeirim","Dineia da Paixão Perna":"Almeirim","Dirley Souza":"Almeirim","Gabrielle Pinheiro Serrão":"Almeirim","Jacymar Silva de Brito":"Almeirim","Jucinalda Coelho da Fonseca":"Almeirim","Maria da Conceição Serra Sarges":"Almeirim","Maria das Graças Pereira Cruz":"Almeirim","Maria Gracinete Lima Fróes":"Almeirim","Maria Ivanete Sarraff dos Santos":"Almeirim","Maria Sofia Ferreira Lacerda":"Almeirim","Mariza Damião Lopes":"Almeirim","Noelma Santos de Sousa":"Almeirim","Raisa das Graças Castro":"Almeirim","Sabrina Gonzaga de Jesus":"Almeirim","Sediney Dias Marques":"Almeirim","Silvana Pena Medeiros":"Almeirim","Suely Silva Bastos":"Almeirim","Wangela Paiva Batista":"Almeirim","Zivanildo Rodrigues Castro":"Almeirim","Albanira dos Santos":"Jacareacanga","Aline de Souza Braga":"Jacareacanga","Angélica Carneiro Rocha":"Jacareacanga","Carlos Alves Cardoso":"Jacareacanga","Cirlea Batista Nogueira":"Jacareacanga","Cristine Reichembak Campos":"Jacareacanga","Daniel Carlos de Jesus Lopes":"Jacareacanga","Eliane Palhano":"Jacareacanga","Geonara Xavier da Silva Matos":"Jacareacanga","Hiltamara Ribeiro Lima":"Jacareacanga","Iranete da Paixão Silva de Souza":"Jacareacanga","Janete Cardoso Sousa":"Jacareacanga","Jessica Aparecida Frederico de Souza":"Jacareacanga","Josiane da Silva Macuyama":"Jacareacanga","Laydiane Miranda do Nascimento":"Jacareacanga","Mábrison Sobrinho da Silva":"Jacareacanga","Mikelle Silva Ferreira":"Jacareacanga","Paulo Anderson Munduruku Bastos":"Jacareacanga","Simone Araújo de Oliveira Bizerril":"Jacareacanga","Adriana Pedroso Marques":"Prainha","Alcione Castilho Magno dos Santos":"Prainha","Alcione Pereira dos Santos":"Prainha","Aldely de Andrade Benicio":"Prainha","Ana Cristina dos Santos Cerqueira":"Prainha","Andrea de Souza Fernandes":"Prainha","Andrelina Fernandes da Silva":"Prainha","Antonio Marques de Araújo Neto":"Prainha","Claudiane Nayara da Costa Guedes":"Prainha","Clebson da Silva Freitas":"Prainha","Daniele da Silva e Silva":"Prainha","Darliene da Silva Sanches":"Prainha","Edirrone Pereira da Silva":"Prainha","Edu da Silva Queiroz":"Prainha","Elizabel Silva Pinho":"Prainha","Elmazia das Graças Amorim Esquerdo":"Prainha","Gelciane Moraes Corrêa":"Prainha","Jarlison Alvarenga da Rocha":"Prainha","Joelma Miranda Lima":"Prainha","Jonefa Perna da Silva":"Prainha","Juliana Magno de Souza":"Prainha","Kelmira Ferreira dos Santos":"Prainha","Larissa Dos Santos Pinto":"Prainha","Maria Edileuza Aragão Ferreira":"Prainha","Odomaria Pires dos Anjos":"Prainha","Rana Pinheiro Santos":"Prainha","Rudilene Pantoja de Araujo":"Prainha","Telma Perna Costa":"Prainha","Wandra Jame Pereira Torres":"Prainha","Acsa Kelly Gelio de Sá Lucena":"Rurópolis","Adriano Grings de Abreu":"Rurópolis","Antonio Benigno de Freita":"Rurópolis","Auzenira Carvalho Cunha":"Rurópolis","Célia Alves Cruz":"Rurópolis","Cleudes Meireles do Prado":"Rurópolis","Cleonice Fabiano":"Rurópolis","Daniella de Almeida Santos":"Rurópolis","Edvânia Barbosa Sousa":"Rurópolis","Eliane Sousa Matos":"Rurópolis","Eliselma Alves Barreto":"Rurópolis","Elizângela Guedes Moura":"Rurópolis","Elzana Lopes de Castro":"Rurópolis","Érica Sousa Scalabrim":"Rurópolis","Erika Sousa Duarte":"Rurópolis","Eudilene Vitor Gomes Matos":"Rurópolis","Evando Oliveira Santos":"Rurópolis","Fabiana Gomes Peixoto":"Rurópolis","Francisca Deneide França da Silva":"Rurópolis","Geizeane Maria das G. Sales":"Rurópolis","Genival Rodrigues Marinho":"Rurópolis","Glaucione Santos Brito":"Rurópolis","Hosana Lopes de Castro":"Rurópolis","Josias Martins de Oliveira":"Rurópolis","Léia de Souza Alves":"Rurópolis","Lourdes Dallabrida Rech":"Rurópolis","Luzineide Brito dos Santos":"Rurópolis","Maria da Conceição dos Santos Ribeiro":"Rurópolis","Maria de Andrade Lima":"Rurópolis","Maria Elismar Bezerra Barbosa":"Rurópolis","Marisane Aparecida Facioni":"Rurópolis","Paulo Afonso Borges da Silva":"Rurópolis","Raimunda de Souza Brandão":"Rurópolis","Rita Delmondes Ferreira":"Rurópolis","Robson Lima de Oliveira":"Rurópolis","Silvana Cardoso Ott":"Rurópolis","Silvana de Sousa Silva":"Rurópolis","Silvana Ferreira de Almeida":"Rurópolis","Valdemir Machado de Alegor":"Rurópolis","Vânea Pereira Scalabrin":"Rurópolis","Aucineia Moreira Galvão":"Santarém","Cláudio José Gonçalves Marques":"Santarém","Edicínia Rabelo Lourido":"Santarém","Elinete Cunha de Sousa":"Santarém","Hiranildes Ramos Pereira":"Santarém","Joelma Costa Castro":"Santarém","José Antonio Sousa de Menezes":"Santarém","Katya Cruz de Sousa":"Santarém","Manoel Edinaldo Rodrigues Oliveira":"Santarém","Márcio José Oliveira Figueira":"Santarém","Maria de Lourdes Pinto Costa":"Santarém","Maria Selma Figueira Costa":"Santarém","Mariane Ferreira Castro":"Santarém","Nelma Isabel Marinho Figueira":"Santarém","Orlandino Manoel dos Santos Costa":"Santarém","Regiane Lira da Silva":"Santarém","Vaneila de Siqueira Gamboa":"Santarém","Ariane do Nascimento da Silva":"Trairão","Claudiléia de Sousa Castro":"Trairão","Edi Alves de Barros":"Trairão","Elaine Soares de Sousa":"Trairão","Ivanete Teixeira Silva":"Trairão","Ivonete Henz":"Trairão","Jackeline Paiva Batista":"Trairão","Juliana Lisboa":"Trairão","Natividade Pereira de Aguiar":"Trairão","Regilene Hecki da Costa":"Trairão"};
 var PROFISSIONAL_ROSTER = [
   {municipio:'Almeirim',ubs:'Coordenador(a)',enfermeira:'Jennifer Santos (coord)'},
-  {municipio:'Almeirim',ubs:'UBS Enf Márcio Marinho',enfermeira:'Odineth Serrao de Souza'},
+  {municipio:'Almeirim',ubs:'UBS Paranã das Velhas',enfermeira:'Odineth Serrao de Souza'},
   {municipio:'Almeirim',ubs:'UBS Nadime',enfermeira:'Mayare Freitas'},
   {municipio:'Jacareacanga',ubs:'UBS São Francisco',enfermeira:'Cássia Rayana Queiroz Lauer'},
   {municipio:'Jacareacanga',ubs:'UBS Alto Tapajos',enfermeira:'Laís Akai Barbosa'},
@@ -213,7 +213,7 @@ let profissionalAtual = null;
 let filtroRegiaoAtual = '';
 let filtroUbsAtual = '';
 let filtroEquipeAtual = '';
-let chartInstance = null;
+let chartInstance = [];
 let activityChartInstance = null;
 
 let replyAudioBlob = null;
@@ -227,7 +227,7 @@ let _registrosIndex = new Map(); // patient_id -> registros[]
 
 // Colunas para carregamento rápido da lista (sem campos pesados)
 const PERFIS_COLS_LIST = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,equipe_ubs,gestante,gestacao_semanas,tem_filhos,qtd_filhos,filhos_json,hipertensao,diabetes,condicoes,peso_inicial,altura,meta_pa_max,meta_glicemia,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min,meta_glicemia_max,meta_glicemia_min,created_by_cpf';
-const PERFIS_COLS_FULL = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,equipe_ubs,hipertensao,tempo_diag_has,diabetes,tempo_diag_dm,gestante,infeccao_urinaria_gestacao,dependencias,tempo_dependencia,condicoes,altura,peso_inicial,peso_atual,peso_primeira_consulta,imc_pre_gestacional,imc_atual,dum,gestacao_semanas,previsao_parto,faz_pre_natal,inicio_pre_natal,data_ultima_consulta_pre_natal,enxerga_bem,consulta_oftalmo,tempo_consulta_oftalmo,dificuldade_mastigar_falar_engolir,uso_medicacoes,nomes_medicacoes,posologia_dosagem,posologia_horario,data_ultima_prescricao,data_ultima_dispensacao,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max,created_by_nome,created_by_ubs,created_by_cpf,created_at,updated_at,meta_glicemia_max,meta_glicemia_min,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min';
+const PERFIS_COLS_FULL = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,equipe_ubs,hipertensao,tempo_diag_has,diabetes,tempo_diag_dm,gestante,infeccao_urinaria_gestacao,dependencias,tempo_dependencia,condicoes,altura,peso_inicial,peso_atual,peso_primeira_consulta,imc_pre_gestacional,imc_atual,dum,gestacao_semanas,previsao_parto,faz_pre_natal,inicio_pre_natal,data_ultima_consulta_pre_natal,data_parto,peso_bebe,altura_bebe,amamentando,local_nascimento,vacinas_maternidade,teste_pezinho,data_teste_pezinho,consulta_puerperal,data_consulta_puerperal,enxerga_bem,consulta_oftalmo,tempo_consulta_oftalmo,dificuldade_mastigar_falar_engolir,uso_medicacoes,nomes_medicacoes,posologia_dosagem,posologia_horario,data_ultima_prescricao,data_ultima_dispensacao,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max,created_by_nome,created_by_ubs,created_by_cpf,created_at,updated_at,meta_glicemia_max,meta_glicemia_min,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min';
 const REGISTROS_COLS_LIGHT = 'registro_id,patient_id,pa_sistolica,pa_diastolica,glicemia_mg,peso_kg,gestante,gestacao_semanas,atividade_fisica,status,tipo,created_at,updated_at';
 const REGISTROS_COLS_FULL = 'registro_id,patient_id,pa_sistolica,pa_diastolica,glicemia_mg,peso_kg,gestante,gestacao_semanas,atividade_fisica,texto,resposta,resposta_data,replies_json,status,tipo,created_at,updated_at';
 // Cache de pacientes com dados completos já carregados
@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tipoProfissional = (prof.tipo || 'acs').toLowerCase();
   const tipoEl = document.getElementById('profTipo');
   if (tipoEl) {
-    const label = tipoProfissional === 'telessaude' ? 'Telessaúde' : tipoProfissional === 'equipe_ubs' ? 'Profissional de Saúde' : 'ACS';
+    const label = tipoProfissional === 'telessaude' ? 'Telessaúde' : tipoProfissional === 'equipe_ubs' ? 'Profissional de Saúde' : tipoProfissional === 'tecnico_enfermagem' ? 'Técnico de Enfermagem' : 'ACS';
     tipoEl.textContent = 'Profissional ' + label;
     tipoEl.style.display = 'inline-block';
     tipoEl.style.padding = '3px 10px';
@@ -340,6 +340,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (tipoProfissional === 'equipe_ubs') {
       tipoEl.style.background = '#fff7ed';
       tipoEl.style.color = '#c2410c';
+    } else if (tipoProfissional === 'tecnico_enfermagem') {
+      tipoEl.style.background = '#ecfeff';
+      tipoEl.style.color = '#0e7490';
     } else {
       tipoEl.style.background = '#dcfce7';
       tipoEl.style.color = '#166534';
@@ -387,7 +390,7 @@ async function carregarDados() {
     const tipoPro = (profissionalAtual?.tipo || 'acs').trim().toLowerCase();
     const isCoordenador = ubsPro.includes('coordenador');
     const isTelessaude = tipoPro === 'telessaude';
-    const isEquipeUbs = tipoPro === 'equipe_ubs';
+    const isEquipeUbs = tipoPro === 'equipe_ubs' || tipoPro === 'tecnico_enfermagem';
     if (!isCoordenador && !isTelessaude && isEquipeUbs && ubsProOriginal) {
       perfisQuery = perfisQuery.or(`ubs_referencia.eq.${ubsProOriginal},created_by_ubs.eq.${ubsProOriginal}`);
     } else if (!isCoordenador && !isTelessaude && profissionalAtual?.cpf) {
@@ -1261,10 +1264,10 @@ function ativarEdicaoFicha() {
     <div class="grid grid-2">
       ${inputCampo('edit_telefone', 'Telefone', p.telefone)}
       ${inputCampo('edit_endereco', 'Endereço', p.endereco)}
-      ${selectCampo('edit_regiao', 'Região', p.regiao, LISTA_REGIOES)}
-      ${selectCampo('edit_ubs_referencia', 'UBS de referência', p.ubs_referencia, LISTA_UBS)}
+      ${selectCampo('edit_regiao', 'Município', p.regiao, [...LISTA_REGIOES, 'Outro'])}
+      ${selectCampo('edit_ubs_referencia', 'UBS de referência', p.ubs_referencia, [...LISTA_UBS, 'Outro'])}
       ${selectCampo('edit_equipe_ubs', 'Equipe UBS', p.equipe_ubs, ['ESF','ESFR'])}
-      ${selectCampo('edit_acs_responsavel', 'ACS responsável', p.acs_responsavel, LISTA_ACS)}
+      ${selectCampo('edit_acs_responsavel', 'Profissional respondente', p.acs_responsavel, [...LISTA_ACS, 'Outro'])}
       <div class="card" style="padding:12px;">
         <label class="text-xs text-muted" for="edit_mora_sozinho">Mora sozinho?</label>
         <select id="edit_mora_sozinho" class="input-box" style="margin-top:4px;">
@@ -1307,11 +1310,31 @@ function ativarEdicaoFicha() {
     </div>
     <div class="section-title">Medicações</div>
     <div class="grid grid-2">
-      ${selectCampo('edit_uso_medicacoes', 'Faz uso de medicações?', p.uso_medicacoes, ['Sim','Não'])}
-      ${inputCampo('edit_nomes_medicacoes', 'Nomes dos medicamentos', p.nomes_medicacoes)}
-      ${inputCampo('edit_posologia_dosagem', 'Posologia - Dosagem', p.posologia_dosagem)}
-      ${timeCampo('edit_posologia_horario', 'Posologia - Horário'  , p.posologia_horario)}
+      ${renderCampo('Faz uso de medicações?', p.uso_medicacoes)}
     </div>
+    ${(() => {
+      const split = value => String(value || '').split('|').map(v => v.trim());
+      const nomes = split(p.nomes_medicacoes);
+      const dosagens = split(p.posologia_dosagem);
+      const horarios = split(p.posologia_horario);
+      const prescricoes = split(p.data_ultima_prescricao);
+      const dispensacoes = split(p.data_ultima_dispensacao);
+      const total = Math.max(nomes.length, dosagens.length, horarios.length, prescricoes.length, dispensacoes.length, 0);
+      if (!total || String(p.uso_medicacoes || '').toLowerCase() === 'não') return '';
+      return `<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
+        ${Array.from({ length: total }).map((_, i) => {
+          if (!nomes[i] && !dosagens[i] && !horarios[i] && !prescricoes[i] && !dispensacoes[i]) return '';
+          return `<div class="card" style="padding:10px;">
+            <div class="text-xs font-bold">Medicação ${i + 1}</div>
+            <div class="text-xs text-muted">Nome</div><div class="font-semibold">${formatarCampo(nomes[i])}</div>
+            <div class="text-xs text-muted">Dosagem</div><div class="font-semibold">${formatarCampo(dosagens[i])}</div>
+            <div class="text-xs text-muted">Horário</div><div class="font-semibold">${formatarCampo(horarios[i])}</div>
+            <div class="text-xs text-muted">Última prescrição</div><div class="font-semibold">${formatarCampo(prescricoes[i])}</div>
+            <div class="text-xs text-muted">Última dispensação</div><div class="font-semibold">${formatarCampo(dispensacoes[i])}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    })()}
     <div class="section-title">Atividade Física</div>
     <div class="grid grid-2">
       ${selectCampo('edit_atividade_fisica', 'Pratica atividade física?', p.atividade_fisica, ['Sim','Não'])}
@@ -1345,7 +1368,13 @@ async function salvarEdicaoFicha() {
   if (!p || !p.patient_id) return;
   const get = id => {
     const el = document.getElementById(id);
-    return el ? el.value.trim() : undefined;
+    if (!el) return undefined;
+    const val = el.value.trim();
+    if (val === 'Outro') {
+      const outro = document.getElementById(id + '_outro');
+      return outro && outro.value.trim() ? outro.value.trim() : 'Outro';
+    }
+    return val;
   };
   const getNum = id => {
     const el = document.getElementById(id);
@@ -1458,17 +1487,31 @@ function inputCampo(fieldId, label, value, type = 'text') {
 
 function selectCampo(fieldId, label, value, options) {
   const safeVal = String(value || '').trim();
+  const normalizedOptions = options.map(opt => String(opt || ''));
+  const hasOutro = normalizedOptions.some(opt => opt.toLowerCase() === 'outro');
+  const isListed = normalizedOptions.some(opt => safeVal && safeVal.toLowerCase() === opt.toLowerCase());
+  const selectOutro = hasOutro && safeVal && !isListed;
   let optHtml = '<option value="">Escolha...</option>';
-  options.forEach(opt => {
-    const sel = (safeVal.toLowerCase() === opt.toLowerCase()) ? 'selected' : '';
+  normalizedOptions.forEach(opt => {
+    const sel = (safeVal.toLowerCase() === opt.toLowerCase()) || (selectOutro && opt.toLowerCase() === 'outro') ? 'selected' : '';
     optHtml += `<option value="${escapeHtml(opt)}" ${sel}>${escapeHtml(opt)}</option>`;
   });
+  const outroInput = hasOutro ? `<input type="text" id="${fieldId}_outro" class="input-box" style="margin-top:8px;display:${selectOutro ? 'block' : 'none'};" value="${selectOutro ? escapeHtml(safeVal) : ''}" placeholder="Qual?">` : '';
   return `
     <div class="card" style="padding:12px;">
       <label class="text-xs text-muted" for="${fieldId}">${escapeHtml(label)}</label>
-      <select id="${fieldId}" class="input-box" style="margin-top:4px;">${optHtml}</select>
+      <select id="${fieldId}" class="input-box" style="margin-top:4px;" onchange="toggleOutroCampo('${fieldId}')">${optHtml}</select>
+      ${outroInput}
     </div>
   `;
+}
+
+function toggleOutroCampo(fieldId) {
+  const select = document.getElementById(fieldId);
+  const input = document.getElementById(fieldId + '_outro');
+  if (!select || !input) return;
+  input.style.display = select.value === 'Outro' ? 'block' : 'none';
+  if (select.value !== 'Outro') input.value = '';
 }
 
 function timeCampo(fieldId, label, value) {
@@ -1637,10 +1680,10 @@ async function abrirFichaCadastral() {
     <div class="grid grid-2">
       ${renderCampo('Telefone', p.telefone)}
       ${renderCampo('Endereço', p.endereco)}
-      ${renderCampo('Região', p.regiao)}
+      ${renderCampo('Município', p.regiao)}
       ${renderCampo('UBS de referência', p.ubs_referencia)}
       ${renderCampo('Equipe UBS', p.equipe_ubs)}
-      ${renderCampo('ACS responsável', p.acs_responsavel)}
+      ${renderCampo('Profissional respondente', p.acs_responsavel)}
       ${renderCampo('Mora sozinho?', p.mora_sozinho)}
     </div>
 
@@ -1666,8 +1709,7 @@ async function abrirFichaCadastral() {
                 <div class="font-semibold">${formatarCampo(f.idade)}</div>
                 <div class="text-xs text-muted">Vacinação</div>
                 <div class="font-semibold">${formatarCampo(f.vacinaStatus)}</div>
-                <div class="text-xs text-muted">Data</div>
-                <div class="font-semibold">${formatarCampo(f.vacinaData)}</div>
+                ${f.vacinaStatus === 'Atrasada' ? `<div class="text-xs text-muted">Última vacina em atraso</div><div class="font-semibold">${formatarCampo(f.vacinaAtraso)}</div>` : `<div class="text-xs text-muted">Data</div><div class="font-semibold">${formatarCampo(f.vacinaData)}</div>`}
               </div>
             `).join('')}
           </div>
@@ -1717,13 +1759,30 @@ async function abrirFichaCadastral() {
     <div class="section-title">Medicações</div>
     <div class="grid grid-2">
       ${renderCampo('Faz uso de medicações?', p.uso_medicacoes)}
-      ${renderCampo('Nomes', p.nomes_medicacoes)}
-      ${renderCampo('Posologia - Dosagem', p.posologia_dosagem)}
-      ${renderCampo('Posologia - Horário', p.posologia_horario)}
-      ${renderCampo('Última prescrição', p.data_ultima_prescricao)}
-      ${renderCampo('Última dispensação', p.data_ultima_dispensacao)}
     </div>
-
+    ${(() => {
+      const split = value => String(value || '').split('|').map(v => v.trim());
+      const nomes = split(p.nomes_medicacoes);
+      const dosagens = split(p.posologia_dosagem);
+      const horarios = split(p.posologia_horario);
+      const prescricoes = split(p.data_ultima_prescricao);
+      const dispensacoes = split(p.data_ultima_dispensacao);
+      const total = Math.max(nomes.length, dosagens.length, horarios.length, prescricoes.length, dispensacoes.length, 0);
+      if (!total || String(p.uso_medicacoes || '').toLowerCase() === 'não') return '';
+      return `<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
+        ${Array.from({ length: total }).map((_, i) => {
+          if (!nomes[i] && !dosagens[i] && !horarios[i] && !prescricoes[i] && !dispensacoes[i]) return '';
+          return `<div class="card" style="padding:10px;">
+            <div class="text-xs font-bold">Medicação ${i + 1}</div>
+            <div class="text-xs text-muted">Nome</div><div class="font-semibold">${formatarCampo(nomes[i])}</div>
+            <div class="text-xs text-muted">Dosagem</div><div class="font-semibold">${formatarCampo(dosagens[i])}</div>
+            <div class="text-xs text-muted">Horário</div><div class="font-semibold">${formatarCampo(horarios[i])}</div>
+            <div class="text-xs text-muted">Última prescrição</div><div class="font-semibold">${formatarCampo(prescricoes[i])}</div>
+            <div class="text-xs text-muted">Última dispensação</div><div class="font-semibold">${formatarCampo(dispensacoes[i])}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    })()}
     <div class="section-title">Atividade Física</div>
     <div class="grid grid-2">
       ${renderCampo('Faz atividade física?', p.atividade_fisica)}
@@ -1759,86 +1818,139 @@ function filtrarPorPeriodo(hist, periodo) {
   return hist.filter(r => new Date(r.created_at || 0) >= limite);
 }
 
-function criarChartConfig(hist, tipo) {
-  const labels = hist.map(r => formatarDataCurta(r.created_at));
-  const datasets = [
-    {
-      label: 'PA Máxima',
-      data: hist.map(r => r.pa_sistolica || null),
-      backgroundColor: 'rgba(239, 68, 68, 0.6)',
-      borderColor: '#ef4444'
-    },
-    {
-      label: 'PA Mínima',
-      data: hist.map(r => r.pa_diastolica || null),
-      backgroundColor: 'rgba(245, 158, 11, 0.6)',
-      borderColor: '#f59e0b'
-    },
-    {
-      label: 'Peso (kg)',
-      data: hist.map(r => r.peso_kg || null),
-      backgroundColor: 'rgba(34, 197, 94, 0.6)',
-      borderColor: '#22c55e'
-    },
-    {
-      label: 'Glicemia (mg/dL)',
-      data: hist.map(r => r.glicemia_mg || null),
-      type: 'line',
-      borderColor: '#3b82f6',
-      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-      tension: 0.6,
-      cubicInterpolationMode: 'monotone',
-      pointRadius: 4,
-      pointHoverRadius: 7
-    }
-  ];
+function valorGrafico(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(String(value).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
+}
 
-  const useDatalabels = window.ChartDataLabels != null;
-  const plugins = useDatalabels ? [ChartDataLabels] : [];
+function formatarNumeroEixo(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return value;
+  const abs = Math.abs(n);
+  if (abs >= 1000000) return `${(n / 1000000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`;
+  if (abs >= 1000) return `${(n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+}
+
+function formatarValorGrafico(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  const abs = Math.abs(n);
+  if (abs >= 1000000) return `${(n / 1000000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mi`;
+  if (abs >= 1000) return `${(n / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
+  return n.toLocaleString('pt-BR', { maximumFractionDigits: Number.isInteger(n) ? 0 : 1 });
+}
+
+function limitesDinamicos(valores) {
+  const nums = valores.filter(v => Number.isFinite(v));
+  if (!nums.length) return { beginAtZero: true, suggestedMin: 0, suggestedMax: 10 };
+  const max = Math.max(...nums, 0);
+  const padding = Math.max(max * 0.16, 12);
+  return { beginAtZero: true, suggestedMin: 0, suggestedMax: max + padding };
+}
+
+function destruirCharts(instancias) {
+  const lista = Array.isArray(instancias) ? instancias : (instancias ? [instancias] : []);
+  lista.forEach(c => { try { c.destroy(); } catch {} });
+}
+
+function criarChartConfig(hist, modo = 'normal') {
+  const labels = hist.map(r => formatarDataCurta(r.created_at));
+  const paMax = hist.map(r => valorGrafico(r.pa_sistolica));
+  const paMin = hist.map(r => valorGrafico(r.pa_diastolica));
+  const pesos = hist.map(r => valorGrafico(r.peso_kg));
+  const glicemias = hist.map(r => valorGrafico(r.glicemia_mg));
+  const valores = [...paMax, ...paMin, ...pesos, ...glicemias].filter(v => Number.isFinite(v));
+  const expanded = modo === 'expandido';
+  const mostrarRotulos = labels.length <= (expanded ? 18 : 10);
+  const barPercentage = labels.length <= 3 ? 0.72 : labels.length <= 8 ? 0.78 : 0.9;
+  const categoryPercentage = labels.length <= 3 ? 0.58 : labels.length <= 8 ? 0.68 : 0.82;
+  const barMax = labels.length <= 4 ? 22 : labels.length <= 8 ? 18 : 12;
+  const baseBar = {
+    type: 'bar',
+    borderWidth: 0,
+    borderRadius: { topLeft: 4, topRight: 4 },
+    barPercentage,
+    categoryPercentage,
+    maxBarThickness: barMax,
+    order: 2,
+    datalabels: { anchor: 'end', align: 'end', offset: 2 }
+  };
 
   return {
     type: 'bar',
-    data: { labels, datasets },
-    plugins,
+    data: {
+      labels,
+      datasets: [
+        { ...baseBar, label: 'PA Máxima', data: paMax, backgroundColor: 'rgba(248,113,113,0.82)', hoverBackgroundColor: '#ef4444' },
+        { ...baseBar, label: 'PA Mínima', data: paMin, backgroundColor: 'rgba(251,191,36,0.82)', hoverBackgroundColor: '#f59e0b' },
+        { ...baseBar, label: 'Peso (kg)', data: pesos, backgroundColor: 'rgba(74,222,128,0.82)', hoverBackgroundColor: '#22c55e' },
+        {
+          type: 'line',
+          label: 'Glicemia (mg/dL)',
+          data: glicemias,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.12)',
+          borderWidth: 3,
+          pointRadius: 4,
+          pointHoverRadius: 7,
+          pointBackgroundColor: '#dbeafe',
+          pointBorderColor: '#3b82f6',
+          pointBorderWidth: 2,
+          tension: 0.28,
+          fill: false,
+          spanGaps: true,
+          order: 0,
+          datalabels: { anchor: 'end', align: 'top', offset: 6 }
+        }
+      ]
+    },
+    plugins: window.ChartDataLabels ? [window.ChartDataLabels] : [],
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resizeDelay: 150,
+      normalized: true,
+      layout: { padding: { top: mostrarRotulos ? 28 : 14, right: 10, bottom: 2, left: 0 } },
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: true, position: 'bottom' },
-        datalabels: useDatalabels ? {
-          display: (ctx) => ctx.dataset.data[ctx.dataIndex] != null,
-          anchor: 'end',
-          align: 'top',
-          offset: 2,
-          font: { size: 10, weight: '600' },
-          color: (ctx) => ctx.dataset.borderColor || '#333',
-          formatter: (val) => val != null ? val : ''
-        } : false,
+        legend: { display: true, position: 'bottom', labels: { boxWidth: 24, padding: 12, color: '#475569' } },
+        datalabels: {
+          display: ctx => mostrarRotulos && Number.isFinite(Number(ctx.dataset.data?.[ctx.dataIndex])),
+          color: ctx => ctx.dataset.borderColor || ctx.dataset.hoverBackgroundColor || '#334155',
+          formatter: value => formatarValorGrafico(value),
+          clamp: true,
+          clip: false,
+          textStrokeColor: 'rgba(255,255,255,0.95)',
+          textStrokeWidth: 3,
+          font: { size: expanded ? 11 : 10, weight: '800' }
+        },
         tooltip: {
           enabled: true,
-          backgroundColor: 'rgba(15,23,42,0.9)',
-          titleFont: { size: 14, weight: 'bold' },
-          bodyFont: { size: 13 },
+          backgroundColor: 'rgba(15,23,42,0.94)',
           padding: 12,
           cornerRadius: 8,
           displayColors: true,
-          callbacks: {
-            title: (items) => {
-              if (!items.length) return '';
-              const idx = items[0].dataIndex;
-              const reg = hist[idx];
-              return reg?.created_at ? new Date(reg.created_at).toLocaleString('pt-BR') : items[0].label;
-            },
-            label: (item) => ` ${item.dataset.label}: ${item.formattedValue}`
-          }
+          callbacks: { label: item => `${item.dataset.label}: ${formatarValorGrafico(item.parsed.y)}` }
         }
       },
-      scales: { y: { beginAtZero: false } }
+      scales: {
+        x: {
+          offset: true,
+          grid: { color: 'rgba(148,163,184,0.16)', drawBorder: false },
+          ticks: { autoSkip: true, maxTicksLimit: expanded ? 12 : 6, maxRotation: 0, minRotation: 0, color: '#64748b' }
+        },
+        y: {
+          ...limitesDinamicos(valores),
+          grid: { color: 'rgba(148,163,184,0.18)', drawBorder: false },
+          border: { display: false },
+          ticks: { maxTicksLimit: expanded ? 7 : 6, callback: formatarNumeroEixo, color: '#64748b' }
+        }
+      }
     }
   };
 }
-
 function renderizarGraficos(container) {
   const p = pacienteSelecionado;
   const histFull = (p.historico || []).slice().reverse();
@@ -1882,8 +1994,8 @@ function renderizarGraficos(container) {
         <button class="btn btn-ghost" style="padding:6px 10px; font-size:12px;" onclick="expandirGrafico('indicadores')">⛶ Expandir</button>
       </div>
     </div>
-    <div style="height:320px; margin-bottom: 24px; width:100%;">
-      <canvas id="healthChart"></canvas>
+    <div class="indicator-chart-grid" style="height:clamp(300px,48vh,430px); margin-bottom:28px; width:100%;">
+      <canvas id="healthChartIndicadores"></canvas>
     </div>
     <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
       <span class="section-title">Atividade Física (Calendário)</span>
@@ -1904,14 +2016,16 @@ function renderizarGraficos(container) {
 
   const hist = filtrarPorPeriodo(histFull, currentPeriodFilter);
 
-  if (chartInstance) chartInstance.destroy();
+  destruirCharts(chartInstance);
+  chartInstance = [];
   if (activityChartInstance) activityChartInstance.destroy();
 
   if (hist.length >= 2) {
-    const ctx = document.getElementById('healthChart').getContext('2d');
-    chartInstance = new Chart(ctx, criarChartConfig(hist, 'main'));
+    const el = document.getElementById('healthChartIndicadores');
+    chartInstance = el ? [new Chart(el.getContext('2d'), criarChartConfig(hist))] : [];
   } else {
-    document.getElementById('healthChart').parentElement.innerHTML = '<div class="empty-state"><p>Sem dados no período selecionado</p></div>';
+    const grid = document.querySelector('.indicator-chart-grid');
+    if (grid) grid.innerHTML = '<div class="empty-state"><p>Sem dados no período selecionado</p></div>';
   }
 
   // Atividade física — calendário
@@ -1936,8 +2050,7 @@ function renderizarGraficoGestacional(histGest, p) {
   const ganhoMin = histGest.map(r => (curva.min * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
   const ganhoMax = histGest.map(r => (curva.max * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
 
-  const useDatalabels = window.ChartDataLabels != null;
-  const gestPlugins = useDatalabels ? [ChartDataLabels] : [];
+  const gestPlugins = [];
 
   const ctxGest = ctxEl.getContext('2d');
   new Chart(ctxGest, {
@@ -1979,15 +2092,7 @@ function renderizarGraficoGestacional(histGest, p) {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: true, position: 'bottom' },
-        datalabels: useDatalabels ? {
-          display: (ctx) => ctx.datasetIndex === 0 && ctx.dataset.data[ctx.dataIndex] != null,
-          anchor: 'end',
-          align: 'top',
-          offset: 2,
-          font: { size: 10, weight: '600' },
-          color: '#3b82f6',
-          formatter: (val) => val != null ? Number(val).toFixed(1) : ''
-        } : false,
+        datalabels: false,
         tooltip: {
           enabled: true,
           backgroundColor: 'rgba(15,23,42,0.9)',
@@ -2038,14 +2143,13 @@ function expandirGrafico(tipo) {
   modal.style.display = 'flex';
   const title = document.getElementById('expandedChartTitle');
   const body = document.getElementById('expandedChartBody');
-  if (expandedChartInstance) { expandedChartInstance.destroy(); expandedChartInstance = null; }
+  if (expandedChartInstance) { destruirCharts(expandedChartInstance); expandedChartInstance = null; }
 
   if (tipo === 'indicadores') {
     title.textContent = 'Evolução dos Indicadores (período completo)';
-    body.innerHTML = '<canvas id="healthChartExpanded" style="width:100%; height:100%;"></canvas>';
+    body.innerHTML = '<div style="height:100%; min-height:320px;"><canvas id="healthChartExpandedIndicadores"></canvas></div>';
     const histFull = window.__histFullForChart || [];
-    const ctx = document.getElementById('healthChartExpanded').getContext('2d');
-    expandedChartInstance = new Chart(ctx, criarChartConfig(histFull, 'expanded'));
+    expandedChartInstance = new Chart(document.getElementById('healthChartExpandedIndicadores').getContext('2d'), criarChartConfig(histFull, 'expandido'));
   } else if (tipo === 'atividade') {
     title.textContent = 'Atividade Física (Calendário completo)';
     body.innerHTML = '';
@@ -2064,10 +2168,9 @@ function expandirGrafico(tipo) {
       const ganhoMin = histGest.map(r => (curva.min * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
       const ganhoMax = histGest.map(r => (curva.max * Math.min(r.gestacao_semanas / 40, 1)).toFixed(1));
       const ctx = document.getElementById('gestChartExpanded').getContext('2d');
-      const useDL = window.ChartDataLabels != null;
       expandedChartInstance = new Chart(ctx, {
         type: 'line',
-        plugins: useDL ? [ChartDataLabels] : [],
+        plugins: [],
         data: {
           labels,
           datasets: [
@@ -2081,7 +2184,7 @@ function expandirGrafico(tipo) {
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: true, position: 'bottom' },
-            datalabels: useDL ? { display: (ctx) => ctx.datasetIndex === 0 && ctx.dataset.data[ctx.dataIndex] != null, anchor: 'end', align: 'top', font: { size: 10, weight: '600' }, color: '#3b82f6', formatter: (v) => v != null ? Number(v).toFixed(1) : '' } : false,
+            datalabels: false,
             tooltip: { enabled: true, backgroundColor: 'rgba(15,23,42,0.9)', padding: 12, cornerRadius: 8 }
           },
           scales: { y: { beginAtZero: true } }
@@ -2169,11 +2272,8 @@ function renderizarAtividadeCalendarioExpandido(container) {
 function fecharGraficoExpandido() {
   const modal = document.getElementById('expandedChartModal');
   if (modal) modal.style.display = 'none';
-  if (expandedChartInstance) { expandedChartInstance.destroy(); expandedChartInstance = null; }
+  if (expandedChartInstance) { destruirCharts(expandedChartInstance); expandedChartInstance = null; }
 }
-
-  // Atividade física — calendário
-  renderizarAtividadeCalendario();
 
 function renderizarAtividadeCalendario() {
   const p = pacienteSelecionado;
@@ -3323,7 +3423,7 @@ async function gerarRelatorioPDF() {
   // ===============================================
   // CHARTS
   // ===============================================
-  const chartCanvas = document.getElementById('healthChart');
+  const chartCanvas = document.getElementById('healthChartIndicadores') || document.getElementById('healthChartPA') || document.getElementById('healthChart');
   if (chartCanvas) {
     checkPage(85);
     sectionTitle('Gráfico de Indicadores');
@@ -3428,7 +3528,8 @@ async function carregarSatisfacao() {
       return m ? parseInt(m[1]) : null;
     }).filter(n => n !== null);
     if (notas.length === 0) { el.textContent = '—'; return; }
-    const media = (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1);
+    const mediaNum = notas.reduce((a, b) => a + b, 0) / notas.length;
+    const media = mediaNum.toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(mediaNum) ? 0 : 1, maximumFractionDigits: 1 });
     el.textContent = `${media} ⭐`;
     el.title = `${notas.length} avaliação(ões)`;
   } catch (e) { console.error('Erro ao carregar satisfação:', e); }
@@ -3463,7 +3564,8 @@ function abrirSatisfacaoModal() {
   });
 
   const notas = entries.map(e => e.nota).filter(n => n !== null);
-  const media = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1) : '—';
+  const mediaNum = notas.length ? (notas.reduce((a, b) => a + b, 0) / notas.length) : null;
+  const media = mediaNum == null ? '—' : mediaNum.toLocaleString('pt-BR', { minimumFractionDigits: Number.isInteger(mediaNum) ? 0 : 1, maximumFractionDigits: 1 });
   const dist = [0, 0, 0, 0, 0];
   notas.forEach(n => { if (n >= 1 && n <= 5) dist[n - 1]++; });
   const labels = ['Muito insatisfeito', 'Insatisfeito', 'Regular', 'Satisfeito', 'Muito satisfeito'];
@@ -3628,5 +3730,3 @@ async function salvarValoresPanicoSupabase(patientKey) {
     }
   }
 }
-
-

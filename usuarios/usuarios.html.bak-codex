@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-<title>Tecendo Saúde - Portal</title>
+<title>Tecendo SaÃºde - Portal</title>
 <link rel="icon" href="../img/logo.png" />
 <link rel="apple-touch-icon" href="../img/logo.png" />
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -48,7 +48,7 @@
 <body>
 <div id="appSplash" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#f0f9f2,#d5f0dc);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s;">
   <div style="width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#e8f5e9);box-shadow:0 6px 30px rgba(47,107,63,0.15);display:flex;align-items:center;justify-content:center;"><img src="../img/logo.png" style="width:65px;height:65px;object-fit:contain;" /></div>
-  <div style="margin-top:18px;font-size:20px;font-weight:800;color:#2f6b3f;letter-spacing:2px;">TECENDO SAÚDE</div>
+  <div style="margin-top:18px;font-size:20px;font-weight:800;color:#2f6b3f;letter-spacing:2px;">TECENDO SAÃšDE</div>
   <div style="margin-top:6px;font-size:12px;color:#64856e;">Carregando...</div>
 </div>
 
@@ -84,7 +84,7 @@ const getProTipoFromHash = () => {
   return 'acs';
 };
 const PRO_TIPO = getProTipoFromHash();
-const tipoProfissionalLabel = (tipo) => tipo === 'telessaude' ? 'Telessaúde' : tipo === 'equipe_ubs' ? 'Profissional de Saúde' : tipo === 'tecnico_enfermagem' ? 'Técnico de Enfermagem' : 'ACS';
+const tipoProfissionalLabel = (tipo) => tipo === 'telessaude' ? 'TelessaÃºde' : tipo === 'equipe_ubs' ? 'Profissional de SaÃºde' : tipo === 'tecnico_enfermagem' ? 'TÃ©cnico de Enfermagem' : 'ACS';
 const tipoProfissionalStyle = (tipo) => tipo === 'telessaude' ? {bg:'#e0e7ff', background:'#e0e7ff', color:'#4338ca'} : tipo === 'equipe_ubs' ? {bg:'#fff7ed', background:'#fff7ed', color:'#c2410c'} : tipo === 'tecnico_enfermagem' ? {bg:'#ecfeff', background:'#ecfeff', color:'#0e7490'} : {bg:'#dcfce7', background:'#dcfce7', color:'#166534'};
 
 // Register Service Worker for mobile notifications (web/PWA only, not Cordova)
@@ -110,8 +110,8 @@ document.addEventListener('deviceready', () => {
   try {
     plugin.createChannel && plugin.createChannel({
       id: 'medicacao-channel',
-      name: 'Lembretes de Medicação',
-      description: 'Notificações de horário de medicação',
+      name: 'Lembretes de MedicaÃ§Ã£o',
+      description: 'NotificaÃ§Ãµes de horÃ¡rio de medicaÃ§Ã£o',
       sound: true,
       vibration: true,
       importance: 4,
@@ -120,7 +120,7 @@ document.addEventListener('deviceready', () => {
     plugin.createChannel && plugin.createChannel({
       id: 'mensagens-channel',
       name: 'Mensagens',
-      description: 'Notificações de novas mensagens da equipe de saúde',
+      description: 'NotificaÃ§Ãµes de novas mensagens da equipe de saÃºde',
       sound: true,
       vibration: true,
       importance: 4,
@@ -128,8 +128,8 @@ document.addEventListener('deviceready', () => {
     }, () => console.log('Messages channel created'), (e) => console.warn('Channel error:', e));
     plugin.createChannel && plugin.createChannel({
       id: 'saude-channel',
-      name: 'Alertas de Saúde',
-      description: 'Alertas de saúde e lembretes do Tecendo Saúde',
+      name: 'Alertas de SaÃºde',
+      description: 'Alertas de saÃºde e lembretes do Tecendo SaÃºde',
       sound: true,
       vibration: true,
       importance: 4,
@@ -162,7 +162,7 @@ document.addEventListener('deviceready', () => {
       plugin.requestPermission((granted2) => {
         console.log('Notification permission after request:', granted2);
         if (!granted2) {
-          alert('⚠️ Para receber lembretes de medicação, ative as notificações nas Configurações do celular > Aplicativos > Tecendo Saude > Notificações.');
+          alert('âš ï¸ Para receber lembretes de medicaÃ§Ã£o, ative as notificaÃ§Ãµes nas ConfiguraÃ§Ãµes do celular > Aplicativos > Tecendo Saude > NotificaÃ§Ãµes.');
         }
       });
     }
@@ -178,14 +178,14 @@ document.addEventListener('deviceready', () => {
     }, () => {});
   }
 
-  // Test notification on install/update — fires to confirm notifications work
+  // Test notification on install/update â€” fires to confirm notifications work
   const testKey = 'cordova_notif_test_v4';
   if (!localStorage.getItem(testKey)) {
     setTimeout(() => {
       plugin.schedule({
         id: 1,
-        title: '✅ Tecendo Saúde',
-        text: 'Notificações ativadas! Você receberá lembretes de medicação e mensagens.',
+        title: 'âœ… Tecendo SaÃºde',
+        text: 'NotificaÃ§Ãµes ativadas! VocÃª receberÃ¡ lembretes de medicaÃ§Ã£o e mensagens.',
         channel: 'saude-channel',
         foreground: true,
         vibrate: true,
@@ -217,7 +217,7 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-const AUTO_REPLY_TEXT = 'Olá! 😊 Recebemos sua solicitação e estamos acompanhando suas informações. Em breve, um profissional da UBS entrará em contato para prestar o atendimento necessário 🩺';
+const AUTO_REPLY_TEXT = 'OlÃ¡! ðŸ˜Š Recebemos sua solicitaÃ§Ã£o e estamos acompanhando suas informaÃ§Ãµes. Em breve, um profissional da UBS entrarÃ¡ em contato para prestar o atendimento necessÃ¡rio ðŸ©º';
 
 const getReadKey = (registro_id, ultimaData) => `read_${registro_id || 'sem'}_${ultimaData || 'sem'}`;
 const isRead = (registro_id, ultimaData) => {
@@ -242,7 +242,7 @@ const notifyUser = async (title, body, tag) => {
       const id = Math.abs(tag.split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0)) % 2147483647;
       // Choose channel based on notification type
       let channel = 'saude-channel';
-      if (tag.startsWith('med_') || title.includes('Medicação') || title.includes('medicação')) channel = 'medicacao-channel';
+      if (tag.startsWith('med_') || title.includes('MedicaÃ§Ã£o') || title.includes('medicaÃ§Ã£o')) channel = 'medicacao-channel';
       else if (tag.startsWith('chat_') || title.includes('mensagem') || title.includes('Mensagem')) channel = 'mensagens-channel';
       cordovaPlugin.schedule({
         id: id,
@@ -337,8 +337,8 @@ const agendarNotificacoesCordova = (user) => {
       const notifId = 9000 + (dayOffset * 50) + idx;
       notifications.push({
         id: notifId,
-        title: '💊 Hora da Medicação',
-        text: nomes ? `Horário ${h} — ${nomes}` : `Está na hora da medicação (${h})`,
+        title: 'ðŸ’Š Hora da MedicaÃ§Ã£o',
+        text: nomes ? `HorÃ¡rio ${h} â€” ${nomes}` : `EstÃ¡ na hora da medicaÃ§Ã£o (${h})`,
         channel: 'medicacao-channel',
         foreground: true,
         vibrate: true,
@@ -368,10 +368,10 @@ const requestMediaPermission = async (permissionType = 'RECORD_AUDIO') => {
   try {
     if (navigator.permissions && navigator.permissions.query) {
       const result = await navigator.permissions.query({ name: 'microphone' });
-      console.log(`Status de permissão de microfone: ${result.state}`);
+      console.log(`Status de permissÃ£o de microfone: ${result.state}`);
     }
   } catch (e) {
-    console.warn('Permissões não suportadas neste navegador');
+    console.warn('PermissÃµes nÃ£o suportadas neste navegador');
   }
   return true;
 };
@@ -464,18 +464,18 @@ const enviarRegistroSupabase = async (registro) => {
   } catch {}
 };
 
-// Card de Status de Saúde
+// Card de Status de SaÃºde
 const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpdate }) => {
   const atividadeLabel = atividade ? String(atividade).split('|').filter(Boolean).join(', ') : 'nenhuma';
   const getStatusPA = (val) => {
-    if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'Não informado' };
-    if (val >= 180) return { color: 'text-red-600', bg: 'bg-red-100', label: 'Crítica' };
+    if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'NÃ£o informado' };
+    if (val >= 180) return { color: 'text-red-600', bg: 'bg-red-100', label: 'CrÃ­tica' };
     if (val >= 140) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Elevada' };
     if (val < 90) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Baixa' };
     return { color: 'text-emerald-600', bg: 'bg-emerald-50', label: 'Normal' };
   };
   const getStatusGlicemia = (val) => {
-    if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'Não informado' };
+    if (!val) return { color: 'text-slate-400', bg: 'bg-slate-100', label: 'NÃ£o informado' };
     if (val >= 200) return { color: 'text-red-600', bg: 'bg-red-100', label: 'Alta' };
     if (val >= 126) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Elevada' };
     if (val < 70) return { color: 'text-amber-600', bg: 'bg-amber-50', label: 'Baixa' };
@@ -487,10 +487,10 @@ const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpd
   
   return (
     <div className={`status-card ${isCritical ? 'alert' : ''}`}>
-      <h3 className="text-lg font-extrabold text-slate-800 mb-3">Seu Status de Saúde</h3>
+      <h3 className="text-lg font-extrabold text-slate-800 mb-3">Seu Status de SaÃºde</h3>
       <div className="metric-grid">
         <div className={`metric-item ${statusPA.bg}`}>
-          <div className="metric-label">Pressão Arterial</div>
+          <div className="metric-label">PressÃ£o Arterial</div>
           <div className={`metric-value ${statusPA.color}`}>{pa ? `${pa}/${paDiastolica || '-'}` : '--'} <span className="text-xs font-normal">mmHg</span></div>
           <div className={`metric-status ${statusPA.color}`}>{statusPA.label}</div>
         </div>
@@ -508,12 +508,12 @@ const HealthStatusCard = ({ pa, paDiastolica, glicemia, peso, atividade, lastUpd
           <div className="metric-value text-base">{atividadeLabel}</div>
         </div>
       </div>
-      {lastUpdate && <div className="mt-3 text-xs text-slate-500 text-center">Última atualização: {formatDateISO(lastUpdate)}</div>}
+      {lastUpdate && <div className="mt-3 text-xs text-slate-500 text-center">Ãšltima atualizaÃ§Ã£o: {formatDateISO(lastUpdate)}</div>}
     </div>
   );
 };
 
-// Login do Usuário do SUS
+// Login do UsuÃ¡rio do SUS
 const PatientLogin = ({onLogin, onBack}) => {
   const [cpf, setCpf] = useState('');
   const [msg, setMsg] = useState('');
@@ -541,25 +541,25 @@ const PatientLogin = ({onLogin, onBack}) => {
           await db.perfil.add({ ...data, patient_id: data.patient_id, synced: 1 });
           setTimeout(()=>onLogin(clean, data),300);
         } else {
-          // Not in perfis — check profissionais
+          // Not in perfis â€” check profissionais
           const { data: pro } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
           if(pro){
-            // Professional found — redirect to FichaMedica with pre-filled data
+            // Professional found â€” redirect to FichaMedica with pre-filled data
             sessionStorage.setItem('autocadastro_pro', JSON.stringify(pro));
             setMsg('Profissional encontrado! Redirecionando para cadastro...');
             setTimeout(() => { window.location.href = '../profissionais/profissionais.html?autocadastro=1'; }, 800);
           } else {
-            setMsg('CPF não encontrado. Solicite ao profissional o seu cadastro.');
+            setMsg('CPF nÃ£o encontrado. Solicite ao profissional o seu cadastro.');
           }
         }
-      } catch { setMsg('Erro de conexão.'); }
-    } else { setMsg('Offline: CPF não encontrado.'); }
+      } catch { setMsg('Erro de conexÃ£o.'); }
+    } else { setMsg('Offline: CPF nÃ£o encontrado.'); }
     setChecking(false);
   };
   
   return (
     <div className="p-6 fade-in pt-20">
-      <h2 className="text-2xl font-bold mb-2">Acesso Usuário do SUS</h2>
+      <h2 className="text-2xl font-bold mb-2">Acesso UsuÃ¡rio do SUS</h2>
       <p className="text-gray-500 mb-6">Digite seu CPF para entrar</p>
       <input className="input-box text-center text-xl font-bold" value={cpf} onChange={e=>setCpf(mascaraCPF(e.target.value))} placeholder="000.000.000-00" inputMode="numeric" maxLength={14} />
       <button className="btn-primary mb-3" disabled={checking} onClick={tryLogin}>{checking?'VERIFICANDO...':'ENTRAR'}</button>
@@ -569,7 +569,7 @@ const PatientLogin = ({onLogin, onBack}) => {
   );
 };
 
-// Menu Principal do Usuário
+// Menu Principal do UsuÃ¡rio
 const PatientMainMenu = ({ user, onSelect, onLogout }) => {
   const normalizar = (v) => String(v || '').trim().toLowerCase();
   const isSim = (v) => ['sim','s','true','1'].includes(normalizar(v));
@@ -600,7 +600,7 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
         if (!monitors.length) {
           setDiasInativo(999);
           setMostrarAlertaInatividade(true);
-          notifyUser('Tecendo Saúde', 'Você ainda não registrou nenhum monitoramento. Atualize seus dados de saúde!', 'inatividade_' + patientId);
+          notifyUser('Tecendo SaÃºde', 'VocÃª ainda nÃ£o registrou nenhum monitoramento. Atualize seus dados de saÃºde!', 'inatividade_' + patientId);
           localStorage.setItem(dailyKey, '1');
           return;
         }
@@ -611,7 +611,7 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
         setDiasInativo(diffDias);
         if (diffDias >= DIAS_LIMITE_INATIVIDADE) {
           setMostrarAlertaInatividade(true);
-          notifyUser('Tecendo Saúde - Lembrete', `Faz ${diffDias} dias que você não atualiza seus dados. Registre sua pressão e glicemia!`, 'inatividade_' + patientId);
+          notifyUser('Tecendo SaÃºde - Lembrete', `Faz ${diffDias} dias que vocÃª nÃ£o atualiza seus dados. Registre sua pressÃ£o e glicemia!`, 'inatividade_' + patientId);
         }
         localStorage.setItem(dailyKey, '1');
       } catch {}
@@ -623,79 +623,79 @@ const PatientMainMenu = ({ user, onSelect, onLogout }) => {
     <div className="p-6 fade-in">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-800">Olá, {user.nome?.split(' ')[0] || 'Usuário'}</h1>
+          <h1 className="text-2xl font-extrabold text-slate-800">OlÃ¡, {user.nome?.split(' ')[0] || 'UsuÃ¡rio'}</h1>
           <div className="text-sm font-bold text-green-600">{user.regiao || ''}</div>
         </div>
         <button onClick={onLogout} className="bg-red-50 text-red-500 px-4 py-2 rounded-lg font-bold text-xs">SAIR</button>
       </div>
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
-        <div className="text-sm font-bold text-emerald-800 mb-1">🔔 Lembrete diário</div>
-        <div className="text-xs text-emerald-700">Verifique sua saúde e atualize seu monitoramento.</div>
+        <div className="text-sm font-bold text-emerald-800 mb-1">ðŸ”” Lembrete diÃ¡rio</div>
+        <div className="text-xs text-emerald-700">Verifique sua saÃºde e atualize seu monitoramento.</div>
       </div>
       {mostrarAlertaInatividade && (
         <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 mb-4 animate-pulse">
           <div className="flex items-start gap-3">
-            <div className="text-3xl">⚠️</div>
+            <div className="text-3xl">âš ï¸</div>
             <div>
               <div className="font-extrabold text-red-800 text-sm">
-                {diasInativo >= 999 ? 'Você ainda não registrou nenhum monitoramento!' : `Faz ${diasInativo} dias sem atualizar seus dados!`}
+                {diasInativo >= 999 ? 'VocÃª ainda nÃ£o registrou nenhum monitoramento!' : `Faz ${diasInativo} dias sem atualizar seus dados!`}
               </div>
-              <div className="text-xs text-red-600 mt-1">Registre sua pressão, glicemia e peso para acompanharmos sua saúde.</div>
+              <div className="text-xs text-red-600 mt-1">Registre sua pressÃ£o, glicemia e peso para acompanharmos sua saÃºde.</div>
               <button onClick={() => onSelect('saude')} className="mt-2 bg-red-600 text-white px-4 py-2 rounded-lg text-xs font-bold">
-                REGISTRAR AGORA →
+                REGISTRAR AGORA â†’
               </button>
             </div>
           </div>
         </div>
       )}
-      <div className="section-title">O que você deseja fazer?</div>
+      <div className="section-title">O que vocÃª deseja fazer?</div>
       <div className="space-y-3">
         <button className="big-btn" onClick={() => onSelect('saude')}>
-          <div className="big-btn-icon bg-emerald-100">❤️</div>
-          <div className="font-bold text-lg text-slate-800">Pressão e Glicemia</div>
+          <div className="big-btn-icon bg-emerald-100">â¤ï¸</div>
+          <div className="font-bold text-lg text-slate-800">PressÃ£o e Glicemia</div>
           <div className="text-gray-400 text-sm">Registre PA, peso, glicemia</div>
         </button>
         <button className="big-btn" onClick={() => onSelect('monitoramento')}>
-          <div className="big-btn-icon bg-indigo-100">📊</div>
+          <div className="big-btn-icon bg-indigo-100">ðŸ“Š</div>
           <div className="font-bold text-lg text-slate-800">Meu Monitoramento</div>
-          <div className="text-gray-400 text-sm">Veja seus gráficos e evolução</div>
+          <div className="text-gray-400 text-sm">Veja seus grÃ¡ficos e evoluÃ§Ã£o</div>
         </button>
         {mostrarGestacao && (
           <button className="big-btn" onClick={() => onSelect('gestacao')}>
-            <div className="big-btn-icon bg-pink-100">🤰</div>
-            <div className="font-bold text-lg text-slate-800">Acompanhamento da Gestação</div>
-            <div className="text-gray-400 text-sm">Peso gestacional, semanas e pré-natal</div>
+            <div className="big-btn-icon bg-pink-100">ðŸ¤°</div>
+            <div className="font-bold text-lg text-slate-800">Acompanhamento da GestaÃ§Ã£o</div>
+            <div className="text-gray-400 text-sm">Peso gestacional, semanas e prÃ©-natal</div>
           </button>
         )}
         {mostrarCrianca && (
           <button className="big-btn" onClick={() => onSelect('crianca')}>
-            <div className="big-btn-icon bg-blue-100">👶</div>
-            <div className="font-bold text-lg text-slate-800">Acompanhamento da Criança</div>
-            <div className="text-gray-400 text-sm">Vacinas e saúde dos filhos</div>
+            <div className="big-btn-icon bg-blue-100">ðŸ‘¶</div>
+            <div className="font-bold text-lg text-slate-800">Acompanhamento da CrianÃ§a</div>
+            <div className="text-gray-400 text-sm">Vacinas e saÃºde dos filhos</div>
           </button>
         )}
         <button className="big-btn" onClick={() => onSelect('chat')}>
-          <div className="big-btn-icon bg-amber-100">💬</div>
+          <div className="big-btn-icon bg-amber-100">ðŸ’¬</div>
           <div className="font-bold text-lg text-slate-800">Converse Conosco</div>
-          <div className="text-gray-400 text-sm">Mensagens para a equipe de saúde</div>
+          <div className="text-gray-400 text-sm">Mensagens para a equipe de saÃºde</div>
         </button>
         <button className="big-btn" onClick={() => onSelect('satisfacao')}>
-          <div className="big-btn-icon bg-violet-100">⭐</div>
-          <div className="font-bold text-lg text-slate-800">Satisfação com o APP</div>
-          <div className="text-gray-400 text-sm">Avalie sua experiência com o aplicativo</div>
+          <div className="big-btn-icon bg-violet-100">â­</div>
+          <div className="font-bold text-lg text-slate-800">SatisfaÃ§Ã£o com o APP</div>
+          <div className="text-gray-400 text-sm">Avalie sua experiÃªncia com o aplicativo</div>
         </button>
       </div>
     </div>
   );
 };
 
-// Acompanhamento Pressão e Glicemia
+// Acompanhamento PressÃ£o e Glicemia
 const AcompanhamentoSaude = ({ user, onBack }) => {
   const ATIVIDADES_OPCOES = [
     { value: 'caminhada', label: 'Caminhada' },
     { value: 'corrida', label: 'Corrida' },
-    { value: 'natacao', label: 'Natação' },
-    { value: 'musculacao', label: 'Musculação' },
+    { value: 'natacao', label: 'NataÃ§Ã£o' },
+    { value: 'musculacao', label: 'MusculaÃ§Ã£o' },
     { value: 'yoga', label: 'Yoga' },
     { value: 'outro', label: 'Outro' }
   ];
@@ -718,7 +718,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
         setLastData({ pa: remoteLast.pa_sistolica, paDiastolica: remoteLast.pa_diastolica, peso: remoteLast.peso_kg, glicemia: remoteLast.glicemia_mg, atividade: remoteLast.atividade_fisica || '', updated_at: remoteLast.created_at || remoteLast.updated_at });
         setLastAt(remoteLast.created_at || remoteLast.updated_at);
         if (isCriticalHealth(remoteLast.pa_sistolica, remoteLast.glicemia_mg)) {
-          notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${remoteLast.created_at || remoteLast.updated_at || ''}`);
+          notifyUser('Alerta de SaÃºde', 'Seus dados indicam valores crÃ­ticos. Procure atendimento se necessÃ¡rio.', `saude_${patientKey}_${remoteLast.created_at || remoteLast.updated_at || ''}`);
         }
         return;
       }
@@ -730,7 +730,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
       setLastData({ pa: last.pa_sistolica, paDiastolica: last.pa_diastolica, peso: last.peso_kg, glicemia: last.glicemia_mg, atividade: last.atividade_fisica || '', updated_at: last.created_at });
       setLastAt(last.created_at);
       if (isCriticalHealth(last.pa_sistolica, last.glicemia_mg)) {
-        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${last.created_at || ''}`);
+        notifyUser('Alerta de SaÃºde', 'Seus dados indicam valores crÃ­ticos. Procure atendimento se necessÃ¡rio.', `saude_${patientKey}_${last.created_at || ''}`);
       }
     };
     load();
@@ -786,23 +786,23 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
     const toNum = v => { const n = Number(String(v).replace(',', '.')); return Number.isFinite(n) ? n : null; };
     const sys = toNum(bpMax), dia = toNum(bpMin), w = toNum(peso), g = toNum(glicemia);
     const atividadeConcatenada = atividade.join('|') || null;
-    if(sys === null || w === null || g === null) return alert('Preencha PA Máxima, Peso e Glicemia.');
+    if(sys === null || w === null || g === null) return alert('Preencha PA MÃ¡xima, Peso e Glicemia.');
     setSaving(true);
     try {
       const rid = uuidv4(), now = new Date().toISOString();
       const gestacaoInfo = await calcularGestacaoDinamicaRegistro(patientKey, now);
       const jejumVal = glicemiaJejum || null;
-      const localId = await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}${jejumVal ? (jejumVal === 'jejum' ? ' (jejum)' : ' (pós-refeição)') : ''}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, glicemia_jejum: jejumVal, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
-      await enviarRegistroSupabase({ id: localId, registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}${jejumVal ? (jejumVal === 'jejum' ? ' (jejum)' : ' (pós-refeição)') : ''}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, glicemia_jejum: jejumVal, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
+      const localId = await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}${jejumVal ? (jejumVal === 'jejum' ? ' (jejum)' : ' (pÃ³s-refeiÃ§Ã£o)') : ''}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, glicemia_jejum: jejumVal, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
+      await enviarRegistroSupabase({ id: localId, registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: `PA: ${sys}/${dia||'-'} | Peso: ${w}kg | Glicemia: ${g}${jejumVal ? (jejumVal === 'jejum' ? ' (jejum)' : ' (pÃ³s-refeiÃ§Ã£o)') : ''}`, tipo: 'monitoramento', status: 'pendente', created_at: now, updated_at: now, pa_sistolica: sys, pa_diastolica: dia, peso_kg: w, glicemia_mg: g, glicemia_jejum: jejumVal, gestante: gestacaoInfo.gestante, gestacao_semanas: gestacaoInfo.gestacao_semanas, atividade_fisica: atividadeConcatenada });
       await syncRegistrosSupabase(patientKey);
       setLastData({ pa: sys, paDiastolica: dia, peso: w, glicemia: g, atividade: atividadeConcatenada || '', updated_at: now });
       setLastAt(now);
       const isCriticoAtual = isCriticalHealth(sys, g);
       if (isCriticoAtual) {
-        alert('🚨 Foi identificado registro crítico, procure atendimento médico mais próximo.');
-        notifyUser('Alerta de Saúde', 'Seus dados indicam valores críticos. Procure atendimento se necessário.', `saude_${patientKey}_${now}`);
+        alert('ðŸš¨ Foi identificado registro crÃ­tico, procure atendimento mÃ©dico mais prÃ³ximo.');
+        notifyUser('Alerta de SaÃºde', 'Seus dados indicam valores crÃ­ticos. Procure atendimento se necessÃ¡rio.', `saude_${patientKey}_${now}`);
       } else {
-        alert('✅ Monitoramento salvo!');
+        alert('âœ… Monitoramento salvo!');
       }
       setBpMax(''); setBpMin(''); setPeso(''); setGlicemia(''); setAtividade([]); setGlicemiaJejum('');
       syncManager();
@@ -812,34 +812,34 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
   return (
     <div className="p-5 fade-in min-h-screen">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
-        <h2 className="text-xl font-bold">Pressão e Glicemia</h2>
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">â†</button>
+        <h2 className="text-xl font-bold">PressÃ£o e Glicemia</h2>
       </div>
       <HealthStatusCard pa={lastData?.pa} paDiastolica={lastData?.paDiastolica} glicemia={lastData?.glicemia} peso={lastData?.peso} atividade={lastData?.atividade} lastUpdate={lastData?.updated_at} />
       <div className="bg-white border border-emerald-100 rounded-2xl p-5 shadow-sm mb-6">
-        <h3 className="text-lg font-extrabold text-emerald-900 mb-1">Monitoramento diário</h3>
+        <h3 className="text-lg font-extrabold text-emerald-900 mb-1">Monitoramento diÃ¡rio</h3>
         <p className="text-sm text-emerald-700 mb-4">Preencha os novos valores</p>
         <div className="grid grid-cols-2 gap-3">
-          <div><label className="text-xs text-slate-500 font-semibold">PA Máxima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMax} onChange={e=>setBpMax(e.target.value)} placeholder="Ex.: 120" /></div>
-          <div><label className="text-xs text-slate-500 font-semibold">PA Mínima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMin} onChange={e=>setBpMin(e.target.value)} placeholder="Ex.: 80" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">PA MÃ¡xima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMax} onChange={e=>setBpMax(e.target.value)} placeholder="Ex.: 120" /></div>
+          <div><label className="text-xs text-slate-500 font-semibold">PA MÃ­nima (mmHg)</label><input className="input-box" type="number" inputMode="numeric" value={bpMin} onChange={e=>setBpMin(e.target.value)} placeholder="Ex.: 80" /></div>
           <div><label className="text-xs text-slate-500 font-semibold">Peso (kg)</label><input className="input-box" type="number" step="0.1" inputMode="decimal" value={peso} onChange={e=>setPeso(e.target.value)} placeholder="Ex.: 70" /></div>
           <div><label className="text-xs text-slate-500 font-semibold">Glicemia (mg/dL)</label><input className="input-box" type="number" inputMode="numeric" value={glicemia} onChange={e=>setGlicemia(e.target.value)} placeholder="Ex.: 100" /></div>
         </div>
         <div className="mt-2">
-          <label className="text-xs text-slate-500 font-semibold block mb-1">Condição da Glicemia</label>
+          <label className="text-xs text-slate-500 font-semibold block mb-1">CondiÃ§Ã£o da Glicemia</label>
           <div className="flex gap-3">
             <label className={`flex-1 flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-3 text-sm font-bold cursor-pointer transition-all ${glicemiaJejum === 'jejum' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500'}`}>
               <input type="radio" name="jejum" className="hidden" checked={glicemiaJejum === 'jejum'} onChange={() => setGlicemiaJejum('jejum')} />
-              🍽️ Em Jejum
+              ðŸ½ï¸ Em Jejum
             </label>
             <label className={`flex-1 flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-3 text-sm font-bold cursor-pointer transition-all ${glicemiaJejum === 'pos_refeicao' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 bg-white text-slate-500'}`}>
               <input type="radio" name="jejum" className="hidden" checked={glicemiaJejum === 'pos_refeicao'} onChange={() => setGlicemiaJejum('pos_refeicao')} />
-              🥗 Pós-refeição
+              ðŸ¥— PÃ³s-refeiÃ§Ã£o
             </label>
           </div>
         </div>
         <div className="mt-2">
-          <label className="text-xs text-slate-500 font-semibold block mb-2">Atividade Física</label>
+          <label className="text-xs text-slate-500 font-semibold block mb-2">Atividade FÃ­sica</label>
           <div className="grid grid-cols-2 gap-2">
             {ATIVIDADES_OPCOES.map(opcao => (
               <label key={opcao.value} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
@@ -859,7 +859,7 @@ const AcompanhamentoSaude = ({ user, onBack }) => {
   );
 };
 
-// Meu Monitoramento - Gráficos do Paciente (offline via Dexie)
+// Meu Monitoramento - GrÃ¡ficos do Paciente (offline via Dexie)
 const MeuMonitoramento = ({ user, onBack }) => {
   const patientKey = user.patient_id || 'cpf-' + user.cpf;
   const [registros, setRegistros] = useState([]);
@@ -918,8 +918,8 @@ const MeuMonitoramento = ({ user, onBack }) => {
         data: {
           labels,
           datasets: [
-            { label: 'PA Máxima', data: hist.map(r => r.pa_sistolica || null), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', tension: 0.4, pointRadius: 4, fill: false },
-            { label: 'PA Mínima', data: hist.map(r => r.pa_diastolica || null), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.4, pointRadius: 4, fill: false }
+            { label: 'PA MÃ¡xima', data: hist.map(r => r.pa_sistolica || null), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', tension: 0.4, pointRadius: 4, fill: false },
+            { label: 'PA MÃ­nima', data: hist.map(r => r.pa_diastolica || null), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', tension: 0.4, pointRadius: 4, fill: false }
           ]
         },
         plugins,
@@ -966,7 +966,7 @@ const MeuMonitoramento = ({ user, onBack }) => {
                 afterLabel: (item) => {
                   const r = hist[item.dataIndex];
                   if (r?.glicemia_jejum === 'jejum') return '(Em jejum)';
-                  if (r?.glicemia_jejum === 'pos_refeicao') return '(Pós-refeição)';
+                  if (r?.glicemia_jejum === 'pos_refeicao') return '(PÃ³s-refeiÃ§Ã£o)';
                   return '';
                 }
               }
@@ -1021,7 +1021,7 @@ const MeuMonitoramento = ({ user, onBack }) => {
   return (
     <div className="p-5 fade-in min-h-screen pb-20">
       <div className="flex items-center gap-4 mb-4">
-        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">â†</button>
         <h2 className="text-xl font-bold">Meu Monitoramento</h2>
       </div>
 
@@ -1029,9 +1029,9 @@ const MeuMonitoramento = ({ user, onBack }) => {
 
       {!loading && registros.length === 0 && (
         <div className="card text-center py-12">
-          <div className="text-5xl mb-3">📊</div>
+          <div className="text-5xl mb-3">ðŸ“Š</div>
           <div className="text-slate-500 font-bold">Nenhum registro encontrado</div>
-          <div className="text-sm text-slate-400 mt-1">Registre sua pressão e glicemia para ver os gráficos aqui</div>
+          <div className="text-sm text-slate-400 mt-1">Registre sua pressÃ£o e glicemia para ver os grÃ¡ficos aqui</div>
         </div>
       )}
 
@@ -1044,11 +1044,11 @@ const MeuMonitoramento = ({ user, onBack }) => {
               <div className="text-xl font-extrabold text-slate-800">{hist.length}</div>
             </div>
             <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
-              <div className="text-[10px] text-slate-500 font-bold uppercase">PA Média</div>
+              <div className="text-[10px] text-slate-500 font-bold uppercase">PA MÃ©dia</div>
               <div className="text-xl font-extrabold text-red-500">{mediaPA}</div>
             </div>
             <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
-              <div className="text-[10px] text-slate-500 font-bold uppercase">Glic. Média</div>
+              <div className="text-[10px] text-slate-500 font-bold uppercase">Glic. MÃ©dia</div>
               <div className="text-xl font-extrabold text-blue-500">{mediaGlic}</div>
             </div>
           </div>
@@ -1063,42 +1063,42 @@ const MeuMonitoramento = ({ user, onBack }) => {
             ))}
           </div>
 
-          {hist.length < 1 && <div className="card text-center py-8 text-slate-400">Sem dados no período selecionado</div>}
+          {hist.length < 1 && <div className="card text-center py-8 text-slate-400">Sem dados no perÃ­odo selecionado</div>}
 
           {hist.length >= 1 && (
             <>
               {/* PA Chart */}
               <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
-                <h3 className="text-sm font-extrabold text-slate-700 mb-2">📈 Pressão Arterial</h3>
+                <h3 className="text-sm font-extrabold text-slate-700 mb-2">ðŸ“ˆ PressÃ£o Arterial</h3>
                 <div style={{height: '220px'}}><canvas ref={chartSaudeRef}></canvas></div>
               </div>
 
               {/* Glicemia Chart */}
               <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
-                <h3 className="text-sm font-extrabold text-slate-700 mb-2">🩸 Glicemia</h3>
+                <h3 className="text-sm font-extrabold text-slate-700 mb-2">ðŸ©¸ Glicemia</h3>
                 <div className="flex gap-3 mb-2">
                   <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Jejum</span>
-                  <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Pós-refeição</span>
-                  <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Não informado</span>
+                  <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> PÃ³s-refeiÃ§Ã£o</span>
+                  <span className="text-[10px] font-bold flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> NÃ£o informado</span>
                 </div>
                 <div style={{height: '220px'}}><canvas ref={chartGlicRef}></canvas></div>
               </div>
 
               {/* Peso Chart */}
               <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
-                <h3 className="text-sm font-extrabold text-slate-700 mb-2">⚖️ Peso</h3>
+                <h3 className="text-sm font-extrabold text-slate-700 mb-2">âš–ï¸ Peso</h3>
                 <div style={{height: '200px'}}><canvas ref={chartPesoRef}></canvas></div>
               </div>
             </>
           )}
         </>
       )}
-      <button className="btn-sec mt-2" onClick={onBack}>← Voltar</button>
+      <button className="btn-sec mt-2" onClick={onBack}>â† Voltar</button>
     </div>
   );
 };
 
-// Acompanhamento da Gestação (com suporte a Puerpério/Pós-parto)
+// Acompanhamento da GestaÃ§Ã£o (com suporte a PuerpÃ©rio/PÃ³s-parto)
 const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
   const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   const parseSemana = (value) => {
@@ -1220,7 +1220,7 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
     const bebe = {
       id: partoId,
       origem: 'parto',
-      nome: 'Bebê com nascimento informado',
+      nome: 'BebÃª com nascimento informado',
       idade: '0',
       nascimento: dataParto,
       peso_nascimento: pesoRecemNascido,
@@ -1231,7 +1231,7 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
     };
     return [bebe, ...filhosAtuais.filter(f => f?.id !== partoId && !(f?.origem === 'parto' && f?.nascimento === dataParto))];
   };
-  const previsao = user.previsao_parto || 'Não informado';
+  const previsao = user.previsao_parto || 'NÃ£o informado';
   const pesoInicial = parsePeso(user.peso_inicial);
   const pesoAtual = pesoAtualCalc || pesoInicial;
   const ganho = pesoAtual - pesoInicial;
@@ -1259,7 +1259,7 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
       const rid = uuidv4(), now = new Date().toISOString();
       const perfilUpdates = {
         ...info,
-        gestante: 'Não',
+        gestante: 'NÃ£o',
         gestacao_semanas: '',
         previsao_parto: '',
         synced: 0,
@@ -1275,7 +1275,7 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
           const { error } = await supabase.from('perfis').update(supabasePayload).eq('patient_id', patientKey);
           if (error) {
             await supabase.from('perfis').update({
-              gestante: 'Não',
+              gestante: 'NÃ£o',
               gestacao_semanas: '',
               previsao_parto: '',
               updated_at: now
@@ -1285,14 +1285,14 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
       }
       if (typeof onUserUpdate === 'function') onUserUpdate(perfilUpdates);
 
-      const texto = `Parto registrado em ${dataParto}. Local: ${localNascimento || 'N/I'}. Peso bebê: ${pesoRecemNascido || 'N/I'}g, Altura: ${alturaBebe || 'N/I'}cm. Amamentando: ${amamentando || 'N/I'}. Vacinas maternidade: ${vacinasStr}. Teste do pezinho: ${testePezinho || 'N/I'}. Consulta puerperal: ${consultaPuerperal || 'N/I'}`;
+      const texto = `Parto registrado em ${dataParto}. Local: ${localNascimento || 'N/I'}. Peso bebÃª: ${pesoRecemNascido || 'N/I'}g, Altura: ${alturaBebe || 'N/I'}cm. Amamentando: ${amamentando || 'N/I'}. Vacinas maternidade: ${vacinasStr}. Teste do pezinho: ${testePezinho || 'N/I'}. Consulta puerperal: ${consultaPuerperal || 'N/I'}`;
       await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0 });
       await enviarRegistroSupabase({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now });
 
       setModoPuerpero(true);
       const dpMs = new Date(dataParto).getTime();
       if (dpMs > 0) setDiasPosParto(Math.floor((Date.now() - dpMs) / 86400000));
-      alert('✅ Parto registrado com sucesso!');
+      alert('âœ… Parto registrado com sucesso!');
     } catch { alert('Erro ao registrar.'); }
     setSalvandoPuerpero(false);
   };
@@ -1302,10 +1302,10 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
     setSalvandoPuerpero(true);
     try {
       const rid = uuidv4(), now = new Date().toISOString();
-      const texto = `Puerpério dia ${diasPosParto}: Humor: ${humorMae || 'N/I'}. ${notasPuerpero || ''}`.trim();
+      const texto = `PuerpÃ©rio dia ${diasPosParto}: Humor: ${humorMae || 'N/I'}. ${notasPuerpero || ''}`.trim();
       await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0 });
       await enviarRegistroSupabase({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'puerpero', status: 'pendente', created_at: now, updated_at: now });
-      alert('✅ Registro de puerpério salvo!');
+      alert('âœ… Registro de puerpÃ©rio salvo!');
       setHumorMae(''); setNotasPuerpero('');
     } catch { alert('Erro ao salvar.'); }
     setSalvandoPuerpero(false);
@@ -1313,15 +1313,15 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
   
   return (
     <div className="p-5 fade-in min-h-screen">
-      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button><h2 className="text-xl font-bold">{modoPuerpero ? 'Puerpério / Pós-parto' : 'Gestação'}</h2></div>
+      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">â†</button><h2 className="text-xl font-bold">{modoPuerpero ? 'PuerpÃ©rio / PÃ³s-parto' : 'GestaÃ§Ã£o'}</h2></div>
 
       {!modoPuerpero ? (
         <>
           <div className="status-card" style={{background: 'linear-gradient(135deg, #fff 0%, #fdf2f8 100%)', borderColor: '#fbcfe8'}}>
-            <div className="text-center mb-4"><div className="text-5xl mb-2">🤰</div><h3 className="text-2xl font-extrabold text-pink-700">{semanas} semanas</h3></div>
+            <div className="text-center mb-4"><div className="text-5xl mb-2">ðŸ¤°</div><h3 className="text-2xl font-extrabold text-pink-700">{semanas} semanas</h3></div>
             <div className="metric-grid">
-              <div className="metric-item bg-pink-50"><div className="metric-label">Previsão Parto</div><div className="metric-value text-base text-pink-700">{previsao}</div></div>
-              <div className="metric-item bg-pink-50"><div className="metric-label">Pré-natal</div><div className={`metric-value text-base ${fazPreNatal ? 'text-emerald-600' : 'text-amber-600'}`}>{fazPreNatal ? '✅ Em dia' : '⚠️ Pendente'}</div></div>
+              <div className="metric-item bg-pink-50"><div className="metric-label">PrevisÃ£o Parto</div><div className="metric-value text-base text-pink-700">{previsao}</div></div>
+              <div className="metric-item bg-pink-50"><div className="metric-label">PrÃ©-natal</div><div className={`metric-value text-base ${fazPreNatal ? 'text-emerald-600' : 'text-amber-600'}`}>{fazPreNatal ? 'âœ… Em dia' : 'âš ï¸ Pendente'}</div></div>
               <div className="metric-item"><div className="metric-label">Peso Inicial</div><div className="metric-value">{pesoInicial || '--'} kg</div></div>
               <div className="metric-item"><div className="metric-label">Ganho de Peso</div><div className="metric-value">{ganho > 0 ? '+' : ''}{ganho.toFixed(1)} kg</div></div>
             </div>
@@ -1329,23 +1329,23 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
 
           {semanas >= 36 && (
             <div className="bg-pink-50 border-2 border-pink-300 rounded-xl p-4 mt-4">
-              <h4 className="font-extrabold text-pink-800 mb-2">🎉 Registrar Parto</h4>
-              <p className="text-xs text-pink-600 mb-3">Quando o bebê nascer, informe aqui para iniciar o acompanhamento pós-parto.</p>
+              <h4 className="font-extrabold text-pink-800 mb-2">ðŸŽ‰ Registrar Parto</h4>
+              <p className="text-xs text-pink-600 mb-3">Quando o bebÃª nascer, informe aqui para iniciar o acompanhamento pÃ³s-parto.</p>
               <label className="text-xs text-slate-500 font-semibold">Data do parto</label>
               <input type="date" className="input-box" value={dataParto} onChange={e => setDataParto(e.target.value)} />
-              <label className="text-xs text-slate-500 font-semibold">Peso do bebê (gramas)</label>
+              <label className="text-xs text-slate-500 font-semibold">Peso do bebÃª (gramas)</label>
               <input type="number" className="input-box" inputMode="numeric" placeholder="Ex: 3200" value={pesoRecemNascido} onChange={e => setPesoRecemNascido(e.target.value)} />
-              <label className="text-xs text-slate-500 font-semibold">Altura do bebê (cm)</label>
+              <label className="text-xs text-slate-500 font-semibold">Altura do bebÃª (cm)</label>
               <input type="number" className="input-box" inputMode="numeric" placeholder="Ex: 49" value={alturaBebe} onChange={e => setAlturaBebe(e.target.value)} />
               <label className="text-xs text-slate-500 font-semibold">Local do nascimento</label>
-              <input className="input-box" placeholder="Ex: Hospital Municipal de Rurópolis" value={localNascimento} onChange={e => setLocalNascimento(e.target.value)} />
-              <label className="text-xs text-slate-500 font-semibold">Está amamentando?</label>
+              <input className="input-box" placeholder="Ex: Hospital Municipal de RurÃ³polis" value={localNascimento} onChange={e => setLocalNascimento(e.target.value)} />
+              <label className="text-xs text-slate-500 font-semibold">EstÃ¡ amamentando?</label>
               <div className="flex gap-3 mb-3">
                 <label className={`flex-1 text-center py-2 rounded-xl border-2 font-bold text-sm cursor-pointer ${amamentando === 'sim' ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 text-slate-500'}`}>
                   <input type="radio" name="amament" className="hidden" checked={amamentando === 'sim'} onChange={() => setAmamentando('sim')} /> Sim
                 </label>
                 <label className={`flex-1 text-center py-2 rounded-xl border-2 font-bold text-sm cursor-pointer ${amamentando === 'nao' ? 'border-pink-500 bg-pink-50 text-pink-700' : 'border-slate-200 text-slate-500'}`}>
-                  <input type="radio" name="amament" className="hidden" checked={amamentando === 'nao'} onChange={() => setAmamentando('nao')} /> Não
+                  <input type="radio" name="amament" className="hidden" checked={amamentando === 'nao'} onChange={() => setAmamentando('nao')} /> NÃ£o
                 </label>
               </div>
               <div className="section-title" style={{fontSize:'12px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', margin:'16px 0 8px'}}>Vacinas na Maternidade</div>
@@ -1357,13 +1357,13 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
                   </label>
                 ))}
               </div>
-              <div className="section-title" style={{fontSize:'12px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', margin:'16px 0 8px'}}>Volta à UBS</div>
+              <div className="section-title" style={{fontSize:'12px', fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', margin:'16px 0 8px'}}>Volta Ã  UBS</div>
               <label className="text-xs text-slate-500 font-semibold">Teste do Pezinho</label>
               <select className="input-box" value={testePezinho} onChange={e => setTestePezinho(e.target.value)}>
                 <option value="">Selecione...</option>
-                <option value="realizado">✅ Realizado</option>
-                <option value="agendado">📅 Agendado</option>
-                <option value="pendente">⏳ Pendente</option>
+                <option value="realizado">âœ… Realizado</option>
+                <option value="agendado">ðŸ“… Agendado</option>
+                <option value="pendente">â³ Pendente</option>
               </select>
               {testePezinho === 'agendado' && (
                 <>
@@ -1374,9 +1374,9 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
               <label className="text-xs text-slate-500 font-semibold">Consulta Puerperal</label>
               <select className="input-box" value={consultaPuerperal} onChange={e => setConsultaPuerperal(e.target.value)}>
                 <option value="">Selecione...</option>
-                <option value="realizada">✅ Realizada</option>
-                <option value="agendada">📅 Agendada</option>
-                <option value="pendente">⏳ Pendente</option>
+                <option value="realizada">âœ… Realizada</option>
+                <option value="agendada">ðŸ“… Agendada</option>
+                <option value="pendente">â³ Pendente</option>
               </select>
               {consultaPuerperal === 'agendada' && (
                 <>
@@ -1385,19 +1385,19 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
                 </>
               )}
               <button className="btn-primary" style={{background: 'linear-gradient(135deg, #ec4899, #be185d)', marginTop:'12px'}} disabled={salvandoPuerpero} onClick={registrarParto}>
-                {salvandoPuerpero ? 'SALVANDO...' : '🎉 REGISTRAR PARTO'}
+                {salvandoPuerpero ? 'SALVANDO...' : 'ðŸŽ‰ REGISTRAR PARTO'}
               </button>
             </div>
           )}
         </>
       ) : (
         <>
-          {/* Puerpério / Pós-parto View */}
+          {/* PuerpÃ©rio / PÃ³s-parto View */}
           <div className="status-card" style={{background: 'linear-gradient(135deg, #fff 0%, #fce7f3 100%)', borderColor: '#f9a8d4'}}>
             <div className="text-center mb-4">
-              <div className="text-5xl mb-2">👶🤱</div>
-              <h3 className="text-xl font-extrabold text-pink-700">Puerpério</h3>
-              {dataParto && <div className="text-sm text-pink-600 font-bold">{diasPosParto} dias pós-parto</div>}
+              <div className="text-5xl mb-2">ðŸ‘¶ðŸ¤±</div>
+              <h3 className="text-xl font-extrabold text-pink-700">PuerpÃ©rio</h3>
+              {dataParto && <div className="text-sm text-pink-600 font-bold">{diasPosParto} dias pÃ³s-parto</div>}
             </div>
             <div className="metric-grid">
               <div className="metric-item bg-pink-50">
@@ -1406,17 +1406,17 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
               </div>
               <div className="metric-item bg-pink-50">
                 <div className="metric-label">Amamentando</div>
-                <div className="metric-value text-base">{amamentando === 'sim' ? '🤱 Sim' : amamentando === 'nao' ? '❌ Não' : '--'}</div>
+                <div className="metric-value text-base">{amamentando === 'sim' ? 'ðŸ¤± Sim' : amamentando === 'nao' ? 'âŒ NÃ£o' : '--'}</div>
               </div>
               {pesoRecemNascido && (
                 <div className="metric-item">
-                  <div className="metric-label">Peso Bebê</div>
+                  <div className="metric-label">Peso BebÃª</div>
                   <div className="metric-value">{pesoRecemNascido}g</div>
                 </div>
               )}
               {alturaBebe && (
                 <div className="metric-item">
-                  <div className="metric-label">Altura Bebê</div>
+                  <div className="metric-label">Altura BebÃª</div>
                   <div className="metric-value">{alturaBebe}cm</div>
                 </div>
               )}
@@ -1431,12 +1431,12 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
 
           {/* Birth/Baby Info Button */}
           <button onClick={() => setShowInfoParto(!showInfoParto)} className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-2xl p-4 mt-3 shadow-md" style={{border:'none', cursor:'pointer', fontWeight:800, fontSize:'15px', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px'}}>
-            🏥 {showInfoParto ? 'Ocultar' : 'Ver'} Informações do Parto e Bebê
+            ðŸ¥ {showInfoParto ? 'Ocultar' : 'Ver'} InformaÃ§Ãµes do Parto e BebÃª
           </button>
 
           {showInfoParto && (
             <div className="bg-white border-2 border-pink-200 rounded-2xl p-5 mt-3 shadow-sm fade-in">
-              <h4 className="font-extrabold text-pink-800 mb-4 text-base">🏥 Informações do Parto e Nascimento</h4>
+              <h4 className="font-extrabold text-pink-800 mb-4 text-base">ðŸ¥ InformaÃ§Ãµes do Parto e Nascimento</h4>
               
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="bg-pink-50 rounded-xl p-3">
@@ -1445,33 +1445,33 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
                 </div>
                 <div className="bg-pink-50 rounded-xl p-3">
                   <div className="text-xs text-pink-400 font-bold uppercase">Local</div>
-                  <div className="font-bold text-pink-800">{localNascimento || 'Não informado'}</div>
+                  <div className="font-bold text-pink-800">{localNascimento || 'NÃ£o informado'}</div>
                 </div>
                 <div className="bg-pink-50 rounded-xl p-3">
-                  <div className="text-xs text-pink-400 font-bold uppercase">Peso Bebê</div>
+                  <div className="text-xs text-pink-400 font-bold uppercase">Peso BebÃª</div>
                   <div className="font-bold text-pink-800">{pesoRecemNascido ? `${pesoRecemNascido}g` : '--'}</div>
                 </div>
                 <div className="bg-pink-50 rounded-xl p-3">
-                  <div className="text-xs text-pink-400 font-bold uppercase">Altura Bebê</div>
+                  <div className="text-xs text-pink-400 font-bold uppercase">Altura BebÃª</div>
                   <div className="font-bold text-pink-800">{alturaBebe ? `${alturaBebe}cm` : '--'}</div>
                 </div>
               </div>
 
-              <h5 className="font-bold text-slate-700 text-sm mb-2">💉 Vacinas na Maternidade</h5>
+              <h5 className="font-bold text-slate-700 text-sm mb-2">ðŸ’‰ Vacinas na Maternidade</h5>
               <div className="flex flex-col gap-2 mb-4">
                 {[{key:'bcg', label:'BCG (tuberculose)'}, {key:'hepatiteB', label:'Hepatite B'}, {key:'vitamK', label:'Vitamina K'}].map(v => (
                   <div key={v.key} className="flex items-center gap-2 text-sm">
-                    <span className={`text-lg ${vacinasMaternidade[v.key] ? '✅' : '⬜'}`}>{vacinasMaternidade[v.key] ? '✅' : '⬜'}</span>
+                    <span className={`text-lg ${vacinasMaternidade[v.key] ? 'âœ…' : 'â¬œ'}`}>{vacinasMaternidade[v.key] ? 'âœ…' : 'â¬œ'}</span>
                     <span className={vacinasMaternidade[v.key] ? 'text-emerald-700 font-bold' : 'text-slate-400'}>{v.label}</span>
                   </div>
                 ))}
               </div>
 
-              <h5 className="font-bold text-slate-700 text-sm mb-2">🏥 Volta à UBS</h5>
+              <h5 className="font-bold text-slate-700 text-sm mb-2">ðŸ¥ Volta Ã  UBS</h5>
               <div className="grid grid-cols-1 gap-3">
                 <div className={`rounded-xl p-3 border-2 ${testePezinho === 'realizado' ? 'bg-emerald-50 border-emerald-200' : testePezinho === 'agendado' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{testePezinho === 'realizado' ? '✅' : testePezinho === 'agendado' ? '📅' : '⏳'}</span>
+                    <span className="text-lg">{testePezinho === 'realizado' ? 'âœ…' : testePezinho === 'agendado' ? 'ðŸ“…' : 'â³'}</span>
                     <div>
                       <div className="font-bold text-sm">Teste do Pezinho</div>
                       <div className="text-xs text-slate-500">{testePezinho === 'realizado' ? 'Realizado' : testePezinho === 'agendado' ? `Agendado${dataTestePezinho ? ' - ' + new Date(dataTestePezinho + 'T12:00:00').toLocaleDateString('pt-BR') : ''}` : 'Pendente'}</div>
@@ -1480,7 +1480,7 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
                 </div>
                 <div className={`rounded-xl p-3 border-2 ${consultaPuerperal === 'realizada' ? 'bg-emerald-50 border-emerald-200' : consultaPuerperal === 'agendada' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{consultaPuerperal === 'realizada' ? '✅' : consultaPuerperal === 'agendada' ? '📅' : '⏳'}</span>
+                    <span className="text-lg">{consultaPuerperal === 'realizada' ? 'âœ…' : consultaPuerperal === 'agendada' ? 'ðŸ“…' : 'â³'}</span>
                     <div>
                       <div className="font-bold text-sm">Consulta Puerperal</div>
                       <div className="text-xs text-slate-500">{consultaPuerperal === 'realizada' ? 'Realizada' : consultaPuerperal === 'agendada' ? `Agendada${dataConsultaPuerperal ? ' - ' + new Date(dataConsultaPuerperal + 'T12:00:00').toLocaleDateString('pt-BR') : ''}` : 'Pendente'}</div>
@@ -1491,27 +1491,27 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
             </div>
           )}
 
-          {/* Puerpério alerts */}
+          {/* PuerpÃ©rio alerts */}
           {diasPosParto <= 42 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-3 mb-3">
               <div className="flex items-start gap-3">
-                <div className="text-2xl">⚠️</div>
+                <div className="text-2xl">âš ï¸</div>
                 <div>
-                  <div className="font-bold text-amber-800 text-sm">Período pós-parto ({diasPosParto <= 7 ? 'Imediato' : diasPosParto <= 42 ? 'Tardio' : 'Remoto'})</div>
+                  <div className="font-bold text-amber-800 text-sm">PerÃ­odo pÃ³s-parto ({diasPosParto <= 7 ? 'Imediato' : diasPosParto <= 42 ? 'Tardio' : 'Remoto'})</div>
                   <div className="text-xs text-amber-600 mt-1">
-                    {diasPosParto <= 7 ? 'Atenção especial: sangramentos, febre, dor intensa. Procure a UBS se necessário.' : 'Continue acompanhando sua saúde e a do bebê. Agende consulta pós-parto na UBS.'}
+                    {diasPosParto <= 7 ? 'AtenÃ§Ã£o especial: sangramentos, febre, dor intensa. Procure a UBS se necessÃ¡rio.' : 'Continue acompanhando sua saÃºde e a do bebÃª. Agende consulta pÃ³s-parto na UBS.'}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Daily puerpério log */}
+          {/* Daily puerpÃ©rio log */}
           <div className="bg-white border border-pink-100 rounded-2xl p-5 shadow-sm mt-3">
-            <h3 className="text-base font-extrabold text-pink-900 mb-3">📝 Registro diário - Puerpério</h3>
-            <label className="text-xs text-slate-500 font-semibold block mb-1">Como você está se sentindo?</label>
+            <h3 className="text-base font-extrabold text-pink-900 mb-3">ðŸ“ Registro diÃ¡rio - PuerpÃ©rio</h3>
+            <label className="text-xs text-slate-500 font-semibold block mb-1">Como vocÃª estÃ¡ se sentindo?</label>
             <div className="flex gap-2 mb-3 flex-wrap">
-              {['😊 Bem', '😐 Normal', '😔 Triste', '😰 Ansiosa', '😡 Irritada', '😴 Cansada'].map(opt => {
+              {['ðŸ˜Š Bem', 'ðŸ˜ Normal', 'ðŸ˜” Triste', 'ðŸ˜° Ansiosa', 'ðŸ˜¡ Irritada', 'ðŸ˜´ Cansada'].map(opt => {
                 const val = opt.split(' ')[1];
                 return (
                   <button key={opt} onClick={() => setHumorMae(val)}
@@ -1521,21 +1521,21 @@ const AcompanhamentoGestacao = ({ user, onBack, onUserUpdate }) => {
                 );
               })}
             </div>
-            <label className="text-xs text-slate-500 font-semibold block mb-1">Observações (sintomas, dúvidas)</label>
-            <textarea className="input-box" placeholder="Ex.: Dor na cesárea, amamentação difícil..." value={notasPuerpero} onChange={e => setNotasPuerpero(e.target.value)} rows={3} />
+            <label className="text-xs text-slate-500 font-semibold block mb-1">ObservaÃ§Ãµes (sintomas, dÃºvidas)</label>
+            <textarea className="input-box" placeholder="Ex.: Dor na cesÃ¡rea, amamentaÃ§Ã£o difÃ­cil..." value={notasPuerpero} onChange={e => setNotasPuerpero(e.target.value)} rows={3} />
             <button className="btn-primary mt-2" style={{background: 'linear-gradient(135deg, #ec4899, #be185d)'}} disabled={salvandoPuerpero} onClick={salvarNotaPuerpero}>
-              {salvandoPuerpero ? 'SALVANDO...' : '💾 SALVAR REGISTRO'}
+              {salvandoPuerpero ? 'SALVANDO...' : 'ðŸ’¾ SALVAR REGISTRO'}
             </button>
           </div>
         </>
       )}
 
-      <button className="btn-sec mt-4" onClick={onBack}>← Voltar</button>
+      <button className="btn-sec mt-4" onClick={onBack}>â† Voltar</button>
     </div>
   );
 };
 
-// Acompanhamento da Criança
+// Acompanhamento da CrianÃ§a
 const AcompanhamentoCrianca = ({ user, onBack }) => {
   const patientKey = user.patient_id || user.patient_id || 'cpf-' + user.cpf;
   let filhos = []; try { filhos = user.filhos_json ? JSON.parse(user.filhos_json) : []; } catch {}
@@ -1557,7 +1557,7 @@ const AcompanhamentoCrianca = ({ user, onBack }) => {
       filhos = [{
         id: partoId,
         origem: 'parto',
-        nome: 'Bebê com nascimento informado',
+        nome: 'BebÃª com nascimento informado',
         idade: '0',
         nascimento: user.data_parto,
         peso_nascimento: user.peso_bebe || user.peso_recem_nascido || '',
@@ -1577,30 +1577,30 @@ const AcompanhamentoCrianca = ({ user, onBack }) => {
 
   return (
     <div className="p-5 fade-in min-h-screen">
-      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button><h2 className="text-xl font-bold">Crianças e adolescentes</h2></div>
-      {criancas.length === 0 && <div className="card text-center py-8"><div className="text-4xl mb-3">👶</div><div className="text-slate-500">Nenhuma criança/adolescente menor de 18 anos cadastrada</div></div>}
+      <div className="flex items-center gap-4 mb-6"><button onClick={onBack} className="text-2xl font-bold text-gray-400">â†</button><h2 className="text-xl font-bold">CrianÃ§as e adolescentes</h2></div>
+      {criancas.length === 0 && <div className="card text-center py-8"><div className="text-4xl mb-3">ðŸ‘¶</div><div className="text-slate-500">Nenhuma crianÃ§a/adolescente menor de 18 anos cadastrada</div></div>}
       <div className="space-y-3">
         {criancas.map((f, idx) => {
           const isBebeParto = f?.origem === 'parto';
           return (
             <div key={f.id || idx} className={`card border-2 ${isBebeParto ? 'border-pink-100 bg-pink-50' : 'border-blue-100'}`}>
-              <div className="font-bold text-slate-800 text-lg">{f.nome || (isBebeParto ? 'Bebê com nascimento informado' : `Filho ${idx+1}`)}</div>
-              <div className="text-sm text-slate-500">{isBebeParto ? (f.nascimento ? `Nascimento: ${formatarNascimento(f.nascimento)}` : 'Recém-nascido') : `${f.idade} anos`}</div>
+              <div className="font-bold text-slate-800 text-lg">{f.nome || (isBebeParto ? 'BebÃª com nascimento informado' : `Filho ${idx+1}`)}</div>
+              <div className="text-sm text-slate-500">{isBebeParto ? (f.nascimento ? `Nascimento: ${formatarNascimento(f.nascimento)}` : 'RecÃ©m-nascido') : `${f.idade} anos`}</div>
               {isBebeParto && (f.peso_nascimento || f.altura_nascimento) && (
                 <div className="mt-2 text-sm text-slate-600">
                   {f.peso_nascimento ? <span className="font-bold">Peso: {f.peso_nascimento}g</span> : null}
-                  {f.peso_nascimento && f.altura_nascimento ? ' • ' : ''}
+                  {f.peso_nascimento && f.altura_nascimento ? ' â€¢ ' : ''}
                   {f.altura_nascimento ? <span className="font-bold">Altura: {f.altura_nascimento}cm</span> : null}
                 </div>
               )}
               {isBebeParto && f.local_nascimento && <div className="mt-1 text-sm text-slate-500">Local: {f.local_nascimento}</div>}
-<div className="mt-2 text-sm">Vacina: <span className="font-bold">{f.vacinaStatus || 'Não informado'}</span></div>
-{f.vacinaStatus === 'Atrasada' && <div className="mt-1 text-xs text-red-700">Última vacina em atraso: <span className="font-bold">{f.vacinaAtraso || 'Não informado'}</span></div>}
+<div className="mt-2 text-sm">Vacina: <span className="font-bold">{f.vacinaStatus || 'NÃ£o informado'}</span></div>
+{f.vacinaStatus === 'Atrasada' && <div className="mt-1 text-xs text-red-700">Ãšltima vacina em atraso: <span className="font-bold">{f.vacinaAtraso || 'NÃ£o informado'}</span></div>}
             </div>
           );
         })}
       </div>
-      <button className="btn-sec mt-4" onClick={onBack}>← Voltar</button>
+      <button className="btn-sec mt-4" onClick={onBack}>â† Voltar</button>
     </div>
   );
 };// ==========================================
@@ -1631,7 +1631,7 @@ const ConverseConosco = ({ user, onBack }) => {
     setLoading(true);
     await syncRegistrosSupabase(patientKey);
     const regs = await db.registros.where('patient_id').equals(patientKey).toArray();
-    // Filtra apenas conversas (monitoramento só se tiver resposta do profissional)
+    // Filtra apenas conversas (monitoramento sÃ³ se tiver resposta do profissional)
     const seenRegistro = new Set();
     const msgs = regs.filter(r => {
       const registro_id = r.registro_id || r.registro_id;
@@ -1651,17 +1651,17 @@ const ConverseConosco = ({ user, onBack }) => {
     const lista = msgs.map(r => {
       const replies = normalizeReplies(r);
       const proReplies = replies.filter(rep => rep.from === 'pro');
-      // Pega último profissional real (não genérico)
-      const realProReply = proReplies.slice().reverse().find(rep => rep.pro_name && rep.pro_name !== 'Equipe de Saúde');
+      // Pega Ãºltimo profissional real (nÃ£o genÃ©rico)
+      const realProReply = proReplies.slice().reverse().find(rep => rep.pro_name && rep.pro_name !== 'Equipe de SaÃºde');
       const ultimaResposta = proReplies.slice(-1)[0];
       const ultimaData = ultimaResposta?.at || r.resposta_data || r.updated_at || r.updated_at || r.created_at || r.created_at;
       const registro_id = r.registro_id || r.registro_id;
       const lidoLocal = isRead(registro_id, ultimaData);
       const temNovaMensagem = (ultimaResposta || r.resposta) && !lidoLocal;
-      const proNome = realProReply?.pro_name || ultimaResposta?.pro_name || r.pro_name || 'Equipe de Saúde';
+      const proNome = realProReply?.pro_name || ultimaResposta?.pro_name || r.pro_name || 'Equipe de SaÃºde';
       
       let resumo = r.texto || '';
-      if (!resumo && r.tipo === 'midia') resumo = '📎 Mídia enviada';
+      if (!resumo && r.tipo === 'midia') resumo = 'ðŸ“Ž MÃ­dia enviada';
       if (r.resposta) resumo = r.resposta;
       if (ultimaResposta?.text) resumo = ultimaResposta.text;
       
@@ -1676,7 +1676,7 @@ const ConverseConosco = ({ user, onBack }) => {
 
     lista.forEach(conv => {
       if (conv.temNovaMensagem) {
-        notifyUser(`Nova mensagem de ${conv.proNome}`, conv.resumo || 'Você recebeu uma nova mensagem.', `chat_${conv.registro_id || conv.registro_id}_${conv.ultimaData || ''}`);
+        notifyUser(`Nova mensagem de ${conv.proNome}`, conv.resumo || 'VocÃª recebeu uma nova mensagem.', `chat_${conv.registro_id || conv.registro_id}_${conv.ultimaData || ''}`);
       }
     });
 
@@ -1722,16 +1722,16 @@ const ConverseConosco = ({ user, onBack }) => {
   return (
     <div className="p-5 fade-in min-h-screen pb-32">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">â†</button>
         <h2 className="text-xl font-bold">Minhas Conversas</h2>
       </div>
       
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
         <div className="flex items-center gap-3">
-          <div className="text-2xl">💬</div>
+          <div className="text-2xl">ðŸ’¬</div>
           <div>
-            <div className="font-bold text-amber-800">Converse com a equipe de saúde</div>
-            <div className="text-xs text-amber-600">Envie dúvidas, fotos, vídeos ou áudios</div>
+            <div className="font-bold text-amber-800">Converse com a equipe de saÃºde</div>
+            <div className="text-xs text-amber-600">Envie dÃºvidas, fotos, vÃ­deos ou Ã¡udios</div>
           </div>
         </div>
       </div>
@@ -1740,7 +1740,7 @@ const ConverseConosco = ({ user, onBack }) => {
       
       {!loading && conversas.length === 0 && (
         <div className="text-center py-12">
-          <div className="text-5xl mb-4">💬</div>
+          <div className="text-5xl mb-4">ðŸ’¬</div>
           <div className="text-gray-500 mb-2">Nenhuma conversa ainda</div>
           <div className="text-sm text-gray-400">Inicie uma nova conversa</div>
         </div>
@@ -1759,7 +1759,7 @@ const ConverseConosco = ({ user, onBack }) => {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-800">{conv.proNome}</span>
-                    {conv.temNovaMensagem && <span className="new-badge">✉ Nova mensagem</span>}
+                    {conv.temNovaMensagem && <span className="new-badge">âœ‰ Nova mensagem</span>}
                   </div>
                   <div className="text-sm text-slate-500 mt-1">{conv.resumo || 'Mensagem'}</div>
                 </div>
@@ -1777,7 +1777,7 @@ const ConverseConosco = ({ user, onBack }) => {
   );
 };
 
-// Botão/Form para Nova Conversa
+// BotÃ£o/Form para Nova Conversa
 const NovaConversaButton = ({ patientKey, onCreated }) => {
   const [showForm, setShowForm] = useState(false);
   const [txt, setTxt] = useState('');
@@ -1811,7 +1811,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopRecording(); return 60; } return p + 1; }), 1000);
-    } catch (error) { alert(`Erro ao acessar microfone: ${error.message || 'indisponível'}`); }
+    } catch (error) { alert(`Erro ao acessar microfone: ${error.message || 'indisponÃ­vel'}`); }
   };
 
   const stopRecording = () => {
@@ -1828,7 +1828,7 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: mode === 'video' });
       streamRef.current = stream;
       videoRef.current && (videoRef.current.srcObject = stream);
-    } catch { alert('Câmera indisponível'); setShowCamera(false); }
+    } catch { alert('CÃ¢mera indisponÃ­vel'); setShowCamera(false); }
   };
 
   const stopCamera = () => {
@@ -1879,22 +1879,22 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
     setSending(true);
     try {
       const rid = uuidv4(), now = new Date().toISOString();
-      const autoReply = { from: 'pro', text: AUTO_REPLY_TEXT, at: now, pro_name: 'Equipe de Saúde' };
-      await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: txt.trim() || (files.length ? 'Mídia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', created_at: now, updated_at: now, replies: [autoReply], synced: 0 });
+      const autoReply = { from: 'pro', text: AUTO_REPLY_TEXT, at: now, pro_name: 'Equipe de SaÃºde' };
+      await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto: txt.trim() || (files.length ? 'MÃ­dia enviada' : ''), tipo: files.length ? 'midia' : 'texto', status: 'pendente', created_at: now, updated_at: now, replies: [autoReply], synced: 0 });
       for(const item of files) await db.midias.add({ registro_id: rid, name: item.file.name, type: item.file.type, blob: item.file, synced: 0 });
       syncManager();
       setTxt('');
       files.forEach(f => f.preview && URL.revokeObjectURL(f.preview));
       setFiles([]);
       setShowForm(false);
-      alert('✅ Mensagem enviada!');
+      alert('âœ… Mensagem enviada!');
       onCreated();
     } finally { setSending(false); }
   };
 
   const formatTime = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
 
-  if (!showForm) return <button onClick={() => setShowForm(true)} className="btn-primary">➕ Nova Conversa</button>;
+  if (!showForm) return <button onClick={() => setShowForm(true)} className="btn-primary">âž• Nova Conversa</button>;
 
   return (
     <div className="bg-white">
@@ -1903,34 +1903,34 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
           <video ref={videoRef} autoPlay playsInline muted style={{width:'100%',maxWidth:'400px',borderRadius:'16px',background:'#000'}} />
           <div className="flex gap-4 items-center">
             {cameraMode === 'photo' ? (
-              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-lg">📸</button>
+              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full flex items-center justify-center text-3xl shadow-lg">ðŸ“¸</button>
             ) : !isRecordingVideo ? (
-              <button onClick={startVideoRecording} className="w-16 h-16 bg-red-500 rounded-full text-white text-2xl shadow-lg">⏺️</button>
+              <button onClick={startVideoRecording} className="w-16 h-16 bg-red-500 rounded-full text-white text-2xl shadow-lg">âºï¸</button>
             ) : (
-              <button onClick={stopVideoRecording} className="w-16 h-16 bg-red-700 rounded-full text-white text-xl shadow-lg">⏹️ {formatTime(recordingTime)}</button>
+              <button onClick={stopVideoRecording} className="w-16 h-16 bg-red-700 rounded-full text-white text-xl shadow-lg">â¹ï¸ {formatTime(recordingTime)}</button>
             )}
-            <button onClick={stopCamera} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">✕</button>
+            <button onClick={stopCamera} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">âœ•</button>
           </div>
         </div>
       )}
       
       <div className="flex items-center justify-between mb-3">
         <span className="font-bold text-slate-700">Nova Conversa</span>
-        <button onClick={() => setShowForm(false)} className="text-slate-400 font-bold">✕</button>
+        <button onClick={() => setShowForm(false)} className="text-slate-400 font-bold">âœ•</button>
       </div>
       
       <div className="flex gap-2 mb-3">
-        <button onClick={() => openCamera('photo')} className="flex-1 bg-slate-100 rounded-xl p-3 text-center text-sm font-semibold text-slate-600">📷 Foto</button>
-        <button onClick={() => openCamera('video')} className="flex-1 bg-slate-100 rounded-xl p-3 text-center text-sm font-semibold text-slate-600">🎥 Vídeo</button>
+        <button onClick={() => openCamera('photo')} className="flex-1 bg-slate-100 rounded-xl p-3 text-center text-sm font-semibold text-slate-600">ðŸ“· Foto</button>
+        <button onClick={() => openCamera('video')} className="flex-1 bg-slate-100 rounded-xl p-3 text-center text-sm font-semibold text-slate-600">ðŸŽ¥ VÃ­deo</button>
       </div>
       
       {isRecording ? (
         <div className="bg-red-50 border-2 border-red-400 rounded-xl p-3 mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div><span className="font-bold text-red-700 text-sm">Gravando {formatTime(recordingTime)}/1:00</span></div>
-          <button onClick={stopRecording} className="bg-red-500 text-white px-3 py-1 rounded-lg font-bold text-sm">⏹️</button>
+          <button onClick={stopRecording} className="bg-red-500 text-white px-3 py-1 rounded-lg font-bold text-sm">â¹ï¸</button>
         </div>
       ) : (
-        <button onClick={startRecording} className="w-full bg-emerald-50 border border-emerald-200 rounded-xl p-2 mb-3 text-emerald-700 font-semibold text-sm">🎙️ Gravar Áudio (até 1 min)</button>
+        <button onClick={startRecording} className="w-full bg-emerald-50 border border-emerald-200 rounded-xl p-2 mb-3 text-emerald-700 font-semibold text-sm">ðŸŽ™ï¸ Gravar Ãudio (atÃ© 1 min)</button>
       )}
       
       {files.length > 0 && (
@@ -1938,16 +1938,16 @@ const NovaConversaButton = ({ patientKey, onCreated }) => {
           {files.map((item, idx) => (
             <div key={idx} className="bg-green-50 p-2 rounded-lg border border-green-200 text-xs flex items-center gap-2">
               {item.type === 'image' && <img src={item.preview} style={{width:'32px',height:'32px',objectFit:'cover',borderRadius:'4px'}} />}
-              {item.type === 'video' && <span>🎥</span>}
-              {item.type === 'audio' && <span>🎵</span>}
-              <button className="text-red-500 font-bold" onClick={()=>removeFile(idx)}>✕</button>
+              {item.type === 'video' && <span>ðŸŽ¥</span>}
+              {item.type === 'audio' && <span>ðŸŽµ</span>}
+              <button className="text-red-500 font-bold" onClick={()=>removeFile(idx)}>âœ•</button>
             </div>
           ))}
         </div>
       )}
       
       <textarea className="input-box mb-2" placeholder="Digite sua mensagem..." value={txt} onChange={e=>setTxt(e.target.value)} rows={2} />
-      <button className="btn-primary" disabled={sending || isRecording} onClick={handleSend}>{sending ? 'ENVIANDO...' : '📤 ENVIAR'}</button>
+      <button className="btn-primary" disabled={sending || isRecording} onClick={handleSend}>{sending ? 'ENVIANDO...' : 'ðŸ“¤ ENVIAR'}</button>
     </div>
   );
 };
@@ -1988,10 +1988,10 @@ const ChatConversa = ({ user, registro, onBack }) => {
   };
 
   const replies = normalizeReplies(registro);
-  // Pega o ÚLTIMO profissional que respondeu (ignorando "Equipe de Saúde" genérico se houver nome real)
+  // Pega o ÃšLTIMO profissional que respondeu (ignorando "Equipe de SaÃºde" genÃ©rico se houver nome real)
   const proReplies = replies.filter(r => r.from === 'pro');
-  const realProReply = proReplies.reverse().find(r => r.pro_name && r.pro_name !== 'Equipe de Saúde') || proReplies[0];
-  const proNome = realProReply?.pro_name || registro.pro_name || 'Equipe de Saúde';
+  const realProReply = proReplies.reverse().find(r => r.pro_name && r.pro_name !== 'Equipe de SaÃºde') || proReplies[0];
+  const proNome = realProReply?.pro_name || registro.pro_name || 'Equipe de SaÃºde';
 
   const carregarMensagens = useCallback(async () => {
     setLoading(true);
@@ -2029,7 +2029,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
     
     const reps = normalizeReplies(reg);
     reps.forEach(rep => {
-      const repMedia = Array.isArray(rep.media) ? rep.media.map(m => ({ type: m.type || '', name: m.name || 'mídia', url: m.url })) : [];
+      const repMedia = Array.isArray(rep.media) ? rep.media.map(m => ({ type: m.type || '', name: m.name || 'mÃ­dia', url: m.url })) : [];
       msgs.push({ from: rep.from === 'pro' ? 'pro' : 'user', text: rep.text || '', at: rep.at, media: repMedia, proName: rep.pro_name });
     });
     
@@ -2051,7 +2051,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
     return () => mediaUrlsRef.current.forEach(u => URL.revokeObjectURL(u));
   }, [carregarMensagens]);
 
-  // Funções de mídia
+  // FunÃ§Ãµes de mÃ­dia
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -2067,7 +2067,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime(p => { if (p >= 60) { stopRecording(); return 60; } return p + 1; }), 1000);
-    } catch (error) { alert(`Erro ao acessar microfone: ${error.message || 'indisponível'}`); }
+    } catch (error) { alert(`Erro ao acessar microfone: ${error.message || 'indisponÃ­vel'}`); }
   };
 
   const stopRecording = () => {
@@ -2084,7 +2084,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: mode === 'video' });
       streamRef.current = stream;
       videoRef.current && (videoRef.current.srcObject = stream);
-    } catch { alert('Câmera indisponível'); setShowCamera(false); }
+    } catch { alert('CÃ¢mera indisponÃ­vel'); setShowCamera(false); }
   };
 
   const stopCamera = () => {
@@ -2135,10 +2135,10 @@ const ChatConversa = ({ user, registro, onBack }) => {
     setSending(true);
     try {
       const now = new Date().toISOString();
-      // Sincronizar com Supabase antes para não perder respostas do profissional
+      // Sincronizar com Supabase antes para nÃ£o perder respostas do profissional
       await syncRegistrosSupabase(patientKey);
       const reg = await db.registros.where('registro_id').equals(regId).first();
-      if (!reg) { alert('Registro não encontrado'); return; }
+      if (!reg) { alert('Registro nÃ£o encontrado'); return; }
       
       const reps = Array.isArray(reg.replies) ? [...reg.replies] : [];
       const newReply = { from: 'user', text: txt.trim(), at: now, media: [] };
@@ -2164,11 +2164,11 @@ const ChatConversa = ({ user, registro, onBack }) => {
   return (
     <div className="fade-in min-h-screen flex flex-col" style={{background:'#f3fbf5'}}>
       <div className="bg-white border-b border-slate-200 p-4 flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">â†</button>
         <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold">{proNome.charAt(0)}</div>
         <div>
           <div className="font-bold text-slate-800">{proNome}</div>
-          <div className="text-xs text-slate-500">Equipe de Saúde</div>
+          <div className="text-xs text-slate-500">Equipe de SaÃºde</div>
         </div>
       </div>
       
@@ -2188,13 +2188,13 @@ const ChatConversa = ({ user, registro, onBack }) => {
                       if (tipo.startsWith('image') && media.url) return <img key={i} src={media.url} className="rounded-lg max-w-full" style={{maxHeight:'200px'}} />;
                       if (tipo.startsWith('video') && media.url) return <video key={i} controls src={media.url} className="rounded-lg max-w-full" style={{maxHeight:'200px'}} />;
                       if (tipo.startsWith('audio') && media.url) return <audio key={i} controls src={media.url} className="w-full" />;
-                      return <div key={i} className="bg-slate-100 p-2 rounded text-xs">📎 {media.name}</div>;
+                      return <div key={i} className="bg-slate-100 p-2 rounded text-xs">ðŸ“Ž {media.name}</div>;
                     })}
                   </div>
                 )}
                 <div className={`text-[10px] mt-1 ${m.from === 'user' ? 'text-emerald-600' : 'text-slate-400'} flex items-center gap-1 justify-end`}>
                   <span>{m.at ? formatDateISO(m.at) : ''}</span>
-                  {m.from === 'user' && <span className="text-[10px]">{m.read ? '✓✓' : '✓'}</span>}
+                  {m.from === 'user' && <span className="text-[10px]">{m.read ? 'âœ“âœ“' : 'âœ“'}</span>}
                 </div>
               </div>
             </div>
@@ -2207,25 +2207,25 @@ const ChatConversa = ({ user, registro, onBack }) => {
           <video ref={videoRef} autoPlay playsInline muted style={{width:'100%',maxWidth:'400px',borderRadius:'16px',background:'#000'}} />
           <div className="flex gap-4 items-center">
             {cameraMode === 'photo' ? (
-              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full text-3xl shadow-lg">📸</button>
+              <button onClick={takePhoto} className="w-16 h-16 bg-white rounded-full text-3xl shadow-lg">ðŸ“¸</button>
             ) : !isRecordingVideo ? (
-              <button onClick={startVideoRecording} className="w-16 h-16 bg-red-500 rounded-full text-white text-2xl shadow-lg">⏺️</button>
+              <button onClick={startVideoRecording} className="w-16 h-16 bg-red-500 rounded-full text-white text-2xl shadow-lg">âºï¸</button>
             ) : (
-              <button onClick={stopVideoRecording} className="w-16 h-16 bg-red-700 rounded-full text-white text-xl shadow-lg">⏹️ {formatTime(recordingTime)}</button>
+              <button onClick={stopVideoRecording} className="w-16 h-16 bg-red-700 rounded-full text-white text-xl shadow-lg">â¹ï¸ {formatTime(recordingTime)}</button>
             )}
-            <button onClick={stopCamera} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">✕</button>
+            <button onClick={stopCamera} className="w-12 h-12 bg-gray-600 rounded-full text-white text-lg">âœ•</button>
           </div>
         </div>
       )}
       
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 shadow-lg">
         <div className="flex gap-2 mb-2">
-          <button onClick={() => openCamera('photo')} className="flex-1 bg-slate-100 rounded-xl p-2 text-center text-xs font-semibold text-slate-600">📷</button>
-          <button onClick={() => openCamera('video')} className="flex-1 bg-slate-100 rounded-xl p-2 text-center text-xs font-semibold text-slate-600">🎥</button>
+          <button onClick={() => openCamera('photo')} className="flex-1 bg-slate-100 rounded-xl p-2 text-center text-xs font-semibold text-slate-600">ðŸ“·</button>
+          <button onClick={() => openCamera('video')} className="flex-1 bg-slate-100 rounded-xl p-2 text-center text-xs font-semibold text-slate-600">ðŸŽ¥</button>
           {isRecording ? (
-            <button onClick={stopRecording} className="flex-1 bg-red-500 rounded-xl p-2 text-center text-xs font-bold text-white">⏹️ {formatTime(recordingTime)}</button>
+            <button onClick={stopRecording} className="flex-1 bg-red-500 rounded-xl p-2 text-center text-xs font-bold text-white">â¹ï¸ {formatTime(recordingTime)}</button>
           ) : (
-            <button onClick={startRecording} className="flex-1 bg-emerald-100 rounded-xl p-2 text-center text-xs font-semibold text-emerald-700">🎙️</button>
+            <button onClick={startRecording} className="flex-1 bg-emerald-100 rounded-xl p-2 text-center text-xs font-semibold text-emerald-700">ðŸŽ™ï¸</button>
           )}
         </div>
         
@@ -2234,9 +2234,9 @@ const ChatConversa = ({ user, registro, onBack }) => {
             {files.map((item, idx) => (
               <div key={idx} className="bg-green-50 p-1 rounded border border-green-200 text-xs flex items-center gap-1">
                 {item.type === 'image' && <img src={item.preview} style={{width:'24px',height:'24px',objectFit:'cover',borderRadius:'2px'}} />}
-                {item.type === 'video' && <span>🎥</span>}
-                {item.type === 'audio' && <span>🎵</span>}
-                <button className="text-red-500 font-bold text-xs" onClick={()=>removeFile(idx)}>✕</button>
+                {item.type === 'video' && <span>ðŸŽ¥</span>}
+                {item.type === 'audio' && <span>ðŸŽµ</span>}
+                <button className="text-red-500 font-bold text-xs" onClick={()=>removeFile(idx)}>âœ•</button>
               </div>
             ))}
           </div>
@@ -2244,7 +2244,7 @@ const ChatConversa = ({ user, registro, onBack }) => {
         
         <div className="flex gap-2">
           <textarea className="input-box mb-0 flex-1" placeholder="Mensagem..." value={txt} onChange={e=>setTxt(e.target.value)} rows={1} style={{resize:'none'}} />
-          <button className="bg-emerald-500 text-white px-4 rounded-xl font-bold" disabled={sending || isRecording} onClick={handleSend}>{sending ? '...' : '➤'}</button>
+          <button className="bg-emerald-500 text-white px-4 rounded-xl font-bold" disabled={sending || isRecording} onClick={handleSend}>{sending ? '...' : 'âž¤'}</button>
         </div>
       </div>
     </div>
@@ -2263,7 +2263,7 @@ const ProAuth = ({onAuth, onBack, tipo}) => {
   const checkCpf = async () => {
     if(!cpf) return alert('Digite o CPF');
     const clean = cpf.replace(/\D/g,'');
-    if(clean.length !== 11) return alert('CPF inválido');
+    if(clean.length !== 11) return alert('CPF invÃ¡lido');
     setLoading(true);
     try {
       const { data: pro } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
@@ -2271,7 +2271,7 @@ const ProAuth = ({onAuth, onBack, tipo}) => {
         const proTipo = pro.tipo || 'acs';
         if(proTipo !== tipo){
           const outroLabel = tipoProfissionalLabel(proTipo);
-          setMsg(`Este CPF já está cadastrado como profissional ${outroLabel}. Não é possível acessar como ${tipoLabel}.`);
+          setMsg(`Este CPF jÃ¡ estÃ¡ cadastrado como profissional ${outroLabel}. NÃ£o Ã© possÃ­vel acessar como ${tipoLabel}.`);
           setLoading(false);
           return;
         }
@@ -2279,20 +2279,20 @@ const ProAuth = ({onAuth, onBack, tipo}) => {
       }
       const { data: paciente } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle();
       if(paciente){
-        setMsg('Este CPF pertence a um usuário do SUS. Acesso profissional não permitido.');
+        setMsg('Este CPF pertence a um usuÃ¡rio do SUS. Acesso profissional nÃ£o permitido.');
         setLoading(false);
         return;
       }
       setReg(r=>({...r, cpf: mascaraCPF(clean)}));
       setStep('register');
-      setMsg(`CPF não encontrado. Complete seu cadastro como profissional ${tipoLabel}.`);
+      setMsg(`CPF nÃ£o encontrado. Complete seu cadastro como profissional ${tipoLabel}.`);
     } catch { setReg(r=>({...r, cpf: mascaraCPF(clean)})); setStep('register'); setMsg('Offline. Cadastre-se.'); }
     setLoading(false);
   };
   
   const register = async () => {
     if(!reg.municipio || !reg.ubs || !reg.nome || !reg.telefone) return alert('Preencha todos os campos');
-    if(reg.municipio === 'Outro') return alert('Informe qual município profissional.');
+    if(reg.municipio === 'Outro') return alert('Informe qual municÃ­pio profissional.');
     if(reg.ubs === 'Outro') return alert('Informe qual UBS profissional.');
     setLoading(true);
     try {
@@ -2311,7 +2311,7 @@ const ProAuth = ({onAuth, onBack, tipo}) => {
       <div className="mb-4"><span style={{display:'inline-block', padding:'4px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:800, ...tipoProfissionalStyle(tipo)}}>{tipoLabel}</span></div>
       {msg && <div className="text-xs font-bold mb-4 text-blue-700 bg-blue-50 p-3 rounded-lg border border-blue-200">{msg}</div>}
       <div className="section-title">CPF</div><input className="input-box bg-gray-100" value={reg.cpf} disabled />
-      <div className="section-title">Município</div>
+      <div className="section-title">MunicÃ­pio</div>
       <select className="input-box" value={PROFISSIONAL_MUNICIPIOS.includes(reg.municipio) || reg.municipio === '' ? reg.municipio : 'Outro'} onChange={e=>{ const m = e.target.value; const ubsOpts = m ? getUbsByMunicipio(m) : []; const nextUbs = ubsOpts.length === 1 ? ubsOpts[0] : ''; setReg(prev => ({ ...prev, municipio: m, ubs: nextUbs })); }}>
         <option value="">Selecione...</option>
         {PROFISSIONAL_MUNICIPIOS.map(m => <option key={m} value={m}>{m}</option>)}
@@ -2319,8 +2319,8 @@ const ProAuth = ({onAuth, onBack, tipo}) => {
       </select>
       {(reg.municipio === 'Outro' || (reg.municipio && !PROFISSIONAL_MUNICIPIOS.includes(reg.municipio))) && (
         <>
-          <div className="section-title">Qual município profissional?</div>
-          <input className="input-box" value={reg.municipio === 'Outro' ? '' : reg.municipio} onChange={e=>setReg(prev => ({ ...prev, municipio: e.target.value, ubs: '' }))} placeholder="Informe o município" />
+          <div className="section-title">Qual municÃ­pio profissional?</div>
+          <input className="input-box" value={reg.municipio === 'Outro' ? '' : reg.municipio} onChange={e=>setReg(prev => ({ ...prev, municipio: e.target.value, ubs: '' }))} placeholder="Informe o municÃ­pio" />
         </>
       )}
       <div className="section-title">UBS</div>
@@ -2365,25 +2365,25 @@ const EditarPerfilProfissional = ({ user, onSave, onCancel, saving }) => {
   const escolherFoto = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) return alert('Selecione uma imagem válida.');
-    if (file.size > 2 * 1024 * 1024) return alert('Selecione uma imagem de até 2MB.');
-    try { const dataUrl = await fileToDataUrl(file); setPreview(dataUrl); setForm(prev => ({ ...prev, foto_url: dataUrl })); } catch { alert('Não foi possível carregar a foto.'); }
+    if (!file.type.startsWith('image/')) return alert('Selecione uma imagem vÃ¡lida.');
+    if (file.size > 2 * 1024 * 1024) return alert('Selecione uma imagem de atÃ© 2MB.');
+    try { const dataUrl = await fileToDataUrl(file); setPreview(dataUrl); setForm(prev => ({ ...prev, foto_url: dataUrl })); } catch { alert('NÃ£o foi possÃ­vel carregar a foto.'); }
   };
   const salvar = () => {
-    if (!form.nome || !form.municipio || !form.ubs || !form.telefone) return alert('Preencha nome, município, UBS e telefone.');
-    if (form.municipio === 'Outro') return alert('Informe qual município do profissional.');
+    if (!form.nome || !form.municipio || !form.ubs || !form.telefone) return alert('Preencha nome, municÃ­pio, UBS e telefone.');
+    if (form.municipio === 'Outro') return alert('Informe qual municÃ­pio do profissional.');
     if (form.ubs === 'Outro') return alert('Informe qual UBS do profissional.');
     onSave({ ...form, cpf: String(form.cpf || user?.cpf || '').replace(/\D/g, '') });
   };
   return (
     <div className="p-6 fade-in">
-      <div className="flex items-center gap-3 mb-4"><button onClick={onCancel} className="btn-sec w-auto px-4 py-2">← Voltar</button><h2 className="text-xl font-bold">Editar meus dados</h2></div>
+      <div className="flex items-center gap-3 mb-4"><button onClick={onCancel} className="btn-sec w-auto px-4 py-2">â† Voltar</button><h2 className="text-xl font-bold">Editar meus dados</h2></div>
       <div className="card">
-        <div className="flex items-center gap-4 mb-4"><div style={{width:76,height:76,borderRadius:'50%',overflow:'hidden',background:'#e8f5e9',border:'2px solid #bbf7d0',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{preview ? <img src={preview} alt="Foto do profissional" style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <img src="../img/logo.png" alt="Tecendo Saúde" style={{width:46,height:46,objectFit:'contain'}} />}</div><label className="btn-sec w-auto px-4 py-2" style={{margin:0,cursor:'pointer'}}>Alterar foto<input type="file" accept="image/*" onChange={escolherFoto} style={{display:'none'}} /></label></div>
+        <div className="flex items-center gap-4 mb-4"><div style={{width:76,height:76,borderRadius:'50%',overflow:'hidden',background:'#e8f5e9',border:'2px solid #bbf7d0',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{preview ? <img src={preview} alt="Foto do profissional" style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <img src="../img/logo.png" alt="Tecendo SaÃºde" style={{width:46,height:46,objectFit:'contain'}} />}</div><label className="btn-sec w-auto px-4 py-2" style={{margin:0,cursor:'pointer'}}>Alterar foto<input type="file" accept="image/*" onChange={escolherFoto} style={{display:'none'}} /></label></div>
         <div className="section-title">CPF</div><input className="input-box bg-gray-100" value={form.cpf} disabled />
-        <div className="section-title">Tipo de Profissional</div><select className="input-box" value={form.tipo} onChange={e=>updateField('tipo', e.target.value)}><option value="acs">Agente Comunitário de Saúde (ACS)</option><option value="tecnico_enfermagem">Técnico de Enfermagem</option><option value="telessaude">Telessaúde</option><option value="equipe_ubs">Profissional de Saúde (Equipe UBS / Coordenação)</option></select>
+        <div className="section-title">Tipo de Profissional</div><select className="input-box" value={form.tipo} onChange={e=>updateField('tipo', e.target.value)}><option value="acs">Agente ComunitÃ¡rio de SaÃºde (ACS)</option><option value="tecnico_enfermagem">TÃ©cnico de Enfermagem</option><option value="telessaude">TelessaÃºde</option><option value="equipe_ubs">Profissional de SaÃºde (Equipe UBS / CoordenaÃ§Ã£o)</option></select>
         <div className="section-title">Nome</div><input className="input-box" value={form.nome} onChange={e=>updateField('nome', e.target.value)} placeholder="Nome completo" />
-        <div className="section-title">Município</div>
+        <div className="section-title">MunicÃ­pio</div>
         <select className="input-box" value={PROFISSIONAL_MUNICIPIOS.includes(form.municipio) || form.municipio === '' ? form.municipio : 'Outro'} onChange={e=>updateField('municipio', e.target.value)}>
           <option value="">Selecione...</option>
           {PROFISSIONAL_MUNICIPIOS.map(m => <option key={m} value={m}>{m}</option>)}
@@ -2391,8 +2391,8 @@ const EditarPerfilProfissional = ({ user, onSave, onCancel, saving }) => {
         </select>
         {(form.municipio === 'Outro' || (form.municipio && !PROFISSIONAL_MUNICIPIOS.includes(form.municipio))) && (
           <>
-            <div className="section-title">Qual município do profissional?</div>
-            <input className="input-box" value={form.municipio === 'Outro' ? '' : form.municipio} onChange={e=>updateField('municipio', e.target.value)} placeholder="Informe o município" />
+            <div className="section-title">Qual municÃ­pio do profissional?</div>
+            <input className="input-box" value={form.municipio === 'Outro' ? '' : form.municipio} onChange={e=>updateField('municipio', e.target.value)} placeholder="Informe o municÃ­pio" />
           </>
         )}
         <div className="section-title">UBS</div>
@@ -2408,7 +2408,7 @@ const EditarPerfilProfissional = ({ user, onSave, onCancel, saving }) => {
           </>
         )}
         <div className="section-title">Telefone</div><input className="input-box" value={form.telefone} onChange={e=>updateField('telefone', mascaraTelefone(e.target.value))} placeholder="(91) 98765-4321" inputMode="tel" />
-        <button className="btn-primary mt-4" onClick={salvar} disabled={saving}>{saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}</button>
+        <button className="btn-primary mt-4" onClick={salvar} disabled={saving}>{saving ? 'SALVANDO...' : 'SALVAR ALTERAÃ‡Ã•ES'}</button>
       </div>
     </div>
   );
@@ -2438,28 +2438,28 @@ const ProDash = ({user, onLogout, onUserUpdate}) => {
       setProfissional(atualizado);
       sessionStorage.setItem('profissional', JSON.stringify(atualizado));
       if (typeof onUserUpdate === 'function') onUserUpdate(atualizado);
-      alert('✅ Cadastro profissional atualizado!');
+      alert('âœ… Cadastro profissional atualizado!');
       setMode('menu');
-    } catch (err) { alert('❌ Erro ao atualizar: ' + (err.message || 'tente novamente')); }
+    } catch (err) { alert('âŒ Erro ao atualizar: ' + (err.message || 'tente novamente')); }
     setSaving(false);
   };
   if (mode === 'editar_profissional') return <EditarPerfilProfissional user={profissional} saving={saving} onSave={savePerfilProfissional} onCancel={() => setMode('menu')} />;
   if (mode === 'gestao_usuarios') return <GestaoCoordenador profissional={profissional} onBack={() => setMode('menu')} />;
   return (
     <div className="p-6 fade-in">
-      <div className="flex justify-between items-center mb-8"><div><h2 className="text-xl font-bold flex items-center gap-2" style={{color:'var(--primary)'}}><img src={profissional.foto_url || "../img/logo.png"} alt="Profissional" className="w-8 h-8 rounded-full" style={{objectFit:'cover'}} />{profissional.enfermeira || profissional.nome}</h2><p className="text-gray-500 text-sm">{profissional.ubs} • {profissional.municipio}</p><span style={{display:'inline-block', marginTop:'4px', padding:'3px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:800, background: tipoCor.bg, color: tipoCor.color}}>Profissional {tipoLabel}</span></div><button onClick={onLogout} className="text-red-500 font-bold text-sm">SAIR</button></div>
+      <div className="flex justify-between items-center mb-8"><div><h2 className="text-xl font-bold flex items-center gap-2" style={{color:'var(--primary)'}}><img src={profissional.foto_url || "../img/logo.png"} alt="Profissional" className="w-8 h-8 rounded-full" style={{objectFit:'cover'}} />{profissional.enfermeira || profissional.nome}</h2><p className="text-gray-500 text-sm">{profissional.ubs} â€¢ {profissional.municipio}</p><span style={{display:'inline-block', marginTop:'4px', padding:'3px 10px', borderRadius:'20px', fontSize:'11px', fontWeight:800, background: tipoCor.bg, color: tipoCor.color}}>Profissional {tipoLabel}</span></div><button onClick={onLogout} className="text-red-500 font-bold text-sm">SAIR</button></div>
       <div className="grid gap-4">
-        <button className="big-btn" onClick={abrirNovoCadastro}><div className="big-btn-icon bg-emerald-100">📝</div><div className="font-bold text-lg">Novo Cadastro</div><div className="text-gray-400 text-sm">Cadastrar novo usuário do SUS</div></button>
-        <button className="big-btn" onClick={() => setMode('editar_profissional')}><div className="big-btn-icon bg-amber-100">👤</div><div className="font-bold text-lg">Editar meus dados</div><div className="text-gray-400 text-sm">Atualizar telefone, UBS, tipo e foto</div></button>
+        <button className="big-btn" onClick={abrirNovoCadastro}><div className="big-btn-icon bg-emerald-100">ðŸ“</div><div className="font-bold text-lg">Novo Cadastro</div><div className="text-gray-400 text-sm">Cadastrar novo usuÃ¡rio do SUS</div></button>
+        <button className="big-btn" onClick={() => setMode('editar_profissional')}><div className="big-btn-icon bg-amber-100">ðŸ‘¤</div><div className="font-bold text-lg">Editar meus dados</div><div className="text-gray-400 text-sm">Atualizar telefone, UBS, tipo e foto</div></button>
         {podeGerenciarUsuarios && (
-          <button className="big-btn" onClick={() => setMode('gestao_usuarios')}><div className="big-btn-icon bg-violet-100">🗂️</div><div className="font-bold text-lg">Gerenciar Usuários</div><div className="text-gray-400 text-sm">Usuários do SUS e profissionais</div></button>
-        )}        <button className="big-btn" onClick={abrirMonitoramento}><div className="big-btn-icon bg-blue-100">📊</div><div className="font-bold text-lg">Monitoramento</div><div className="text-gray-400 text-sm">{tipoAtual === 'telessaude' ? 'Dashboard completo — todos os pacientes' : 'Dashboard de acompanhamento'}</div></button>
+          <button className="big-btn" onClick={() => setMode('gestao_usuarios')}><div className="big-btn-icon bg-violet-100">ðŸ—‚ï¸</div><div className="font-bold text-lg">Gerenciar UsuÃ¡rios</div><div className="text-gray-400 text-sm">UsuÃ¡rios do SUS e profissionais</div></button>
+        )}        <button className="big-btn" onClick={abrirMonitoramento}><div className="big-btn-icon bg-blue-100">ðŸ“Š</div><div className="font-bold text-lg">Monitoramento</div><div className="text-gray-400 text-sm">{tipoAtual === 'telessaude' ? 'Dashboard completo â€” todos os pacientes' : 'Dashboard de acompanhamento'}</div></button>
       </div>
     </div>
   );
 };
 
-// Pesquisa de Satisfação
+// Pesquisa de SatisfaÃ§Ã£o
 const PesquisaSatisfacao = ({ user, onBack }) => {
   const patientKey = user.patient_id || 'cpf-' + user.cpf;
   const [nota, setNota] = useState(0);
@@ -2479,12 +2479,12 @@ const PesquisaSatisfacao = ({ user, onBack }) => {
     setSalvando(true);
     try {
       const rid = uuidv4(), now = new Date().toISOString();
-      const texto = `Pesquisa de Satisfação: Nota ${nota}/5. Facilidade: ${facilidade || 'N/I'}. Utilidade: ${utilidade || 'N/I'}. Sugestão: ${sugestao || 'Nenhuma'}`;
+      const texto = `Pesquisa de SatisfaÃ§Ã£o: Nota ${nota}/5. Facilidade: ${facilidade || 'N/I'}. Utilidade: ${utilidade || 'N/I'}. SugestÃ£o: ${sugestao || 'Nenhuma'}`;
       await db.registros.add({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'satisfacao', status: 'pendente', created_at: now, updated_at: now, replies: [], synced: 0 });
       await enviarRegistroSupabase({ registro_id: rid, patient_id: patientKey, device_id: 'dev', texto, tipo: 'satisfacao', status: 'pendente', created_at: now, updated_at: now });
       localStorage.setItem(`satisfacao_${patientKey}`, JSON.stringify({ nota, facilidade, utilidade, sugestao, data: now }));
       setEnviado(true);
-      alert('✅ Obrigado pela sua avaliação!');
+      alert('âœ… Obrigado pela sua avaliaÃ§Ã£o!');
     } catch { alert('Erro ao enviar. Tente novamente.'); }
     setSalvando(false);
   };
@@ -2492,22 +2492,22 @@ const PesquisaSatisfacao = ({ user, onBack }) => {
   return (
     <div className="p-5 fade-in min-h-screen">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={onBack} className="text-2xl font-bold text-gray-400">←</button>
-        <h2 className="text-xl font-bold">Satisfação com o APP</h2>
+        <button onClick={onBack} className="text-2xl font-bold text-gray-400">â†</button>
+        <h2 className="text-xl font-bold">SatisfaÃ§Ã£o com o APP</h2>
       </div>
 
       {enviado ? (
         <div className="text-center py-12">
-          <div className="text-6xl mb-4">🎉</div>
+          <div className="text-6xl mb-4">ðŸŽ‰</div>
           <h3 className="text-2xl font-extrabold text-emerald-700 mb-2">Obrigado!</h3>
-          <p className="text-slate-500">Sua avaliação foi registrada com sucesso.</p>
-          <button className="btn-sec mt-6" onClick={onBack}>← Voltar ao Menu</button>
+          <p className="text-slate-500">Sua avaliaÃ§Ã£o foi registrada com sucesso.</p>
+          <button className="btn-sec mt-6" onClick={onBack}>â† Voltar ao Menu</button>
         </div>
       ) : (
         <>
           <div className="bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-200 rounded-2xl p-6 mb-4">
-            <h3 className="font-extrabold text-violet-800 text-lg mb-2">⭐ Como você avalia o aplicativo Tecendo Saúde?</h3>
-            <p className="text-sm text-violet-600 mb-4">Sua opinião é muito importante para melhorarmos o atendimento.</p>
+            <h3 className="font-extrabold text-violet-800 text-lg mb-2">â­ Como vocÃª avalia o aplicativo Tecendo SaÃºde?</h3>
+            <p className="text-sm text-violet-600 mb-4">Sua opiniÃ£o Ã© muito importante para melhorarmos o atendimento.</p>
             <div className="flex justify-center gap-3 mb-4">
               {[1,2,3,4,5].map(n => (
                 <button
@@ -2520,7 +2520,7 @@ const PesquisaSatisfacao = ({ user, onBack }) => {
                     background: 'none', border: 'none', cursor: 'pointer',
                     transform: nota >= n ? 'scale(1.1)' : 'scale(1)'
                   }}>
-                  ⭐
+                  â­
                 </button>
               ))}
             </div>
@@ -2528,9 +2528,9 @@ const PesquisaSatisfacao = ({ user, onBack }) => {
           </div>
 
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-4">
-            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">O aplicativo é fácil de usar?</label>
+            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">O aplicativo Ã© fÃ¡cil de usar?</label>
             <div className="flex gap-2 flex-wrap mb-4">
-              {['Muito fácil', 'Fácil', 'Regular', 'Difícil', 'Muito difícil'].map(opt => (
+              {['Muito fÃ¡cil', 'FÃ¡cil', 'Regular', 'DifÃ­cil', 'Muito difÃ­cil'].map(opt => (
                 <button
                   key={opt}
                   onClick={() => setFacilidade(opt)}
@@ -2541,9 +2541,9 @@ const PesquisaSatisfacao = ({ user, onBack }) => {
               ))}
             </div>
 
-            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">O aplicativo ajuda no cuidado da sua saúde?</label>
+            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">O aplicativo ajuda no cuidado da sua saÃºde?</label>
             <div className="flex gap-2 flex-wrap mb-4">
-              {['Sim, muito', 'Sim, um pouco', 'Indiferente', 'Não muito', 'Não'].map(opt => (
+              {['Sim, muito', 'Sim, um pouco', 'Indiferente', 'NÃ£o muito', 'NÃ£o'].map(opt => (
                 <button
                   key={opt}
                   onClick={() => setUtilidade(opt)}
@@ -2554,10 +2554,10 @@ const PesquisaSatisfacao = ({ user, onBack }) => {
               ))}
             </div>
 
-            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">Sugestões ou comentários</label>
+            <label className="text-xs text-slate-500 font-bold uppercase block mb-2">SugestÃµes ou comentÃ¡rios</label>
             <textarea
               className="input-box"
-              placeholder="Deixe sua sugestão para melhorarmos o aplicativo..."
+              placeholder="Deixe sua sugestÃ£o para melhorarmos o aplicativo..."
               value={sugestao}
               onChange={e => setSugestao(e.target.value)}
               rows={3}
@@ -2565,9 +2565,9 @@ const PesquisaSatisfacao = ({ user, onBack }) => {
           </div>
 
           <button className="btn-primary" style={{background: 'linear-gradient(135deg, #7c3aed, #5b21b6)'}} disabled={salvando} onClick={enviar}>
-            {salvando ? 'ENVIANDO...' : '📨 ENVIAR AVALIAÇÃO'}
+            {salvando ? 'ENVIANDO...' : 'ðŸ“¨ ENVIAR AVALIAÃ‡ÃƒO'}
           </button>
-          <button className="btn-sec mt-3" onClick={onBack}>← Voltar</button>
+          <button className="btn-sec mt-3" onClick={onBack}>â† Voltar</button>
         </>
       )}
     </div>
@@ -2620,7 +2620,7 @@ const App = () => {
     return () => clearInterval(syncTimer);
   }, [user, pullAutomatico]);
 
-  // Background message check — notify even when NOT on chat screen
+  // Background message check â€” notify even when NOT on chat screen
   useEffect(() => {
     if (!user || IS_PROFISSIONAL) return;
     const patientKey = user.patient_id || 'cpf-' + user.cpf;
@@ -2649,9 +2649,9 @@ const App = () => {
           const readKey = `read_${r.registro_id}_${lastReply.at || r.updated_at}`;
           if (localStorage.getItem(readKey) === '1') return;
           localStorage.setItem(replyKey, '1');
-          const proName = lastReply.pro_name || r.pro_name || 'Equipe de Saúde';
-          const text = lastReply.text || 'Você recebeu uma nova mensagem.';
-          notifyUser(`💬 Nova mensagem de ${proName}`, text.substring(0, 100), `chat_bg_${r.registro_id}_${lastReply.at || ''}`);
+          const proName = lastReply.pro_name || r.pro_name || 'Equipe de SaÃºde';
+          const text = lastReply.text || 'VocÃª recebeu uma nova mensagem.';
+          notifyUser(`ðŸ’¬ Nova mensagem de ${proName}`, text.substring(0, 100), `chat_bg_${r.registro_id}_${lastReply.at || ''}`);
         });
       } catch {}
     };
@@ -2731,8 +2731,8 @@ const App = () => {
 
       const nomes = String(currentNomes || '').split('|').map(v => v.trim()).filter(Boolean).join(', ');
       const body = nomes
-        ? `Está na hora da medicação (${matchedHorario}): ${nomes}.`
-        : `Está na hora da medicação (${matchedHorario}).`;
+        ? `EstÃ¡ na hora da medicaÃ§Ã£o (${matchedHorario}): ${nomes}.`
+        : `EstÃ¡ na hora da medicaÃ§Ã£o (${matchedHorario}).`;
 
       // 1) Play audio alert
       tocarAlertaMedicacao();
@@ -2746,11 +2746,11 @@ const App = () => {
       setMedAlertaBanner({ texto: body, horario: matchedHorario });
 
       // 4) Show native notification
-      await notifyUser('💊 Alerta de Medicação', body, `med_${patientId}_${dia}_${matchedHorario}`);
+      await notifyUser('ðŸ’Š Alerta de MedicaÃ§Ã£o', body, `med_${patientId}_${dia}_${matchedHorario}`);
 
       // 5) Fallback: browser alert for devices without notification support
       if (!('Notification' in window) || Notification.permission !== 'granted') {
-        alert(`💊 ${body}`);
+        alert(`ðŸ’Š ${body}`);
       }
     };
 
@@ -2768,7 +2768,7 @@ const App = () => {
   const logout = () => { localStorage.clear(); sessionStorage.clear(); setUser(null); setRoute(IS_PROFISSIONAL ? 'pro_login' : 'login'); };
   const proLogin = (data) => { setUser(data); setRoute('pro_dash'); };
   
-  if(SUPABASE_CONFIG_MISSING) return (<div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center"><img src="../img/logo.png" alt="Tecendo Saúde" className="w-36 h-36 mb-6" /><h1 className="text-2xl font-extrabold text-green-900 mb-2">Configuração necessária</h1><p className="text-gray-600 mb-4">Configure env/env.js com SUPABASE_URL e SUPABASE_KEY.</p></div>);
+  if(SUPABASE_CONFIG_MISSING) return (<div className="flex flex-col items-center justify-center min-h-screen p-6 fade-in text-center"><img src="../img/logo.png" alt="Tecendo SaÃºde" className="w-36 h-36 mb-6" /><h1 className="text-2xl font-extrabold text-green-900 mb-2">ConfiguraÃ§Ã£o necessÃ¡ria</h1><p className="text-gray-600 mb-4">Configure env/env.js com SUPABASE_URL e SUPABASE_KEY.</p></div>);
   
   return (
     <>
@@ -2777,13 +2777,13 @@ const App = () => {
         <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 shadow-lg" style={{animation: 'fadeIn 0.3s'}}>
           <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
             <div className="flex items-center gap-3">
-              <div className="text-3xl animate-bounce">💊</div>
+              <div className="text-3xl animate-bounce">ðŸ’Š</div>
               <div>
-                <div className="font-extrabold text-sm">Hora da Medicação!</div>
+                <div className="font-extrabold text-sm">Hora da MedicaÃ§Ã£o!</div>
                 <div className="text-xs opacity-90">{medAlertaBanner.texto}</div>
               </div>
             </div>
-            <button onClick={() => setMedAlertaBanner(null)} className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg">✕</button>
+            <button onClick={() => setMedAlertaBanner(null)} className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center font-bold text-lg">âœ•</button>
           </div>
         </div>
       )}
