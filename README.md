@@ -8,6 +8,8 @@
 
 O **Tecendo Saúde** conecta pacientes e profissionais de saúde em localidades com conectividade intermitente. Funciona 100% offline, sincronizando automaticamente quando há rede.
 
+O app foi pensado para apoiar linhas de cuidado na Atenção Primária à Saúde, com foco em acompanhamento territorial, registros de saúde, conteúdos educativos e comunicação entre usuários do SUS, ACS, equipes de UBS e telessaúde.
+
 ---
 
 ## Estrutura do Projeto
@@ -18,9 +20,7 @@ app-tecendo-saude/
 │   └── build-apk.yml        # CI/CD — gera o APK automaticamente
 ├── audios/                   # Áudios educativos (hipertensão, gestação, etc.)
 ├── database/
-│   ├── database-config.sql   # Schema completo do Supabase
-│   ├── seed-dados.sql        # Dados iniciais (UBS, regiões)
-│   └── migration-*.sql       # Migrações incrementais
+│   └── database-config.sql   # Schema completo do Supabase
 ├── env/
 │   ├── build-env.js          # Gera env.js a partir de variáveis de ambiente
 │   ├── env.example.js        # Template para configuração local
@@ -30,7 +30,8 @@ app-tecendo-saude/
 ├── js/
 │   ├── components.js         # Componentes React reutilizáveis
 │   ├── config.js             # Supabase client, Dexie schema, listas de UBS/ACS
-│   └── utils.js              # Máscaras, formatação, sync
+│   ├── utils.js              # Máscaras, formatação, sync
+│   └── admin-gestao.js       # Componentes de apoio à gestão
 ├── monitoramento/
 │   ├── monitoramento.html    # Dashboard de monitoramento (profissional)
 │   └── monitoramento.js      # Lógica de gráficos e filtros
@@ -110,6 +111,7 @@ O APK é gerado automaticamente pelo **GitHub Actions** a cada push na branch `m
 - Envio de registros com fotos, vídeos e áudios
 - Biblioteca educativa offline
 - Histórico de atendimentos
+- Recebimento de respostas e orientações da equipe de saúde
 
 ### Profissional
 - Cadastro completo de pacientes (prontuário)
@@ -125,6 +127,7 @@ O APK é gerado automaticamente pelo **GitHub Actions** a cada push na branch `m
 - Sincronização automática via Supabase
 - Armazenamento local via IndexedDB (Dexie.js)
 - Indicador visual de status de sync
+- Fila local de perfis, registros e mídias pendentes até a conexão voltar
 
 ---
 
@@ -155,10 +158,4 @@ Use este roteiro para validar o acesso dos profissionais de ensino superior ou g
 
 ## Regiões Atendidas
 
-Santarém, Belterra, Mojuí dos Campos, Alenquer, Curuá, Óbidos, Oriximiná, Terra Santa, Faro, Juruti, Monte Alegre, Almeirim, Prainha.
-
----
-
-## Licença
-
-Projeto acadêmico — Tecendo Linhas do Cuidado Integral à Saúde na Amazônia.
+Santarém, Belterra, Mojuí dos Campos, Alenquer, Curuá, Óbidos, Oriximiná, Terra Santa, Faro, Juruti, Monte Alegre, Almeirim, Prainha, Rurópolis, Trairão e Jacareacanga.
