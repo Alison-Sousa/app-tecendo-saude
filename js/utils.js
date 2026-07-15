@@ -98,7 +98,7 @@ async function syncManager() {
       'enxerga_bem','consulta_oftalmo','tempo_consulta_oftalmo','dificuldade_mastigar_falar_engolir',
       'uso_medicacoes','nomes_medicacoes','posologia_dosagem','posologia_horario','data_ultima_prescricao','data_ultima_dispensacao',
       'atividade_fisica','freq_atividade','tipo_atividade','meta_peso','meta_glicemia','meta_pa_min','meta_pa_max',
-      'created_by_nome','created_by_ubs','created_by_cpf'
+      'created_by_nome','created_by_ubs','created_by_cpf','created_at'
     ];
     const perfis = await db.perfil.where('synced').equals(0).toArray();
     for (const p of perfis) {

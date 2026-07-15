@@ -21,6 +21,7 @@ ALTER TABLE profissionais ADD COLUMN IF NOT EXISTS tipo text DEFAULT 'acs';
 ALTER TABLE profissionais ADD COLUMN IF NOT EXISTS foto_url text;
 ALTER TABLE profissionais ADD COLUMN IF NOT EXISTS updated_at timestamptz DEFAULT now();
 CREATE INDEX IF NOT EXISTS profissionais_tipo_idx ON profissionais (tipo);
+CREATE INDEX IF NOT EXISTS profissionais_municipio_ubs_idx ON profissionais (municipio, ubs);
 
 -- 2. PERFIS (Pacientes)
 CREATE TABLE IF NOT EXISTS perfis (
@@ -103,6 +104,8 @@ CREATE TABLE IF NOT EXISTS perfis (
 CREATE INDEX IF NOT EXISTS perfis_patient_id_idx ON perfis (patient_id);
 CREATE INDEX IF NOT EXISTS perfis_cpf_idx ON perfis (cpf);
 CREATE INDEX IF NOT EXISTS perfis_regiao_idx ON perfis (regiao);
+CREATE INDEX IF NOT EXISTS perfis_ubs_referencia_idx ON perfis (ubs_referencia);
+CREATE INDEX IF NOT EXISTS perfis_created_at_idx ON perfis (created_at DESC);
 
 -- 2.1 Colunas adicionadas em migrações (seguro para banco novo ou existente)
 ALTER TABLE perfis ADD COLUMN IF NOT EXISTS data_parto text;
@@ -354,14 +357,19 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_admin record;
 BEGIN
-  PERFORM 1 FROM app_coordenador_atual();
+  SELECT p.* INTO v_admin
+  FROM profissionais p
+  JOIN app_coordenador_atual() a ON a.id = p.id;
 
   RETURN QUERY
   SELECT p.patient_id, p.nome, p.cpf, p.nascimento, p.regiao, p.foto_url, p.telefone,
          p.ubs_referencia, p.acs_responsavel, p.equipe_ubs, p.genero, p.raca,
          p.hipertensao, p.diabetes, p.gestante, p.created_at, p.updated_at
   FROM perfis p
+  WHERE coalesce(v_admin.municipio, '') = '' OR p.regiao = v_admin.municipio
   ORDER BY p.nome NULLS LAST
   LIMIT 2000;
 END;
@@ -385,13 +393,18 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_admin record;
 BEGIN
-  PERFORM 1 FROM app_coordenador_atual();
+  SELECT p.* INTO v_admin
+  FROM profissionais p
+  JOIN app_coordenador_atual() a ON a.id = p.id;
 
   RETURN QUERY
   SELECT p.id, p.nome, p.cpf, p.telefone, p.municipio, p.ubs, p.tipo, p.foto_url,
          p.created_at, p.updated_at
   FROM profissionais p
+  WHERE coalesce(v_admin.municipio, '') = '' OR p.municipio = v_admin.municipio
   ORDER BY p.nome NULLS LAST
   LIMIT 2000;
 END;
@@ -563,4 +576,4 @@ GRANT EXECUTE ON FUNCTION app_coordenador_atualizar_profissional(uuid, text, tex
 GRANT EXECUTE ON FUNCTION app_coordenador_excluir_usuario(text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION app_coordenador_excluir_profissional(uuid, text) TO authenticated;
 
-COMMENT ON COLUMN profissionais.tipo IS 'Valores usados no app: acs, tecnico_enfermagem, telessaude, equipe_ubs.';
+COMMENT ON COLUMN profissionais.tipo IS 'Valores usados no app: acs, tecnico_enfermagem, telessaude, equipe_ubs, gerente_unidade, coordenador_ab.';

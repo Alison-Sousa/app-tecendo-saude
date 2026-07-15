@@ -80,12 +80,14 @@ const getProTipoFromHash = () => {
   const hash = window.location.hash;
   if (hash === '#profissional-telessaude') return 'telessaude';
   if (hash === '#profissional-tecnico_enfermagem') return 'tecnico_enfermagem';
+  if (hash === '#profissional-gerente_unidade') return 'gerente_unidade';
+  if (hash === '#profissional-coordenador_ab') return 'coordenador_ab';
   if (hash === '#profissional-equipe_ubs') return 'equipe_ubs';
   return 'acs';
 };
 const PRO_TIPO = getProTipoFromHash();
-const tipoProfissionalLabel = (tipo) => tipo === 'telessaude' ? 'Telessaúde' : tipo === 'equipe_ubs' ? 'Profissional de Saúde' : tipo === 'tecnico_enfermagem' ? 'Técnico de Enfermagem' : 'ACS';
-const tipoProfissionalStyle = (tipo) => tipo === 'telessaude' ? {bg:'#e0e7ff', background:'#e0e7ff', color:'#4338ca'} : tipo === 'equipe_ubs' ? {bg:'#fff7ed', background:'#fff7ed', color:'#c2410c'} : tipo === 'tecnico_enfermagem' ? {bg:'#ecfeff', background:'#ecfeff', color:'#0e7490'} : {bg:'#dcfce7', background:'#dcfce7', color:'#166534'};
+const tipoProfissionalLabel = (tipo) => tipo === 'telessaude' ? 'Telessaúde' : tipo === 'equipe_ubs' ? 'Profissional de Saúde' : tipo === 'tecnico_enfermagem' ? 'Técnico de Enfermagem' : tipo === 'gerente_unidade' ? 'Gerente de Unidade' : (tipo === 'coordenador_ab' || String(tipo || '').startsWith('coord')) ? 'Coordenador de Atenção Básica' : 'ACS';
+const tipoProfissionalStyle = (tipo) => tipo === 'telessaude' ? {bg:'#e0e7ff', background:'#e0e7ff', color:'#4338ca'} : tipo === 'equipe_ubs' ? {bg:'#fff7ed', background:'#fff7ed', color:'#c2410c'} : tipo === 'tecnico_enfermagem' ? {bg:'#ecfeff', background:'#ecfeff', color:'#0e7490'} : tipo === 'gerente_unidade' ? {bg:'#fef9c3', background:'#fef9c3', color:'#854d0e'} : (tipo === 'coordenador_ab' || String(tipo || '').startsWith('coord')) ? {bg:'#f3e8ff', background:'#f3e8ff', color:'#7e22ce'} : {bg:'#dcfce7', background:'#dcfce7', color:'#166534'};
 
 // Register Service Worker for mobile notifications (web/PWA only, not Cordova)
 if ('serviceWorker' in navigator && !window.cordova) {
@@ -2381,7 +2383,7 @@ const EditarPerfilProfissional = ({ user, onSave, onCancel, saving }) => {
       <div className="card">
         <div className="flex items-center gap-4 mb-4"><div style={{width:76,height:76,borderRadius:'50%',overflow:'hidden',background:'#e8f5e9',border:'2px solid #bbf7d0',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>{preview ? <img src={preview} alt="Foto do profissional" style={{width:'100%',height:'100%',objectFit:'cover'}} /> : <img src="../img/logo.png" alt="Tecendo Saúde" style={{width:46,height:46,objectFit:'contain'}} />}</div><label className="btn-sec w-auto px-4 py-2" style={{margin:0,cursor:'pointer'}}>Alterar foto<input type="file" accept="image/*" onChange={escolherFoto} style={{display:'none'}} /></label></div>
         <div className="section-title">CPF</div><input className="input-box bg-gray-100" value={form.cpf} disabled />
-        <div className="section-title">Tipo de Profissional</div><select className="input-box" value={form.tipo} onChange={e=>updateField('tipo', e.target.value)}><option value="acs">Agente Comunitário de Saúde (ACS)</option><option value="tecnico_enfermagem">Técnico de Enfermagem</option><option value="telessaude">Telessaúde</option><option value="equipe_ubs">Profissional de Saúde (Equipe UBS / Coordenação)</option></select>
+        <div className="section-title">Tipo de Profissional</div><select className="input-box" value={form.tipo} onChange={e=>updateField('tipo', e.target.value)}><option value="acs">Agente Comunitário de Saúde (ACS)</option><option value="tecnico_enfermagem">Técnico de Enfermagem</option><option value="telessaude">Telessaúde</option><option value="equipe_ubs">Profissional de Saúde (Equipe UBS)</option><option value="gerente_unidade">Gerente de Unidade</option><option value="coordenador_ab">Coordenador de Atenção Básica</option></select>
         <div className="section-title">Nome</div><input className="input-box" value={form.nome} onChange={e=>updateField('nome', e.target.value)} placeholder="Nome completo" />
         <div className="section-title">Município</div>
         <select className="input-box" value={PROFISSIONAL_MUNICIPIOS.includes(form.municipio) || form.municipio === '' ? form.municipio : 'Outro'} onChange={e=>updateField('municipio', e.target.value)}>

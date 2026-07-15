@@ -18,11 +18,21 @@
     return value || '';
   };
 
+  const formatarDataGestao = (value) => {
+    if (!value) return '-';
+    try {
+      return new Date(value).toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    } catch { return value || '-'; }
+  };
+
   const tipoLabel = (tipo) => {
     if (tipo === 'telessaude') return 'Telessaúde';
     if (tipo === 'equipe_ubs') return 'Profissional de Saúde';
     if (tipo === 'tecnico_enfermagem') return 'Técnico de Enfermagem';
-    if (normalizar(tipo).startsWith('coord')) return 'Coordenador';
+    if (tipo === 'gerente_unidade') return 'Gerente de Unidade';
+    if (normalizar(tipo).startsWith('coord')) return 'Coordenador de Atenção Básica';
     return 'ACS';
   };
 
@@ -30,6 +40,7 @@
     if (tipo === 'telessaude') return { background: '#e0e7ff', color: '#4338ca' };
     if (tipo === 'equipe_ubs') return { background: '#fff7ed', color: '#c2410c' };
     if (tipo === 'tecnico_enfermagem') return { background: '#ecfeff', color: '#0e7490' };
+    if (tipo === 'gerente_unidade') return { background: '#fef9c3', color: '#854d0e' };
     if (normalizar(tipo).startsWith('coord')) return { background: '#f3e8ff', color: '#7e22ce' };
     return { background: '#dcfce7', color: '#166534' };
   };
@@ -109,18 +120,22 @@
       }
 
       try {
-        const [usersResp, prosResp] = await Promise.all([
-          supabase
-            .from('perfis')
-            .select('patient_id,nome,cpf,nascimento,regiao,foto_url,telefone,ubs_referencia,acs_responsavel,equipe_ubs,genero,raca,hipertensao,diabetes,gestante,created_at,updated_at')
-            .order('nome', { ascending: true })
-            .limit(2000),
-          supabase
-            .from('profissionais')
-            .select('id,nome,cpf,telefone,municipio,ubs,tipo,foto_url,created_at,updated_at')
-            .order('nome', { ascending: true })
-            .limit(2000)
-        ]);
+        const municipioGestao = String(profissional?.municipio || '').trim();
+        let usuariosQuery = supabase
+          .from('perfis')
+          .select('patient_id,nome,cpf,nascimento,regiao,foto_url,telefone,ubs_referencia,acs_responsavel,equipe_ubs,genero,raca,hipertensao,diabetes,gestante,created_at,updated_at')
+          .order('nome', { ascending: true })
+          .limit(2000);
+        let profissionaisQuery = supabase
+          .from('profissionais')
+          .select('id,nome,cpf,telefone,municipio,ubs,tipo,foto_url,created_at,updated_at')
+          .order('nome', { ascending: true })
+          .limit(2000);
+        if (municipioGestao) {
+          usuariosQuery = usuariosQuery.eq('regiao', municipioGestao);
+          profissionaisQuery = profissionaisQuery.eq('municipio', municipioGestao);
+        }
+        const [usersResp, prosResp] = await Promise.all([usuariosQuery, profissionaisQuery]);
 
         if (usersResp.error) throw usersResp.error;
         if (prosResp.error) throw prosResp.error;
@@ -142,19 +157,25 @@
     }, [profissional?.id, profissional?.cpf, profissional?.tipo, profissional?.ubs]);
 
     const registrarAuditoria = async ({ acao, alvoTipo, alvoId, alvoCpf, alvoNome, antes, depois }) => {
-      const { error } = await supabase.from('gestao_auditoria').insert({
-        admin_profissional_id: profissional?.id || null,
-        admin_cpf: adminCpf || profissional?.cpf || null,
-        admin_nome: adminNome || null,
-        acao,
-        alvo_tipo: alvoTipo,
-        alvo_id: alvoId ? String(alvoId) : null,
-        alvo_cpf: alvoCpf || null,
-        alvo_nome: alvoNome || null,
-        antes: antes || null,
-        depois: depois || null
-      });
-      if (error) throw error;
+      try {
+        const { error } = await supabase.from('gestao_auditoria').insert({
+          admin_profissional_id: profissional?.id || null,
+          admin_cpf: adminCpf || profissional?.cpf || null,
+          admin_nome: adminNome || null,
+          acao,
+          alvo_tipo: alvoTipo,
+          alvo_id: alvoId ? String(alvoId) : null,
+          alvo_cpf: alvoCpf || null,
+          alvo_nome: alvoNome || null,
+          antes: antes || null,
+          depois: depois || null
+        });
+        if (error) {
+          console.warn('Falha ao registrar auditoria:', error);
+        }
+      } catch (error) {
+        console.warn('Falha ao registrar auditoria:', error);
+      }
     };
 
     const lista = useMemo(() => {
@@ -295,8 +316,9 @@
       }
     };
 
-    const confirmarExclusao = (nome) => {
-      const ok = confirm(`Exclusão definitiva no Supabase.\n\nDeseja mesmo excluir ${nome}?`);
+    const confirmarExclusao = (nome, dataCadastro) => {
+      const infoData = dataCadastro ? `\nCadastro em: ${formatarDataGestao(dataCadastro)}` : '\nCadastro sem data registrada';
+      const ok = confirm(`Exclusão definitiva no Supabase.\n\nDeseja mesmo excluir ${nome}?${infoData}`);
       if (!ok) return false;
       return prompt('Para confirmar a exclusão definitiva, digite EXCLUIR') === 'EXCLUIR';
     };
@@ -304,7 +326,7 @@
     const excluirUsuario = async () => {
       const item = selecionado.item;
       const nome = item.nome || 'este usuário';
-      if (!confirmarExclusao(nome)) return;
+      if (!confirmarExclusao(nome, item.created_at)) return;
       setSaving(true);
       try {
         await registrarAuditoria({
@@ -338,9 +360,9 @@
       const item = selecionado.item;
       const nome = item.nome || 'este profissional';
       if (onlyDigits(item.cpf) && onlyDigits(item.cpf) === adminCpf) {
-        return alert('Não ? possível excluir o próprio coordenador logado.');
+        return alert('Não é possível excluir o próprio coordenador logado.');
       }
-      if (!confirmarExclusao(nome)) return;
+      if (!confirmarExclusao(nome, item.created_at)) return;
       setSaving(true);
       try {
         await registrarAuditoria({
@@ -381,10 +403,11 @@
               <Avatar item={item} tipo={isUser ? 'usuario' : 'profissional'} />
               <div style={{minWidth:0,flex:1}}>
                 <div style={{fontSize:16,fontWeight:900,color:'#1f2a44',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{item.nome || 'Sem nome'}</div>
-                <div style={{fontSize:12,color:'#64748b',fontWeight:700,marginTop:2}}>{maskCpf(item.cpf) || 'CPF n?o informado'}</div>
+                <div style={{fontSize:12,color:'#64748b',fontWeight:700,marginTop:2}}>{maskCpf(item.cpf) || 'CPF não informado'}</div>
                 <div style={{fontSize:12,color:'#64748b',marginTop:4,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
                   {isUser ? (item.ubs_referencia || item.regiao || 'Sem UBS') : (item.ubs || item.municipio || 'Sem UBS')}
                 </div>
+                <div style={{fontSize:11,color:'#94a3b8',marginTop:3,fontWeight:700}}>Cadastro: {formatarDataGestao(item.created_at)}</div>
               </div>
               {!isUser && <span style={{...tipoStyle(item.tipo),fontSize:10,fontWeight:900,borderRadius:999,padding:'5px 8px',textTransform:'uppercase'}}>{tipoLabel(item.tipo)}</span>}
             </button>
@@ -417,6 +440,8 @@
           </div>
 
           <div className="card">
+            <InfoLinha label="Cadastro" value={formatarDataGestao(selecionado.item.created_at)} />
+            <InfoLinha label="Última atualização" value={formatarDataGestao(selecionado.item.updated_at)} />
             <Campo label="Nome"><input className="input-box" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></Campo>
             <Campo label="CPF"><input className="input-box" value={maskCpf(form.cpf)} disabled style={{background:'#f8fafc',color:'#64748b'}} /></Campo>
             <Campo label="Telefone"><input className="input-box" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: maskTelefone(e.target.value) })} /></Campo>
@@ -443,6 +468,8 @@
           </div>
 
           <div className="card">
+            <InfoLinha label="Cadastro" value={formatarDataGestao(item.created_at)} />
+            <InfoLinha label="Última atualização" value={formatarDataGestao(item.updated_at)} />
             <InfoLinha label="Nascimento" value={item.nascimento} />
             <InfoLinha label="Gênero" value={item.genero} />
             <InfoLinha label="Raça/cor" value={item.raca} />
@@ -479,6 +506,8 @@
           </div>
 
           <div className="card">
+            <InfoLinha label="Cadastro" value={formatarDataGestao(selecionado.item.created_at)} />
+            <InfoLinha label="Última atualização" value={formatarDataGestao(selecionado.item.updated_at)} />
             <Campo label="Nome"><input className="input-box" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} /></Campo>
             <Campo label="CPF"><input className="input-box" value={maskCpf(form.cpf)} disabled style={{background:'#f8fafc',color:'#64748b'}} /></Campo>
             <Campo label="Telefone"><input className="input-box" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: maskTelefone(e.target.value) })} /></Campo>
@@ -488,6 +517,8 @@
                 <option value="acs">ACS</option>
                 <option value="equipe_ubs">Profissional de Saúde</option>
                 <option value="tecnico_enfermagem">Técnico de Enfermagem</option>
+                <option value="gerente_unidade">Gerente de Unidade</option>
+                <option value="coordenador_ab">Coordenador de Atenção Básica</option>
                 <option value="telessaude">Telessaúde</option>
               </select>
             </Campo>

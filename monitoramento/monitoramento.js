@@ -158,20 +158,34 @@ const LIMITES = {
   }
 };
 
-function obterLimitesPaciente(p) {
-  const asNum = (v) => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  };
+function toMetaNumber(...values) {
+  for (const value of values) {
+    if (value === null || value === undefined) continue;
+    const raw = String(value).trim().replace(',', '.');
+    if (!raw) continue;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
 
+function metaPesoForaDaFaixa(peso, metaPeso) {
+  const pesoNum = Number(peso);
+  const metaNum = Number(metaPeso);
+  if (!Number.isFinite(pesoNum) || !Number.isFinite(metaNum) || metaNum <= 0) return false;
+  const tolerancia = Math.max(metaNum * 0.05, 1);
+  return Math.abs(pesoNum - metaNum) > tolerancia;
+}
+
+function obterLimitesPaciente(p) {
   return {
-    // Prioridade: meta individual > fallback global padrão
-    pa_sis_max: asNum(p?.meta_pa_sis_max ?? p?.meta_pa_max) ?? 120,
-    pa_sis_min: asNum(p?.meta_pa_sis_min),
-    pa_dia_max: asNum(p?.meta_pa_dia_max) ?? 80,
-    pa_dia_min: asNum(p?.meta_pa_dia_min),
-    glicemia_max: asNum(p?.meta_glicemia_max ?? p?.meta_glicemia) ?? 99,
-    glicemia_min: asNum(p?.meta_glicemia_min)
+    pa_sis_max: toMetaNumber(p?.meta_pa_sis_max, p?.meta_pa_max),
+    pa_sis_min: toMetaNumber(p?.meta_pa_sis_min),
+    pa_dia_max: toMetaNumber(p?.meta_pa_dia_max),
+    pa_dia_min: toMetaNumber(p?.meta_pa_dia_min),
+    glicemia_max: toMetaNumber(p?.meta_glicemia_max, p?.meta_glicemia),
+    glicemia_min: toMetaNumber(p?.meta_glicemia_min),
+    peso_meta: toMetaNumber(p?.meta_peso)
   };
 }
 
@@ -224,9 +238,10 @@ let replyAudioMs = 0;
 let registroSelecionadoChat = null;
 const mediaCache = new Map();
 let _registrosIndex = new Map(); // patient_id -> registros[]
+let _carregandoDados = false;
 
 // Colunas para carregamento rápido da lista (sem campos pesados)
-const PERFIS_COLS_LIST = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,equipe_ubs,gestante,gestacao_semanas,tem_filhos,qtd_filhos,filhos_json,hipertensao,diabetes,condicoes,peso_inicial,altura,meta_pa_max,meta_glicemia,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min,meta_glicemia_max,meta_glicemia_min,created_by_cpf';
+const PERFIS_COLS_LIST = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,acs_responsavel,equipe_ubs,gestante,gestacao_semanas,tem_filhos,qtd_filhos,filhos_json,hipertensao,diabetes,condicoes,peso_inicial,altura,meta_peso,meta_pa_max,meta_glicemia,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min,meta_glicemia_max,meta_glicemia_min,created_by_nome,created_by_cpf,created_by_ubs,created_at,updated_at';
 const PERFIS_COLS_FULL = 'patient_id,nome,cpf,nascimento,regiao,foto_url,ubs_referencia,genero,raca,endereco,telefone,escolaridade,profissao,mora_sozinho,mora_companheiro,tem_filhos,qtd_filhos,filhos_json,acs_responsavel,equipe_ubs,hipertensao,tempo_diag_has,diabetes,tempo_diag_dm,gestante,infeccao_urinaria_gestacao,dependencias,tempo_dependencia,condicoes,altura,peso_inicial,peso_atual,peso_primeira_consulta,imc_pre_gestacional,imc_atual,dum,gestacao_semanas,previsao_parto,faz_pre_natal,inicio_pre_natal,data_ultima_consulta_pre_natal,data_parto,peso_bebe,altura_bebe,amamentando,local_nascimento,vacinas_maternidade,teste_pezinho,data_teste_pezinho,consulta_puerperal,data_consulta_puerperal,enxerga_bem,consulta_oftalmo,tempo_consulta_oftalmo,dificuldade_mastigar_falar_engolir,uso_medicacoes,nomes_medicacoes,posologia_dosagem,posologia_horario,data_ultima_prescricao,data_ultima_dispensacao,atividade_fisica,freq_atividade,tipo_atividade,meta_peso,meta_glicemia,meta_pa_min,meta_pa_max,created_by_nome,created_by_ubs,created_by_cpf,created_at,updated_at,meta_glicemia_max,meta_glicemia_min,meta_pa_sis_max,meta_pa_sis_min,meta_pa_dia_max,meta_pa_dia_min';
 const REGISTROS_COLS_LIGHT = 'registro_id,patient_id,pa_sistolica,pa_diastolica,glicemia_mg,peso_kg,gestante,gestacao_semanas,atividade_fisica,status,tipo,created_at,updated_at';
 const REGISTROS_COLS_FULL = 'registro_id,patient_id,pa_sistolica,pa_diastolica,glicemia_mg,peso_kg,gestante,gestacao_semanas,atividade_fisica,texto,resposta,resposta_data,replies_json,status,tipo,created_at,updated_at';
@@ -253,7 +268,6 @@ function montarTextoPadrao(reg) {
   if (reg?.atividade_fisica) partes.push(`Atividade: ${reg.atividade_fisica}`);
   return partes.join(' | ');
 }
-
 // ============================================
 // NOTIFICAÇÕES
 // ============================================
@@ -326,7 +340,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const tipoProfissional = (prof.tipo || 'acs').toLowerCase();
   const tipoEl = document.getElementById('profTipo');
   if (tipoEl) {
-    const label = tipoProfissional === 'telessaude' ? 'Telessaúde' : tipoProfissional === 'equipe_ubs' ? 'Profissional de Saúde' : tipoProfissional === 'tecnico_enfermagem' ? 'Técnico de Enfermagem' : 'ACS';
+    const label = tipoProfissional === 'telessaude' ? 'Telessaúde'
+      : tipoProfissional === 'equipe_ubs' ? 'Profissional de Saúde'
+      : tipoProfissional === 'tecnico_enfermagem' ? 'Técnico de Enfermagem'
+      : tipoProfissional === 'gerente_unidade' ? 'Gerente de Unidade'
+      : tipoProfissional.startsWith('coord') ? 'Coordenador de Atenção Básica'
+      : 'ACS';
     tipoEl.textContent = 'Profissional ' + label;
     tipoEl.style.display = 'inline-block';
     tipoEl.style.padding = '3px 10px';
@@ -343,6 +362,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (tipoProfissional === 'tecnico_enfermagem') {
       tipoEl.style.background = '#ecfeff';
       tipoEl.style.color = '#0e7490';
+    } else if (tipoProfissional === 'gerente_unidade') {
+      tipoEl.style.background = '#fef9c3';
+      tipoEl.style.color = '#854d0e';
+    } else if (tipoProfissional.startsWith('coord')) {
+      tipoEl.style.background = '#f3e8ff';
+      tipoEl.style.color = '#7e22ce';
     } else {
       tipoEl.style.background = '#dcfce7';
       tipoEl.style.color = '#166534';
@@ -350,13 +375,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await carregarDados();
+  setInterval(() => carregarDados(true), 300000);
 });
 
 // ============================================
 // CARREGAR DADOS DO SUPABASE
 // ============================================
-async function carregarDados() {
-  mostrarLoading('Carregando usuários do SUS...');
+async function carregarDados(silencioso = false) {
+  if (_carregandoDados) return;
+  _carregandoDados = true;
+  if (!silencioso) mostrarLoading('Carregando usuários do SUS...');
   // Limpar cache de mídia para buscar dados novos
   mediaCache.clear();
 
@@ -387,15 +415,22 @@ async function carregarDados() {
     
     const ubsProOriginal = (profissionalAtual?.ubs || '').trim();
     const ubsPro = ubsProOriginal.toLowerCase();
+    const municipioProOriginal = (profissionalAtual?.municipio || '').trim();
     const tipoPro = (profissionalAtual?.tipo || 'acs').trim().toLowerCase();
-    const isCoordenador = ubsPro.includes('coordenador');
-    const isTelessaude = tipoPro === 'telessaude';
-    const isEquipeUbs = tipoPro === 'equipe_ubs' || tipoPro === 'tecnico_enfermagem';
-    if (!isCoordenador && !isTelessaude && isEquipeUbs && ubsProOriginal) {
-      perfisQuery = perfisQuery.or(`ubs_referencia.eq.${ubsProOriginal},created_by_ubs.eq.${ubsProOriginal}`);
-    } else if (!isCoordenador && !isTelessaude && profissionalAtual?.cpf) {
-      const cpfPro = String(profissionalAtual.cpf).replace(/\D/g, '');
-      perfisQuery = perfisQuery.eq('created_by_cpf', cpfPro);
+    const tipoNormalizado = tipoPro.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const isCoordenador = ubsPro.includes('coordenador') || tipoNormalizado.startsWith('coord');
+    const isTelessaude = tipoNormalizado === 'telessaude';
+    const isGerenteUnidade = tipoNormalizado === 'gerente_unidade' || tipoNormalizado === 'gerente';
+    const isEquipeUbs = tipoNormalizado === 'equipe_ubs' || tipoNormalizado === 'tecnico_enfermagem' || isGerenteUnidade;
+    if (!isTelessaude) {
+      if (isCoordenador && municipioProOriginal) {
+        perfisQuery = perfisQuery.eq('regiao', municipioProOriginal);
+      } else if (isEquipeUbs && ubsProOriginal) {
+        perfisQuery = perfisQuery.or(`ubs_referencia.eq.${ubsProOriginal},created_by_ubs.eq.${ubsProOriginal}`);
+      } else if (profissionalAtual?.cpf) {
+        const cpfPro = String(profissionalAtual.cpf).replace(/\D/g, '');
+        perfisQuery = perfisQuery.eq('created_by_cpf', cpfPro);
+      }
     }
     const { data: perfisData, error: perfisError } = await perfisQuery;
 
@@ -471,7 +506,9 @@ async function carregarDados() {
 
   } catch (error) {
     console.error('Erro ao carregar dados:', error);
-    mostrarErro('Erro: ' + error.message + ' - Verifique o console (F12) para detalhes');
+    if (!silencioso) mostrarErro('Erro: ' + error.message + ' - Verifique o console (F12) para detalhes');
+  } finally {
+    _carregandoDados = false;
   }
 }
 
@@ -621,8 +658,10 @@ function classificarPaciente(paciente) {
     const pa = dadosVitais.pa_sistolica;
     const pad = dadosVitais.pa_diastolica;
 
-    const excedeLimitePersonalizado = (pa != null && limites.pa_sis_max != null && pa >= limites.pa_sis_max)
-      || (pad != null && limites.pa_dia_max != null && pad >= limites.pa_dia_max);
+    const excedeLimitePersonalizado = (pa != null && limites.pa_sis_max != null && pa > limites.pa_sis_max)
+      || (pa != null && limites.pa_sis_min != null && pa < limites.pa_sis_min)
+      || (pad != null && limites.pa_dia_max != null && pad > limites.pa_dia_max)
+      || (pad != null && limites.pa_dia_min != null && pad < limites.pa_dia_min);
 
     if (pa != null) {
       if (pa >= LIMITES.PA_SISTOLICA.CRITICA || (pad != null && pad >= LIMITES.PA_DIASTOLICA.CRITICA)) {
@@ -643,7 +682,7 @@ function classificarPaciente(paciente) {
 
       if (excedeLimitePersonalizado) {
         if (classificacao !== 'critico') classificacao = 'atencao';
-        alertas.push(`🚨 PA acima do limite personalizado (${limites.pa_sis_max}/${limites.pa_dia_max})`);
+        alertas.push('⚠️ PA fora da meta personalizada preenchida');
       }
     }
 
@@ -668,10 +707,18 @@ function classificarPaciente(paciente) {
         if (classificacao === 'sem_dados') classificacao = 'estavel';
       }
 
-      if (limiteGlic != null && glic >= limiteGlic) {
+      const glicemiaForaMeta = (limiteGlic != null && glic > limiteGlic)
+        || (limites.glicemia_min != null && glic < limites.glicemia_min);
+      if (glicemiaForaMeta) {
         if (classificacao !== 'critico') classificacao = 'atencao';
-        alertas.push(`🚨 Glicemia acima do limite personalizado (${limiteGlic})`);
+        alertas.push('⚠️ Glicemia fora da meta personalizada preenchida');
       }
+    }
+
+    // ===== AVALIAR PESO =====
+    if (dadosVitais.peso != null && metaPesoForaDaFaixa(dadosVitais.peso, limites.peso_meta)) {
+      if (classificacao !== 'critico') classificacao = 'atencao';
+      alertas.push(`⚠️ Peso fora da meta personalizada preenchida (${limites.peso_meta} kg)`);
     }
 
     // ===== AVALIAR GESTANTE =====
@@ -687,7 +734,7 @@ function classificarPaciente(paciente) {
     }
 
     // Se tem dados mas sem alertas = estável
-    if (classificacao === 'sem_dados' && (pa || glic || dadosVitais.peso)) {
+    if (classificacao === 'sem_dados' && (pa != null || glic != null || dadosVitais.peso != null)) {
       classificacao = 'estavel';
     }
   }
@@ -894,6 +941,7 @@ function renderizarListaPacientes() {
           '<span class="badge badge-neutral">Sem dados</span>';
 
     const dataUlt = p.dadosVitais?.data ? formatarData(p.dadosVitais.data) : 'Sem registro';
+    const dataCadastro = p.created_at ? `Cadastro ${formatarDataCurta(p.created_at)}` : '';
     const hasNovas = contarNovasMensagens(p.historico || p.ultimoRegistro) > 0;
     const badgeMsg = hasNovas ? `<span class="msg-badge">✉ Nova mensagem</span>` : '';
 
@@ -907,7 +955,7 @@ function renderizarListaPacientes() {
       ? Math.min(42, semanasBase + Math.floor(diasPassados / 7))
       : 0;
     const gestText = isGest ? `🤰 Gestação ${semanasDinamicas ? semanasDinamicas + ' semanas' : ''}` : '';
-    const subtitulo = [gestText, p.ubs_referencia || '', dataUlt].filter(Boolean).join(' • ');
+    const subtitulo = [gestText, p.ubs_referencia || '', dataCadastro, dataUlt].filter(Boolean).join(' • ');
 
     let filhos = [];
     try { filhos = p.filhos_json ? JSON.parse(p.filhos_json) : []; } catch { filhos = []; }
@@ -1034,9 +1082,10 @@ async function selecionarPaciente(patient_id) {
   const gestLabel = pacienteSelecionado.dadosGestacionais ? ` • 🤰 Gestação ${gestSemanas ? gestSemanas + ' semanas' : ''}` : '';
   const idosoLabel = ehIdosoPac ? ' • 👴 Idoso' : '';
   const filhosLabel = (temFilhosPac || qtdFilhosPac > 0) ? ` • 👶 ${qtdFilhosPac} filho${qtdFilhosPac !== 1 ? 's' : ''}` : '';
+  const cadastroLabel = pacienteSelecionado.created_at ? ` • Cadastro: ${formatarData(pacienteSelecionado.created_at)}` : '';
 
   document.getElementById('detailMeta').innerHTML = `
-    ${pacienteSelecionado.cpf || ''} • ${idadePac}${idosoLabel}${filhosLabel}${gestLabel}
+    ${pacienteSelecionado.cpf || ''} • ${idadePac}${idosoLabel}${filhosLabel}${gestLabel}${cadastroLabel}
   `;
 
   const header = document.getElementById('detailHeader');
@@ -1103,11 +1152,13 @@ function renderizarResumo(container) {
   if (v.atividade_fisica == null && ultimo.atividade_fisica != null) v.atividade_fisica = ultimo.atividade_fisica;
 
   const limitesPaciente = obterLimitesPaciente(p);
-  const classPA = (v.pa_sistolica != null && v.pa_sistolica >= limitesPaciente.pa_sis_max) ? 'danger' :
-    (v.pa_sistolica != null && v.pa_sistolica >= (limitesPaciente.pa_sis_max * 0.9)) ? 'warning' : '';
-  const classGlic = (v.glicemia != null && v.glicemia >= limitesPaciente.glicemia_max) ? 'danger' :
-    (v.glicemia != null && v.glicemia >= (limitesPaciente.glicemia_max * 0.9)) ? 'warning' :
-      (v.glicemia != null && v.glicemia < limitesPaciente.glicemia_min) ? 'danger' : '';
+  const classPA = (v.pa_sistolica != null && limitesPaciente.pa_sis_max != null && v.pa_sistolica > limitesPaciente.pa_sis_max) ? 'warning' :
+    (v.pa_sistolica != null && limitesPaciente.pa_sis_min != null && v.pa_sistolica < limitesPaciente.pa_sis_min) ? 'warning' :
+      (v.pa_diastolica != null && limitesPaciente.pa_dia_max != null && v.pa_diastolica > limitesPaciente.pa_dia_max) ? 'warning' :
+        (v.pa_diastolica != null && limitesPaciente.pa_dia_min != null && v.pa_diastolica < limitesPaciente.pa_dia_min) ? 'warning' : '';
+  const classGlic = (v.glicemia != null && limitesPaciente.glicemia_max != null && v.glicemia > limitesPaciente.glicemia_max) ? 'warning' :
+    (v.glicemia != null && limitesPaciente.glicemia_min != null && v.glicemia < limitesPaciente.glicemia_min) ? 'warning' : '';
+  const classPeso = metaPesoForaDaFaixa(v.peso, limitesPaciente.peso_meta) ? 'warning' : '';
 
   let html = `
     <div class="vital-grid mb-4">
@@ -1119,7 +1170,7 @@ function renderizarResumo(container) {
         <div class="vital-label">Glicemia</div>
         <div class="vital-value">${v.glicemia || '-'} ${v.glicemia ? 'mg/dL' : ''}</div>
       </div>
-      <div class="vital-card">
+      <div class="vital-card ${classPeso}">
         <div class="vital-label">Peso</div>
         <div class="vital-value">${v.peso || '-'} ${v.peso ? 'kg' : ''}</div>
       </div>
@@ -2932,14 +2983,21 @@ function verificarAlerta(p, registro) {
   const diastolica = registro.pa_diastolica;
   const glicemia = registro.glicemia_mg;
 
-  // Usa limites do paciente; se ausentes, fallback global padrão
-  const maxSist = Number.isFinite(Number(p.meta_pa_sis_max ?? p.meta_pa_max)) ? Number(p.meta_pa_sis_max ?? p.meta_pa_max) : 120;
-  const maxDia = Number.isFinite(Number(p.meta_pa_dia_max)) ? Number(p.meta_pa_dia_max) : 80;
-  const maxGlic = Number.isFinite(Number(p.meta_glicemia_max ?? p.meta_glicemia)) ? Number(p.meta_glicemia_max ?? p.meta_glicemia) : 99;
+  const maxSist = toMetaNumber(p.meta_pa_sis_max, p.meta_pa_max);
+  const minSist = toMetaNumber(p.meta_pa_sis_min);
+  const maxDia = toMetaNumber(p.meta_pa_dia_max);
+  const minDia = toMetaNumber(p.meta_pa_dia_min);
+  const maxGlic = toMetaNumber(p.meta_glicemia_max, p.meta_glicemia);
+  const minGlic = toMetaNumber(p.meta_glicemia_min);
+  const metaPeso = toMetaNumber(p.meta_peso);
 
-  const isCritico = (sistolica != null && sistolica >= maxSist)
-    || (diastolica != null && diastolica >= maxDia)
-    || (glicemia != null && glicemia >= maxGlic);
+  const isCritico = (sistolica != null && maxSist != null && sistolica > maxSist)
+    || (sistolica != null && minSist != null && sistolica < minSist)
+    || (diastolica != null && maxDia != null && diastolica > maxDia)
+    || (diastolica != null && minDia != null && diastolica < minDia)
+    || (glicemia != null && maxGlic != null && glicemia > maxGlic)
+    || (glicemia != null && minGlic != null && glicemia < minGlic)
+    || metaPesoForaDaFaixa(registro.peso_kg, metaPeso);
 
   if (isCritico) {
     return 'badge-danger';
@@ -3010,7 +3068,7 @@ async function carregarMetasPanico(patient_id) {
       perfil.meta_pa_dia_min,
       perfil.meta_glicemia_max,
       perfil.meta_glicemia_min
-    ].some(v => v !== null && v !== undefined && String(v).trim() !== '');
+    ].some(v => toMetaNumber(v) !== null);
 
     if (temAlgumaMeta) {
       // Se o perfil tem metas definidas, usamos elas
@@ -3620,6 +3678,63 @@ function fecharSatisfacaoModal() {
   if (modal) modal.style.display = 'none';
 }
 
+// ============================================
+// PLANILHA DE REGISTROS
+// ============================================
+function escapeCsv(value) {
+  const text = String(value ?? '').replace(/\r?\n|\r/g, ' ').trim();
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function baixarPlanilhaRegistros() {
+  if (!pacientes.length) return alert('Nenhum dado carregado para exportar.');
+  const pacientesPorId = new Map(pacientes.map(p => [p.patient_id, p]));
+  const linhas = [[
+    'Data do registro', 'Data de cadastro', 'Município', 'UBS', 'Equipe', 'ACS/Respondente',
+    'Nome', 'CPF', 'Patient ID', 'Tipo', 'Status', 'PA sistólica', 'PA diastólica',
+    'Glicemia', 'Peso kg', 'Gestante', 'Semanas gestação', 'Atividade física', 'Texto/Resumo'
+  ]];
+
+  registros
+    .slice()
+    .sort((a, b) => new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0))
+    .forEach(r => {
+      const p = pacientesPorId.get(r.patient_id) || {};
+      linhas.push([
+        r.created_at ? formatarData(r.created_at) : '',
+        p.created_at ? formatarData(p.created_at) : '',
+        p.regiao || '',
+        p.ubs_referencia || p.created_by_ubs || '',
+        p.equipe_ubs || '',
+        p.acs_responsavel || p.created_by_nome || '',
+        p.nome || '',
+        p.cpf || '',
+        r.patient_id || '',
+        r.tipo || '',
+        r.status || '',
+        r.pa_sistolica ?? '',
+        r.pa_diastolica ?? '',
+        r.glicemia_mg ?? '',
+        r.peso_kg ?? '',
+        r.gestante ?? p.gestante ?? '',
+        r.gestacao_semanas ?? p.gestacao_semanas ?? '',
+        r.atividade_fisica || '',
+        r.texto || montarTextoPadrao(r) || ''
+      ]);
+    });
+
+  const csv = linhas.map(row => row.map(escapeCsv).join(';')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const dataArquivo = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `registros_tecendo_saude_${dataArquivo}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
 // ============================================
 // UTILITÁRIOS
 // ============================================

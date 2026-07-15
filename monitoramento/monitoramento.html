@@ -707,6 +707,8 @@
       <div>
         <div class="search-bar">
           <input type="text" class="input-box search-input" placeholder="Buscar usuário do SUS por nome ou CPF..." id="searchInput" onkeyup="filtrarPacientes()">
+          <button class="filter-btn" type="button" onclick="baixarPlanilhaRegistros()">📥 Planilha</button>
+          <button class="filter-btn" type="button" onclick="carregarDados(true)">↻ Atualizar</button>
           <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">Todos</button>
           <button class="filter-btn danger" data-filter="critical" onclick="setFilter('critical')">🚨 Críticos</button>
           <button class="filter-btn" data-filter="warning" onclick="setFilter('warning')">⚠️ Atenção</button>
