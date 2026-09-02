@@ -262,13 +262,13 @@ SELECT * FROM perfis;
 --   Rana Pinheiro Santos, Rudilene Pantoja de Araujo, Telma Perna Costa,
 --   Wandra Jame Pereira Torres
 
--- GESTAO DO COORDENADOR + AUDITORIA
+-- GESTAO DE COORDENADOR E TELESSAUDE + AUDITORIA
 -- Execute este SQL no Supabase para ativar a tela "Gerenciar Usuarios".
 --
 -- Seguranca:
 -- - As funcoes exigem usuario autenticado no Supabase Auth.
 -- - O usuario autenticado precisa estar vinculado a profissionais.auth_user_id.
--- - O profissional vinculado precisa ter UBS contendo "coordenador" ou tipo iniciando com "coord".
+-- - O profissional vinculado precisa ser coordenador ou ter tipo "telessaude".
 -- - CPF dos cadastros nao e editado.
 -- - Toda edicao/exclusao gera log em gestao_auditoria.
 
@@ -323,11 +323,12 @@ BEGIN
     AND (
       lower(coalesce(p.ubs, '')) LIKE '%coordenador%'
       OR lower(coalesce(p.tipo, '')) LIKE 'coord%'
+      OR lower(coalesce(p.tipo, '')) = 'telessaude'
     )
   LIMIT 1;
 
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Acesso permitido apenas para coordenador autenticado.';
+    RAISE EXCEPTION 'Acesso permitido apenas para coordenador ou Telessaude autenticado.';
   END IF;
 END;
 $$;
@@ -369,7 +370,8 @@ BEGIN
          p.ubs_referencia, p.acs_responsavel, p.equipe_ubs, p.genero, p.raca,
          p.hipertensao, p.diabetes, p.gestante, p.created_at, p.updated_at
   FROM perfis p
-  WHERE coalesce(v_admin.municipio, '') = '' OR p.regiao = v_admin.municipio
+  WHERE lower(coalesce(v_admin.tipo, '')) = 'telessaude'
+     OR coalesce(v_admin.municipio, '') = '' OR p.regiao = v_admin.municipio
   ORDER BY p.nome NULLS LAST
   LIMIT 2000;
 END;
@@ -404,7 +406,8 @@ BEGIN
   SELECT p.id, p.nome, p.cpf, p.telefone, p.municipio, p.ubs, p.tipo, p.foto_url,
          p.created_at, p.updated_at
   FROM profissionais p
-  WHERE coalesce(v_admin.municipio, '') = '' OR p.municipio = v_admin.municipio
+  WHERE lower(coalesce(v_admin.tipo, '')) = 'telessaude'
+     OR coalesce(v_admin.municipio, '') = '' OR p.municipio = v_admin.municipio
   ORDER BY p.nome NULLS LAST
   LIMIT 2000;
 END;
@@ -553,7 +556,7 @@ BEGIN
 
   IF v_antes IS NULL THEN RAISE EXCEPTION 'Profissional nao encontrado.'; END IF;
   IF app_normalize_cpf(v_cpf_alvo) = app_normalize_cpf(v_admin.cpf) THEN
-    RAISE EXCEPTION 'Nao e possivel excluir o proprio coordenador logado.';
+    RAISE EXCEPTION 'Nao e possivel excluir o proprio profissional logado.';
   END IF;
 
   DELETE FROM profissionais WHERE id = p_profissional_id;

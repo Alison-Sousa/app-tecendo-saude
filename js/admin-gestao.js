@@ -65,7 +65,11 @@
     return ubs.includes('coordenador') || tipo.includes('coordenador') || tipo.startsWith('coord');
   };
 
+  const isTelessaude = (profissional) => normalizar(profissional?.tipo) === 'telessaude';
+  const podeGerenciarCadastros = (profissional) => isCoordenador(profissional) || isTelessaude(profissional);
+
   window.isCoordenadorProfissional = isCoordenador;
+  window.podeGerenciarCadastrosProfissional = podeGerenciarCadastros;
 
   const Avatar = ({ item, tipo }) => {
     const initial = (item?.nome || '').trim().charAt(0).toUpperCase() || (tipo === 'usuario' ? 'U' : 'P');
@@ -111,10 +115,10 @@
       setLoading(true);
       setErroGestao('');
 
-      if (!isCoordenador(profissional)) {
+      if (!podeGerenciarCadastros(profissional)) {
         setUsuarios([]);
         setProfissionais([]);
-        setErroGestao('Acesso permitido apenas para coordenador.');
+        setErroGestao('Acesso permitido apenas para coordenador ou Telessaude.');
         setLoading(false);
         return;
       }
@@ -131,7 +135,7 @@
           .select('id,nome,cpf,telefone,municipio,ubs,tipo,foto_url,created_at,updated_at')
           .order('nome', { ascending: true })
           .limit(2000);
-        if (municipioGestao) {
+        if (municipioGestao && !isTelessaude(profissional)) {
           usuariosQuery = usuariosQuery.eq('regiao', municipioGestao);
           profissionaisQuery = profissionaisQuery.eq('municipio', municipioGestao);
         }

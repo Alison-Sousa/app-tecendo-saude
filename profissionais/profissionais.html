@@ -1268,7 +1268,7 @@ const ProDash = ({user, onLogout, initialMode, initialFormData, onUserUpdate}) =
   const tipoAtual = profissional?.tipo || 'acs';
   const tipoLabel = tipoProfissionalLabel(tipoAtual);
   const tipoCor = tipoProfissionalStyle(tipoAtual);
-  const podeGerenciarUsuarios = typeof window.isCoordenadorProfissional === 'function' && window.isCoordenadorProfissional(profissional);
+  const podeGerenciarUsuarios = typeof window.podeGerenciarCadastrosProfissional === 'function' && window.podeGerenciarCadastrosProfissional(profissional);
 
   const saveForm = async (f, extraFiles = []) => {
     setSaving(true);

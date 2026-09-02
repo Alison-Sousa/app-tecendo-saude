@@ -2425,7 +2425,7 @@ const ProDash = ({user, onLogout, onUserUpdate}) => {
   const tipoAtual = profissional.tipo || 'acs';
   const tipoLabel = tipoProfissionalLabel(tipoAtual);
   const tipoCor = tipoProfissionalStyle(tipoAtual);
-  const podeGerenciarUsuarios = typeof window.isCoordenadorProfissional === 'function' && window.isCoordenadorProfissional(profissional);
+  const podeGerenciarUsuarios = typeof window.podeGerenciarCadastrosProfissional === 'function' && window.podeGerenciarCadastrosProfissional(profissional);
   const abrirMonitoramento = () => { window.location.href = '../monitoramento/monitoramento.html'; };
   const abrirNovoCadastro = () => { window.location.href = '../profissionais/profissionais.html'; };
   const savePerfilProfissional = async (dados) => {
