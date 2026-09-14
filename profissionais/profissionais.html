@@ -270,11 +270,15 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
     const nomes = split(normalized.nomes_medicacoes);
     const dosagens = split(normalized.posologia_dosagem);
     const horarios = split(normalized.posologia_horario);
-    const maxLen = Math.max(nomes.length, dosagens.length, horarios.length, 1);
+    const prescricoes = split(normalized.data_ultima_prescricao);
+    const dispensacoes = split(normalized.data_ultima_dispensacao);
+    const maxLen = Math.max(nomes.length, dosagens.length, horarios.length, prescricoes.length, dispensacoes.length, 1);
     const meds = Array.from({ length: maxLen }).map((_, i) => ({
       nome: nomes[i] || '',
       dosagem: dosagens[i] || '',
-      horario: horarios[i] || ''
+      horario: horarios[i] || '',
+      data_prescricao: prescricoes[i] || '',
+      data_dispensacao: dispensacoes[i] || ''
     }));
     setMedicacoes(meds);
   }, [initialData]);
@@ -544,6 +548,8 @@ const FichaMedica = ({initialData, onSave, onCancel}) => {
         if (m.horario === 'Horário específico' && m.horario_especifico) return m.horario_especifico;
         return m.horario || '';
       }).join('|');
+      cleaned.data_ultima_prescricao = medsClean.map(m => m.data_prescricao || '').join('|');
+      cleaned.data_ultima_dispensacao = medsClean.map(m => m.data_dispensacao || '').join('|');
       if (cleaned.tem_filhos !== 'Sim') {
         cleaned.qtd_filhos = '0';
         cleaned.filhos_json = '[]';
@@ -1291,7 +1297,9 @@ const ProDash = ({user, onLogout, initialMode, initialFormData, onUserUpdate}) =
       const nomes = splitPipe(payload.nomes_medicacoes);
       const dosagens = splitPipe(payload.posologia_dosagem);
       const horarios = splitPipe(payload.posologia_horario);
-      const maxLen = Math.max(nomes.length, dosagens.length, horarios.length, 0);
+      const prescricoes = splitPipe(payload.data_ultima_prescricao);
+      const dispensacoes = splitPipe(payload.data_ultima_dispensacao);
+      const maxLen = Math.max(nomes.length, dosagens.length, horarios.length, prescricoes.length, dispensacoes.length, 0);
       const medicamentos = [];
       for (let i = 0; i < maxLen; i += 1) {
         const nome = nomes[i] || '';
