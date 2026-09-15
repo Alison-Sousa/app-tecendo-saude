@@ -26,16 +26,36 @@ body{background:linear-gradient(160deg,#f0f9f2 0%,#e0f3e5 40%,#d5f0dc 100%);font
 <div class="subtitle">Cuidado Integral à Saúde na Amazônia</div>
 <div class="dots"><span></span><span></span><span></span></div>
 <script>
+var started = false;
+var REMOTE_APP = 'https://app-tecendo.netlify.app/';
+
+function openApp() {
+  if (started) return;
+  started = true;
+
+  var probe = new Image();
+  var finished = false;
+  var timeout = setTimeout(function() { finish(false); }, 4000);
+
+  function finish(remoteAvailable) {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timeout);
+    window.location.replace(remoteAvailable ? REMOTE_APP : 'index.html');
+  }
+
+  probe.onload = function() { finish(true); };
+  probe.onerror = function() { finish(false); };
+  // Without a query string, an installed service worker can answer from its offline cache.
+  probe.src = REMOTE_APP + 'img/logo.png';
+}
+
 document.addEventListener('deviceready', function() {
   if (navigator.splashscreen) navigator.splashscreen.hide();
-  setTimeout(function() {
-    window.location.replace('https://app-tecendo.netlify.app/');
-  }, 800);
+  setTimeout(openApp, 500);
 }, false);
-// Fallback if deviceready never fires (web browser)
-setTimeout(function() {
-  window.location.replace('https://app-tecendo.netlify.app/');
-}, 3000);
+
+setTimeout(openApp, 2500);
 </script>
 </body>
 </html>

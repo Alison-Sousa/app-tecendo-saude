@@ -85,6 +85,25 @@ const getMediaDuration = (file) => {
   });
 };
 
+function saveCachedProfessional(professional) {
+  var cpf = String(professional && professional.cpf || '').replace(/\D/g, '');
+  if (!cpf) return;
+  try {
+    localStorage.setItem('cached_professional_' + cpf, JSON.stringify(professional));
+  } catch (e) {}
+}
+
+function loadCachedProfessional(cpf) {
+  var clean = String(cpf || '').replace(/\D/g, '');
+  if (!clean) return null;
+  try {
+    var raw = localStorage.getItem('cached_professional_' + clean);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Sincronização com Supabase
 async function syncManager() {
   if (!navigator.onLine || !supabase) return;
@@ -121,7 +140,23 @@ async function syncManager() {
         const retry = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' });
         if (retry.error) throw retry.error;
       }
-      await db.perfil.update(p.id, { synced: 1 });
+      if (p.medications_dirty) {
+        var deleteMeds = await supabase.from('medicamentos').delete().eq('patient_id', base.patient_id);
+        if (deleteMeds.error) throw deleteMeds.error;
+        var localMeds = await db.medicamentos.where('patient_id').equals(base.patient_id).toArray();
+        if (localMeds.length > 0) {
+          var medsPayload = localMeds.map(function(med) {
+            var copy = { ...med };
+            delete copy.id;
+            delete copy.synced;
+            return copy;
+          });
+          var insertMeds = await supabase.from('medicamentos').insert(medsPayload);
+          if (insertMeds.error) throw insertMeds.error;
+          await db.medicamentos.where('patient_id').equals(base.patient_id).modify({ synced: 1 });
+        }
+      }
+      await db.perfil.update(p.id, { synced: 1, medications_dirty: 0 });
     }
     const regs = await db.registros.where('synced').equals(0).toArray();
     for (const r of regs) {
@@ -178,6 +213,9 @@ async function syncManager() {
     }
   } catch (e) { console.warn('Erro no syncManager:', e); }
 }
+
+window.addEventListener('online', function() { syncManager(); });
+setTimeout(function() { if (navigator.onLine) syncManager(); }, 1500);
 
 // ================================================
 // OTA UPDATE CHECKER (only for Cordova APK)

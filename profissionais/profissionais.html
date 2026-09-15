@@ -51,15 +51,23 @@ var _sp=setInterval(function(){var r=document.getElementById('root');if(r&&r.chi
 
 <!-- Scripts moved from head so splash renders instantly -->
 <script src="../cordova.js"></script>
-<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="../js/vendor/react.development.js"></script>
+<script src="../js/vendor/react-dom.development.js"></script>
+<script src="../js/vendor/babel.min.js"></script>
+<script src="../js/vendor/tailwindcss.js"></script>
+<script src="../js/vendor/dexie.js"></script>
+<script src="../js/vendor/supabase.min.js"></script>
 <script src="../env/env.js"></script>
 <script src="../js/config.js"></script>
 <script src="../js/utils.js"></script>
+
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(window.location.protocol)) {
+  navigator.serviceWorker.register('../sw.js').catch(function(error) {
+    console.warn('SW registration failed:', error);
+  });
+}
+</script>
 
 <script type="text/babel" src="../js/components.js"></script>
 <script type="text/babel" src="../js/admin-gestao.js"></script>
@@ -94,9 +102,16 @@ const ProAuth = ({onAuth, onBack}) => {
     const clean = cpf.replace(/\D/g,'');
     if(clean.length !== 11) return alert('CPF inválido');
     setLoading(true);
+    if (!navigator.onLine) {
+      const cached = loadCachedProfessional(clean);
+      if (cached) onAuth(cached);
+      else setMsg('Sem conexão. Este profissional precisa entrar uma vez com internet neste aparelho.');
+      setLoading(false);
+      return;
+    }
     try {
       const { data: pro } = await supabase.from('profissionais').select('*').eq('cpf', clean).maybeSingle();
-      if(pro){ onAuth({...pro, tipo: pro.tipo || 'acs'}); setLoading(false); return; }
+      if(pro){ const authenticated = {...pro, tipo: pro.tipo || 'acs'}; saveCachedProfessional(authenticated); onAuth(authenticated); setLoading(false); return; }
       // Not a professional — check if exists as patient
       const { data: paciente } = await supabase.from('perfis').select('cpf').eq('cpf', clean).maybeSingle();
       if(paciente){
@@ -108,7 +123,11 @@ const ProAuth = ({onAuth, onBack}) => {
       setReg(r=>({...r, cpf: mascaraCPF(clean), tipo: tipoSelecionado}));
       setStep('register');
       setMsg('CPF não encontrado. Complete seu cadastro como profissional.');
-    } catch { setReg(r=>({...r, cpf: mascaraCPF(clean), tipo: tipoSelecionado})); setStep('register'); setMsg('Offline ou erro. Cadastre-se.'); }
+    } catch {
+      const cached = loadCachedProfessional(clean);
+      if (cached) onAuth(cached);
+      else setMsg('Não foi possível conectar. Tente novamente quando houver internet.');
+    }
     setLoading(false);
   };
   
@@ -122,7 +141,7 @@ const ProAuth = ({onAuth, onBack}) => {
       const payload = { nome: reg.nome, cpf: cpfClean, municipio: reg.municipio, ubs: reg.ubs, telefone: reg.telefone, tipo: reg.tipo || tipoSelecionado };
       const { data, error } = await supabase.from('profissionais').insert(payload).select().maybeSingle();
       if(error){ alert('Erro ao cadastrar: ' + error.message); }
-      else { alert('Cadastrado com sucesso!'); onAuth({...data, tipo: data.tipo || tipoSelecionado}); }
+      else { const authenticated = {...data, tipo: data.tipo || tipoSelecionado}; saveCachedProfessional(authenticated); alert('Cadastrado com sucesso!'); onAuth(authenticated); }
     } catch(e) { alert('Falha de rede: ' + e.message); }
     setLoading(false);
   };
@@ -1282,9 +1301,17 @@ const ProDash = ({user, onLogout, initialMode, initialFormData, onUserUpdate}) =
       const clean = f.cpf.replace(/\D/g,'');
       const profNome = profissional?.enfermeira || profissional?.nome || 'Profissional';
       const payload = { ...f, patient_id: 'cpf-' + clean, cpf: clean, created_by_nome: profNome, created_by_ubs: profissional?.ubs || '', created_by_cpf: profissional?.cpf || '', updated_at: new Date().toISOString() };
-      const { error } = await supabase.from('perfis').upsert(payload, { onConflict: 'patient_id' });
-      if(error && payload.condicoes){ const fallback = { ...payload }; delete fallback.condicoes; const { error: retryError } = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' }); if(retryError) throw retryError; }
-      else if(error) { throw error; }
+      const canSync = navigator.onLine && !!supabase;
+      if (canSync) {
+        const { error } = await supabase.from('perfis').upsert(payload, { onConflict: 'patient_id' });
+        if(error && payload.condicoes){ const fallback = { ...payload }; delete fallback.condicoes; const { error: retryError } = await supabase.from('perfis').upsert(fallback, { onConflict: 'patient_id' }); if(retryError) throw retryError; }
+        else if(error) { throw error; }
+      } else {
+        const existingLocal = await db.perfil.where('patient_id').equals(payload.patient_id).first();
+        const localPayload = { ...payload, synced: 0, medications_dirty: 1 };
+        if (existingLocal?.id) await db.perfil.update(existingLocal.id, localPayload);
+        else await db.perfil.add(localPayload);
+      }
 
       const splitPipe = (value) => String(value || '').split('|').map(v => v.trim());
       const toDateISO = (value) => {
@@ -1311,18 +1338,27 @@ const ProDash = ({user, onLogout, initialMode, initialFormData, onUserUpdate}) =
           cpf_paciente: payload.cpf || null, tipo_medicamento: null, nome_medicamento: nome || null,
           dosagem: dosagem || null, horarios: horario || null,
           data_prescricao: toDateISO(prescricoes[i]), data_dispensacao: toDateISO(dispensacoes[i]),
-          data_inicio: null, data_termino: null, ativo: usoMedicacoes ? 'sim' : 'nao', synced: 1
+          data_inicio: null, data_termino: null, ativo: usoMedicacoes ? 'sim' : 'nao', synced: canSync ? 1 : 0
         });
       }
 
-      const { error: delMedsError } = await supabase.from('medicamentos').delete().eq('patient_id', payload.patient_id);
-      if (delMedsError) throw delMedsError;
-      if (usoMedicacoes && medicamentos.length > 0) {
-        const { error: insMedsError } = await supabase.from('medicamentos').insert(medicamentos);
-        if (insMedsError) throw insMedsError;
+      if (canSync) {
+        const { error: delMedsError } = await supabase.from('medicamentos').delete().eq('patient_id', payload.patient_id);
+        if (delMedsError) throw delMedsError;
+        if (usoMedicacoes && medicamentos.length > 0) {
+          const { error: insMedsError } = await supabase.from('medicamentos').insert(medicamentos);
+          if (insMedsError) throw insMedsError;
+        }
+        const existingLocal = await db.perfil.where('patient_id').equals(payload.patient_id).first();
+        const localPayload = { ...payload, synced: 1, medications_dirty: 0 };
+        if (existingLocal?.id) await db.perfil.update(existingLocal.id, localPayload);
+        else await db.perfil.add(localPayload);
+      } else {
+        await db.medicamentos.where('patient_id').equals(payload.patient_id).delete();
+        if (usoMedicacoes && medicamentos.length > 0) await db.medicamentos.bulkAdd(medicamentos);
       }
 
-      if (extraFiles && extraFiles.length > 0) {
+      if (canSync && extraFiles && extraFiles.length > 0) {
         const registroId = uuidv4();
         const now = new Date().toISOString();
         const media = [];
@@ -1338,7 +1374,11 @@ const ProDash = ({user, onLogout, initialMode, initialFormData, onUserUpdate}) =
           await supabase.from('registros').upsert({ registro_id: registroId, patient_id: payload.patient_id, device_id: 'pro', texto: 'Fotos clínicas enviadas no cadastro.', tipo: 'cadastro', status: 'respondido', replies_json: replies, created_at: now, updated_at: now }, { onConflict: 'registro_id' });
         }
       }
-      alert('✅ Usuário do SUS cadastrado com sucesso!');
+      alert(canSync
+        ? '✅ Usuário do SUS cadastrado com sucesso!'
+        : (extraFiles && extraFiles.length > 0)
+          ? '✅ Dados salvos no aparelho. Serão sincronizados quando a internet voltar. As fotos clínicas precisam ser reenviadas com conexão.'
+          : '✅ Salvo no aparelho. Será sincronizado quando a internet voltar.');
       setMode('menu');
     } catch(err) { console.error('Erro ao salvar:', err); alert('❌ Erro ao salvar: ' + (err.message || 'Tente novamente')); } finally { setSaving(false); }
   };
@@ -1444,7 +1484,7 @@ const ProfissionalApp = () => {
     }
   }, []);
 
-  const loginPro = (data) => { setUser(data); setRoute('dash'); };
+  const loginPro = (data) => { saveCachedProfessional(data); setUser(data); setRoute('dash'); };
   const logout = () => { sessionStorage.removeItem('profissional'); sessionStorage.removeItem('autocadastro_pro'); setUser(null); setRoute('login'); };
 
   if(SUPABASE_CONFIG_MISSING) return (

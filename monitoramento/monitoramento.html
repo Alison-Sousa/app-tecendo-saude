@@ -651,14 +651,14 @@
   </div>
 
   <!-- Scripts moved from head so splash renders instantly -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="../js/vendor/supabase.min.js"></script>
+  <script src="../js/vendor/chart.umd.min.js"></script>
+  <script src="../js/vendor/chartjs-plugin-datalabels.min.js"></script>
+  <script src="../js/vendor/jspdf.umd.min.js"></script>
+  <script src="../js/vendor/html2canvas.min.js"></script>
   <script src="../env/env.js"></script>
   <script src="../js/utils.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/9.0.0/uuidv4.min.js"></script>
+  <script src="../js/vendor/uuidv4.min.js"></script>
 
   <div class="container-fluid" style="max-width: 1600px; margin: 0 auto;">
     <!-- Header -->
@@ -881,8 +881,8 @@
 // NOTIFICAÇÕES PROFISSIONAL (SW + Cordova)
 // ============================================
 
-// Register Service Worker (PWA only, not Cordova)
-if ('serviceWorker' in navigator && !window.cordova) {
+// Register the offline cache on every HTTP(S) surface, including the remote page inside Cordova.
+if ('serviceWorker' in navigator && /^https?:$/.test(window.location.protocol)) {
   navigator.serviceWorker.register('../sw.js').then(function(reg) {
     console.log('SW registered (profissional):', reg.scope);
   }).catch(function(err) { console.warn('SW registration failed:', err); });

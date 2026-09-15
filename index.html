@@ -103,15 +103,28 @@ setTimeout(function() { clearInterval(_splashCheck); _hideSplashes(); }, 8000);
 </script>
 
 <!-- Scripts moved from head so splash renders instantly -->
-<script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+if (!/^https?:$/.test(window.location.protocol) || window.location.hostname === 'localhost') {
+  document.write('<script src="cordova.js"><\/script>');
+}
+</script>
+<script src="./js/vendor/react.development.js"></script>
+<script src="./js/vendor/react-dom.development.js"></script>
+<script src="./js/vendor/babel.min.js"></script>
+<script src="./js/vendor/tailwindcss.js"></script>
+<script src="./js/vendor/dexie.js"></script>
+<script src="./js/vendor/supabase.min.js"></script>
 <script src="./env/env.js"></script>
 <script src="./js/config.js"></script>
 <script src="./js/utils.js"></script>
+
+<script>
+if ('serviceWorker' in navigator && /^https?:$/.test(window.location.protocol)) {
+  navigator.serviceWorker.register('./sw.js').catch(function(error) {
+    console.warn('SW registration failed:', error);
+  });
+}
+</script>
 
 <script type="text/babel" src="./js/components.js"></script>
 <script type="text/babel">
